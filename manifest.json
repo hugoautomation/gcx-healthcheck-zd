@@ -1,0 +1,20 @@
+{
+  "name": "Zendeks Healthcheck",
+  "author": {
+    "name": "Gravity CX",
+    "email": "customerdelight@gravitycx.com.au",
+    "url": "https://gravitycx.com.au"
+  },
+  "defaultLocale": "en",
+  "private": true,
+  "location": {
+    "support": {
+      "ticket_sidebar": {
+        "url": "assets/iframe.html",
+        "flexible": true
+      }
+    }
+  },
+  "version": "1.0.0",
+  "frameworkVersion": "2.0"
+}
