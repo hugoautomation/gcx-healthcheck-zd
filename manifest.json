@@ -1,20 +1,24 @@
 {
-  "name": "Zendeks Healthcheck",
+  "name": "Zendesk Healthcheck",
   "author": {
     "name": "Gravity CX",
     "email": "customerdelight@gravitycx.com.au",
     "url": "https://gravitycx.com.au"
   },
-  "defaultLocale": "en",
-  "private": true,
+  "version": "1.0.0",
+  "frameworkVersion": "2.0",
   "location": {
     "support": {
-      "ticket_sidebar": {
-        "url": "assets/iframe.html",
-        "flexible": true
-      }
+      "nav_bar": "https://your-django-app.com/healthcheck/"
     }
   },
-  "version": "1.0.0",
-  "frameworkVersion": "2.0"
+  "defaultLocale": "en",
+  "private": true,
+  "parameters": [
+    {
+      "name": "oauth_token",
+      "type": "hidden",
+      "required": true
+    }
+  ]
 }
