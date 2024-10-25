@@ -11,8 +11,11 @@
 
   client.invoke('resize', { width: '100%', height: '800px' });
 
-  // Rest of your initialization code...
-
+   // Get the Zendesk domain
+   client.context().then(function(context) {
+    const domain = context.account.subdomain + '.zendesk.com';
+    document.getElementById('domain').value = domain;
+  });
   document.getElementById('healthcheck-form').addEventListener('submit', (e) => {
       e.preventDefault();
       
