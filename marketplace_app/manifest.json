@@ -1,0 +1,17 @@
+{
+  "name": "Zendesk Healthcheck",
+  "author": {
+    "name": "Gravity CX",
+    "email": "customerdelight@gravitycx.com.au",
+    "url": "https://gravitycx.com.au"
+  },
+  "version": "1.0.0",
+  "frameworkVersion": "2.0",
+  "location": {
+    "support": {
+      "nav_bar": "https://gcx-healthcheck-zd-production.up.railway.app/"
+    }
+  },
+  "defaultLocale": "en",
+  "private": true
+}

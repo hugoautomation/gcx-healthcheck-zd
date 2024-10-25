@@ -12,5 +12,29 @@
     <h2 class="u-semibold u-fs-xl">Zendesk Healthcheck</h2>
     <!-- Rest of your HTML remains the same as in iframe.html -->
     {% csrf_token %}
+    <div class="container">
+        <form id="healthcheck-form">
+            <div class="form-group">
+                <label for="domain">Zendesk Domain:</label>
+                <input type="text" class="form-control" id="domain" readonly>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" class="form-control" id="email" placeholder="user@example.com">
+            </div>
+            
+            <div class="form-group">
+                <label for="token">API Token:</label>
+                <input type="password" class="form-control" id="token" placeholder="API Token">
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="run-check">Run Health Check</button>
+        </form>
+        
+        <div id="results">
+            <!-- JSON report will be displayed here -->
+        </div>
+    </div>
 </body>
 </html>
