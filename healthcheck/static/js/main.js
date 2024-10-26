@@ -31,6 +31,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 client.context(),
                 client.metadata()
             ]);
+            client.metadata().then(function(metadata) {
+                console.log(metadata.settings);
+              });
 
             console.log('Context:', context);
             console.log('Metadata:', metadata);
