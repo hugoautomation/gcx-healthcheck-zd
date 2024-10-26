@@ -31,5 +31,6 @@
     }
   ],
   "defaultLocale": "en",
-  "private": true
+  "private": true,
+  "domainWhitelist": ["gcx-healthcheck-zd-production.up.railway.app", "app.configly.io"]
 }
