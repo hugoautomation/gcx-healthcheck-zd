@@ -1,10 +1,11 @@
-(function() {
-  const client = window.ZAFClient ? window.ZAFClient.init() : null;
-  
-  if (!client) {
-      console.error('ZAF Client could not be initialized');
-      return;
-  }
+document.addEventListener('DOMContentLoaded', function() {
+    const client = window.ZAFClient ? window.ZAFClient.init() : null;
+    
+    if (!client) {
+        console.error('ZAF Client could not be initialized');
+        return;
+    }
+
 
   // Get CSRF token for Django
   const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
