@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('healthcheck-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const formData = new FormData();
-        const formData = new FormData();
         formData.append('url', document.getElementById('domain').value);
         formData.append('email', document.getElementById('email').value);
         formData.append('api_token', document.getElementById('token').value);
