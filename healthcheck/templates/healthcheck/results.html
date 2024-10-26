@@ -82,30 +82,3 @@
         </div>
     {% endif %}
 {% endif %}
-
-<script>
-    // Simple filtering logic
-    const issuesTable = document.getElementById('issues-table-body');
-    const severityFilter = document.getElementById('severity-filter');
-    const categoryFilter = document.getElementById('category-filter');
-
-    function filterIssues() {
-        const rows = Array.from(issuesTable.getElementsByClassName('issue-row'));
-        const severity = severityFilter.value;
-        const category = categoryFilter.value;
-
-        rows.forEach(row => {
-            const rowSeverity = row.dataset.severity;
-            const rowCategory = row.dataset.category;
-            
-            const matchesSeverity = severity === 'all' || rowSeverity === severity;
-            const matchesCategory = category === 'all' || rowCategory === category;
-            
-            row.style.display = matchesSeverity && matchesCategory ? '' : 'none';
-        });
-    }
-
-    // Event listeners
-    severityFilter.addEventListener('change', filterIssues);
-    categoryFilter.addEventListener('change', filterIssues);
-</script>

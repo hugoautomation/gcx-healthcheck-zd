@@ -17,6 +17,43 @@ document.addEventListener('DOMContentLoaded', function() {
         e.stopPropagation();
     });
 
+    // Filtering function
+    function initializeFilters() {
+        const issuesTable = document.getElementById('issues-table-body');
+        const severityFilter = document.getElementById('severity-filter');
+        const categoryFilter = document.getElementById('category-filter');
+
+        if (!issuesTable || !severityFilter || !categoryFilter) return;
+
+        function filterIssues() {
+            const rows = Array.from(issuesTable.getElementsByClassName('issue-row'));
+            const severity = severityFilter.value;
+            const category = categoryFilter.value;
+
+            console.log('Filtering:', { severity, category }); // Debug log
+
+            rows.forEach(row => {
+                const rowSeverity = row.dataset.severity;
+                const rowCategory = row.dataset.category;
+                
+                const matchesSeverity = severity === 'all' || rowSeverity === severity;
+                const matchesCategory = category === 'all' || rowCategory === category;
+                
+                row.style.display = matchesSeverity && matchesCategory ? '' : 'none';
+                
+                console.log('Row:', { 
+                    rowSeverity, 
+                    rowCategory, 
+                    matches: matchesSeverity && matchesCategory 
+                }); // Debug log
+            });
+        }
+
+        // Event listeners
+        severityFilter.addEventListener('change', filterIssues);
+        categoryFilter.addEventListener('change', filterIssues);
+    }
+
     document.getElementById('run-check').addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
         
@@ -52,6 +89,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('Response:', response);
             resultsDiv.innerHTML = response;
+
+            // Initialize filters after content is loaded
+            initializeFilters();
 
             // Reset scroll position
             scrollContainer.scrollTop = 0;
