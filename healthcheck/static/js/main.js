@@ -29,8 +29,12 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             body: formData
         })
-        .then(response => response.text())  // Changed from response.json()
+        .then(response => {
+            console.log('Response status:', response.status); // Debug log
+            return response.text();
+        })
         .then(html => {
+            console.log('Received HTML:', html); // Debug log
             document.getElementById('results').innerHTML = html;
             client.invoke('resize', { width: '100%', height: '800px' });
         })
