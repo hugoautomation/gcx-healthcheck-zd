@@ -27,41 +27,25 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Fetching context and metadata...');
             
             // Get context and parameters
-            const [context, metadata] = await Promise.all([
-                client.context(),
-                client.metadata()
-            ]);
-        
-            console.log('Raw metadata:', JSON.stringify(metadata, null, 2));
-            console.log('Settings:', JSON.stringify(metadata.settings, null, 2));
-            
+            const context = await client.context();
+            console.log('Context:', context);
 
-            const formData = new FormData();
-            const subdomain = context.account.subdomain;
-            const email = metadata.settings.admin_email;
-            const token = metadata.settings.api_token;
-
-            console.log('Subdomain:', subdomain);
-            console.log('Admin Email:', email);
-            console.log('API Token length:', token ? token.length : 0);
-
-            formData.append('url', `${subdomain}.zendesk.com`);
-            formData.append('email', email);
-            formData.append('api_token', token);
+            const options = {
+                url: '/check/',
+                type: 'POST',
+                data: {
+                    url: `${context.account.subdomain}.zendesk.com`,
+                    email: '{{setting.admin_email}}',
+                    api_token: '{{setting.api_token}}'
+                },
+                secure: true
+            };
 
             console.log('Sending request to /check/...');
-
-            const response = await fetch('/check/', {
-                method: 'POST',
-                body: formData
-            });
-
-            console.log('Response status:', response.status);
-            const html = await response.text();
-            console.log('Response length:', html.length);
-            console.log('Response preview:', html.substring(0, 200));
-
-            resultsDiv.innerHTML = html;
+            const response = await client.request(options);
+            
+            console.log('Response:', response);
+            resultsDiv.innerHTML = response;
 
             // Wait for content to be rendered
             setTimeout(() => {
