@@ -107,8 +107,11 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Fetching context and metadata...');
             
-            const context = await client.context();
-            console.log('Context:', context);
+                    // Fetch both context and metadata
+        const [context, metadata] = await Promise.all([
+            client.context(),
+            client.metadata()
+        ]);
             if (!loadCachedResults()) {
                 // If no cache, fetch latest report from database
                 try {
@@ -116,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         url: 'https://gcx-healthcheck-zd-production.up.railway.app/latest_report/',
                         type: 'GET',
                         data: {
-                            installation_id: context._metadata.installationId
+                            installation_id: metadata.installationId
 
                         }
                     };
@@ -135,23 +138,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const options = {
                 url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
                 type: 'POST',
-                contentType: 'application/json',  // Add this line
-                data: JSON.stringify({            // Stringify the data
+                contentType: 'application/json',
+                data: JSON.stringify({
                     // Original auth data
                     url: `${context.account.subdomain}.zendesk.com`,
-                    email: '{{setting.admin_email}}',
-                    api_token: '{{setting.api_token}}',
+                    email: metadata.settings.admin_email,
+                    api_token: metadata.settings.api_token,
                     
                     // Additional instance data
                     instance_guid: context.instanceGuid,
-                    app_guid: context._appGuid,
-                    installation_id: context._metadata.installationId,
+                    app_guid: metadata.appId,
+                    installation_id: metadata.installationId,
                     subdomain: context.account.subdomain,
                     
                     // App metadata
-                    plan: '{{setting.plan}}',
-                    stripe_subscription_id: '{{setting.stripe_subscription_id}}',
-                    version: '{{setting.version}}'
+                    plan: metadata.plan?.name,
+                    stripe_subscription_id: metadata.stripe_subscription_id,
+                    version: metadata.version
                 }),
                 secure: true
             };
