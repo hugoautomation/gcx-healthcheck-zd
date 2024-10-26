@@ -7,13 +7,32 @@
     <link href="{% static 'css/main.css' %}" rel="stylesheet">
     <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
     <script src="{% static 'js/main.js' %}"></script>
+    <style>
+        .scrollable-container {
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 1000;
+            padding: 1rem 0;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h2 class="u-semibold u-fs-xl mb-4 mt-2">Zendesk Healthcheck</h2>
-        <button id="run-check" class="btn btn-primary mb-4">Run Health Check</button>
-        <div id="results">
-            <!-- Results will be displayed here -->
+        <div class="sticky-header">
+            <h2 class="u-semibold u-fs-xl mb-4">Zendesk Healthcheck</h2>
+            <button id="run-check" class="btn btn-primary mb-4">Run Health Check</button>
+        </div>
+        <div class="scrollable-container">
+            <div id="results">
+                <!-- Results will be displayed here -->
+            </div>
         </div>
     </div>
 </body>
