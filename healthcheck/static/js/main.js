@@ -1,5 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const client = window.ZAFClient ? window.ZAFClient.init() : null;
+    const CACHE_KEY = 'healthcheck_results';
+    const CACHE_TIMESTAMP_KEY = 'healthcheck_timestamp';
     
     if (!client) {
         console.error('ZAF Client could not be initialized');
@@ -17,6 +19,33 @@ document.addEventListener('DOMContentLoaded', function() {
         e.stopPropagation();
     });
 
+    // Load cached results if they exist
+    function loadCachedResults() {
+        const cachedHtml = localStorage.getItem(CACHE_KEY);
+        const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+        
+        if (cachedHtml) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = cachedHtml;
+            initializeFilters();
+            
+            // Add timestamp indicator
+            const timeAgo = timestamp ? new Date(parseInt(timestamp)) : new Date();
+            const timeDiff = Math.round((new Date() - timeAgo) / 1000 / 60); // minutes
+            
+            const timestampDiv = document.createElement('div');
+            timestampDiv.className = 'text-muted small mb-3';
+            timestampDiv.innerHTML = `Last checked: ${timeDiff} minutes ago`;
+            resultsDiv.insertBefore(timestampDiv, resultsDiv.firstChild);
+            
+            return true;
+        }
+        return false;
+    }
+
+    // Try to load cached results on initial load
+    loadCachedResults();
+
     // Filtering function
     function initializeFilters() {
         const issuesTable = document.getElementById('issues-table-body');
@@ -30,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const severity = severityFilter.value;
             const category = categoryFilter.value;
 
-            console.log('Filtering:', { severity, category }); // Debug log
+            console.log('Filtering:', { severity, category });
 
             rows.forEach(row => {
                 const rowSeverity = row.dataset.severity;
@@ -40,22 +69,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 const matchesCategory = category === 'all' || rowCategory === category;
                 
                 row.style.display = matchesSeverity && matchesCategory ? '' : 'none';
-                
-                console.log('Row:', { 
-                    rowSeverity, 
-                    rowCategory, 
-                    matches: matchesSeverity && matchesCategory 
-                }); // Debug log
             });
         }
 
         // Event listeners
         severityFilter.addEventListener('change', filterIssues);
         categoryFilter.addEventListener('change', filterIssues);
+
+        // Store filter states
+        const savedSeverity = localStorage.getItem('severity_filter');
+        const savedCategory = localStorage.getItem('category_filter');
+        
+        if (savedSeverity) severityFilter.value = savedSeverity;
+        if (savedCategory) categoryFilter.value = savedCategory;
+        
+        // Apply saved filters
+        filterIssues();
     }
 
     document.getElementById('run-check').addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
+        
+        // Clear existing cache when running new check
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
         
         // Show loading state
         resultsDiv.innerHTML = `
@@ -69,7 +106,6 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log('Fetching context and metadata...');
             
-            // Get context and parameters
             const context = await client.context();
             console.log('Context:', context);
 
@@ -89,6 +125,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('Response:', response);
             resultsDiv.innerHTML = response;
+
+            // Cache the results
+            localStorage.setItem(CACHE_KEY, response);
+            localStorage.setItem(CACHE_TIMESTAMP_KEY, new Date().getTime().toString());
 
             // Initialize filters after content is loaded
             initializeFilters();
@@ -126,6 +166,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p>${error.message || 'An unexpected error occurred. Please try again.'}</p>
                 </div>
             `;
+        }
+    });
+
+    // Save filter states when changed
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'severity-filter') {
+            localStorage.setItem('severity_filter', e.target.value);
+        } else if (e.target.id === 'category-filter') {
+            localStorage.setItem('category_filter', e.target.value);
         }
     });
 });
