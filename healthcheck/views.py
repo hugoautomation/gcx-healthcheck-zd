@@ -2,12 +2,13 @@ from django.shortcuts import render
 from django.http import JsonResponse
 import requests
 from zendeskapp import settings
+from django.views.decorators.csrf import csrf_exempt  # Add this
 
 
 def app(request):
     return render(request, "healthcheck/app.html")
 
-
+@csrf_exempt  # Add this decorator
 def health_check(request):
     if request.method == "POST":
         data = request.POST
