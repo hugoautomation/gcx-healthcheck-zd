@@ -17,158 +17,152 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         console.log('Metadata:', metadata);  // Debug log
         
-        // Update URL with installation_id
+        // Check if installation_id is already in URL
         const currentUrl = new URL(window.location.href);
-        currentUrl.searchParams.set('installation_id', metadata.installationId);
+        const urlInstallationId = currentUrl.searchParams.get('installation_id');
         
-        // Reload the page with the new URL to trigger server-side rendering
-        window.location.href = currentUrl.toString();
+        if (!urlInstallationId) {
+            // If not in URL, add it and reload
+            currentUrl.searchParams.set('installation_id', metadata.installationId);
+            window.location.href = currentUrl.toString();
+            return; // Stop execution since page will reload
+        }
+
+        // Initial resize with maximum height
+        client.invoke('resize', { width: '100%', height: '800px' });
+
+        // Handle scroll events
+        const scrollContainer = document.querySelector('.scrollable-container');
+        scrollContainer.addEventListener('scroll', (e) => {
+            e.stopPropagation();
+        });
+
+        // Initialize filters for initial load
+        initializeFilters();
+
+        // Handle new health check requests
+        document.getElementById('run-check').addEventListener('click', async () => {
+            const resultsDiv = document.getElementById('results');
+            
+            // Show loading state
+            resultsDiv.innerHTML = `
+                <div class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="d-none">Loading...</span>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const options = {
+                    url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        // Original auth data
+                        url: `${context.account.subdomain}.zendesk.com`,
+                        email: metadata.settings.admin_email,
+                        api_token: metadata.settings.api_token,
+                        
+                        // Additional instance data
+                        instance_guid: context.instanceGuid,
+                        app_guid: metadata.appId,
+                        installation_id: metadata.installationId,
+                        subdomain: context.account.subdomain,
+                        
+                        // App metadata
+                        plan: metadata.plan?.name,
+                        stripe_subscription_id: metadata.stripe_subscription_id,
+                        version: metadata.version
+                    }),
+                    secure: true
+                };
+
+                console.log('Sending request to /check/...');
+                const response = await client.request(options);
+                
+                console.log('Response:', response);
+                resultsDiv.innerHTML = response;
+
+                // Initialize filters after content is loaded
+                initializeFilters();
+
+                // Reset scroll position
+                scrollContainer.scrollTop = 0;
+
+                // Adjust height after content is rendered
+                setTimeout(() => {
+                    const contentHeight = Math.min(
+                        Math.max(
+                            resultsDiv.scrollHeight,
+                            document.getElementById('health-check-content')?.scrollHeight || 0,
+                            600  // minimum height
+                        ),
+                        800  // maximum height
+                    );
+
+                    client.invoke('resize', { 
+                        width: '100%', 
+                        height: `${contentHeight}px`
+                    });
+                }, 100);
+
+            } catch (error) {
+                console.error('Detailed error:', {
+                    message: error.message,
+                    stack: error.stack,
+                    error: error
+                });
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <h5>Error Running Health Check</h5>
+                        <p>${error.message || 'An unexpected error occurred. Please try again.'}</p>
+                    </div>
+                `;
+            }
+        });
+
     } catch (error) {
         console.error('Error initializing:', error);
     }
+});
 
-    // Get metadata for installation_id and update URL
-    const metadata = await client.metadata();
-    const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set('installation_id', metadata.installationId);
-    window.history.replaceState({}, '', currentUrl);
+// Filtering function
+function initializeFilters() {
+    const issuesTable = document.getElementById('issues-table-body');
+    const severityFilter = document.getElementById('severity-filter');
+    const categoryFilter = document.getElementById('category-filter');
 
-    // Initial resize with maximum height
-    client.invoke('resize', { width: '100%', height: '800px' });
+    if (!issuesTable || !severityFilter || !categoryFilter) return;
 
-    // Handle scroll events
-    const scrollContainer = document.querySelector('.scrollable-container');
-    scrollContainer.addEventListener('scroll', (e) => {
-        e.stopPropagation();
-    });
+    function filterIssues() {
+        const rows = Array.from(issuesTable.getElementsByClassName('issue-row'));
+        const severity = severityFilter.value;
+        const category = categoryFilter.value;
 
-    // Filtering function
-    function initializeFilters() {
-        const issuesTable = document.getElementById('issues-table-body');
-        const severityFilter = document.getElementById('severity-filter');
-        const categoryFilter = document.getElementById('category-filter');
-
-        if (!issuesTable || !severityFilter || !categoryFilter) return;
-
-        function filterIssues() {
-            const rows = Array.from(issuesTable.getElementsByClassName('issue-row'));
-            const severity = severityFilter.value;
-            const category = categoryFilter.value;
-
-            rows.forEach(row => {
-                const rowSeverity = row.dataset.severity;
-                const rowCategory = row.dataset.category;
-                
-                const matchesSeverity = severity === 'all' || rowSeverity === severity;
-                const matchesCategory = category === 'all' || rowCategory === category;
-                
-                row.style.display = matchesSeverity && matchesCategory ? '' : 'none';
-            });
-        }
-
-        // Event listeners
-        severityFilter.addEventListener('change', filterIssues);
-        categoryFilter.addEventListener('change', filterIssues);
-
-        // Apply saved filters if they exist
-        const savedSeverity = localStorage.getItem('severity_filter');
-        const savedCategory = localStorage.getItem('category_filter');
-        
-        if (savedSeverity) severityFilter.value = savedSeverity;
-        if (savedCategory) categoryFilter.value = savedCategory;
-        
-        filterIssues();
+        rows.forEach(row => {
+            const rowSeverity = row.dataset.severity;
+            const rowCategory = row.dataset.category;
+            
+            const matchesSeverity = severity === 'all' || rowSeverity === severity;
+            const matchesCategory = category === 'all' || rowCategory === category;
+            
+            row.style.display = matchesSeverity && matchesCategory ? '' : 'none';
+        });
     }
 
-    // Initialize filters for initial load
-    initializeFilters();
+    // Event listeners
+    severityFilter.addEventListener('change', filterIssues);
+    categoryFilter.addEventListener('change', filterIssues);
 
-    // Handle new health check requests
-    document.getElementById('run-check').addEventListener('click', async () => {
-        const resultsDiv = document.getElementById('results');
-        
-        // Show loading state
-        resultsDiv.innerHTML = `
-            <div class="text-center my-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="d-none">Loading...</span>
-                </div>
-            </div>
-        `;
-
-        try {
-            const [context, metadata] = await Promise.all([
-                client.context(),
-                client.metadata()
-            ]);
-
-            const options = {
-                url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    // Original auth data
-                    url: `${context.account.subdomain}.zendesk.com`,
-                    email: metadata.settings.admin_email,
-                    api_token: metadata.settings.api_token,
-                    
-                    // Additional instance data
-                    instance_guid: context.instanceGuid,
-                    app_guid: metadata.appId,
-                    installation_id: metadata.installationId,
-                    subdomain: context.account.subdomain,
-                    
-                    // App metadata
-                    plan: metadata.plan?.name,
-                    stripe_subscription_id: metadata.stripe_subscription_id,
-                    version: metadata.version
-                }),
-                secure: true
-            };
-
-            console.log('Sending request to /check/...');
-            const response = await client.request(options);
-            
-            console.log('Response:', response);
-            resultsDiv.innerHTML = response;
-
-            // Initialize filters after content is loaded
-            initializeFilters();
-
-            // Reset scroll position
-            scrollContainer.scrollTop = 0;
-
-            // Adjust height after content is rendered
-            setTimeout(() => {
-                const contentHeight = Math.min(
-                    Math.max(
-                        resultsDiv.scrollHeight,
-                        document.getElementById('health-check-content')?.scrollHeight || 0,
-                        600  // minimum height
-                    ),
-                    800  // maximum height
-                );
-
-                client.invoke('resize', { 
-                    width: '100%', 
-                    height: `${contentHeight}px`
-                });
-            }, 100);
-
-        } catch (error) {
-            console.error('Detailed error:', {
-                message: error.message,
-                stack: error.stack,
-                error: error
-            });
-            resultsDiv.innerHTML = `
-                <div class="alert alert-danger" role="alert">
-                    <h5>Error Running Health Check</h5>
-                    <p>${error.message || 'An unexpected error occurred. Please try again.'}</p>
-                </div>
-            `;
-        }
-    });
+    // Apply saved filters if they exist
+    const savedSeverity = localStorage.getItem('severity_filter');
+    const savedCategory = localStorage.getItem('category_filter');
+    
+    if (savedSeverity) severityFilter.value = savedSeverity;
+    if (savedCategory) categoryFilter.value = savedCategory;
+    
+    filterIssues();
 
     // Save filter states when changed
     document.addEventListener('change', function(e) {
@@ -178,4 +172,4 @@ document.addEventListener('DOMContentLoaded', async function() {
             localStorage.setItem('category_filter', e.target.value);
         }
     });
-});
+}
