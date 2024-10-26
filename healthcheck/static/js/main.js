@@ -31,12 +31,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 client.context(),
                 client.metadata()
             ]);
-            client.metadata().then(function(metadata) {
-                console.log(metadata.settings);
-              });
-
-            console.log('Context:', context);
-            console.log('Metadata:', metadata);
+        
+            console.log('Raw metadata:', JSON.stringify(metadata, null, 2));
+            console.log('Settings:', JSON.stringify(metadata.settings, null, 2));
+            
 
             const formData = new FormData();
             const subdomain = context.account.subdomain;
