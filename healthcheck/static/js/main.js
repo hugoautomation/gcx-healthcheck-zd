@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', async function() {
     const client = window.ZAFClient ? window.ZAFClient.init() : null;
-    const CACHE_KEY = 'healthcheck_results';
-    const CACHE_TIMESTAMP_KEY = 'healthcheck_timestamp';
     
     if (!client) {
         console.error('ZAF Client could not be initialized');
@@ -9,6 +7,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     console.log('ZAF Client initialized successfully');
+
+    try {
+        // Get metadata and context at startup
+        const [context, metadata] = await Promise.all([
+            client.context(),
+            client.metadata()
+        ]);
+        
+        console.log('Metadata:', metadata);  // Debug log
+        
+        // Update URL with installation_id
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('installation_id', metadata.installationId);
+        
+        // Reload the page with the new URL to trigger server-side rendering
+        window.location.href = currentUrl.toString();
+    } catch (error) {
+        console.error('Error initializing:', error);
+    }
 
     // Get metadata for installation_id and update URL
     const metadata = await client.metadata();

@@ -7,28 +7,34 @@ import requests
 from zendeskapp import settings
 from .models import HealthCheckReport
 
-
 def app(request):
     # Get installation_id from query parameters
     installation_id = request.GET.get('installation_id')
+    print(f"Received installation_id: {installation_id}")  # Debug log
     
     initial_data = {}
     if installation_id:
         try:
+            # Convert to integer since it comes as string from URL
+            installation_id = int(installation_id)
+            
             # Try to get latest report
             latest_report = HealthCheckReport.objects.filter(
                 installation_id=installation_id
             ).latest('created_at')
             
+            print(f"Found report for installation {installation_id}")  # Debug log
+            
             # Format the data
             initial_data = {
                 'data': format_response_data(latest_report.raw_response)
             }
-        except HealthCheckReport.DoesNotExist:
-            # No report exists yet
+        except (ValueError, HealthCheckReport.DoesNotExist) as e:
+            print(f"Error getting report: {str(e)}")  # Debug log
             pass
     
     return render(request, "healthcheck/app.html", initial_data)
+
 
 @csrf_exempt
 def health_check(request):
