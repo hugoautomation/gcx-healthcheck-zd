@@ -114,9 +114,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
                 type: 'POST',
                 data: {
+                    // Original auth data
                     url: `${context.account.subdomain}.zendesk.com`,
                     email: '{{setting.admin_email}}',
-                    api_token: '{{setting.api_token}}'
+                    api_token: '{{setting.api_token}}',
+                    
+                    // Additional instance data
+                    instance_guid: context.instanceGuid,
+                    installation_id: context.installationId,
+                    subdomain: context.account.subdomain,
+                    
+                    // App metadata
+                    plan: '{{setting.plan}}',
+                    stripe_subscription_id: '{{setting.stripe_subscription_id}}',
+                    version: '{{setting.version}}'
                 },
                 secure: true
             };
