@@ -29,19 +29,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
 
+CORS_ALLOW_ALL_ORIGINS = True
+
 CSRF_TRUSTED_ORIGINS = [
-    "https://django-server-production-2966.up.railway.app",
-    "https://congravitycx1714632791.zendesk.com",
+    "https://*.zendesk.com",  # Allow all Zendesk subdomains
 ]
 
-CORS_ALLOWED_ORIGINS = [
-    "https://django-server-production-2966.up.railway.app",
-    "https://congravitycx1714632791.zendesk.com",
-]
-CORS_ORIGINS_WHITELIST = [
-    "https://django-server-production-2966.up.railway.app",
-    "https://congravitycx1714632791.zendesk.com",
-]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Application definition
