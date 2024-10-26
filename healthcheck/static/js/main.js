@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         url: 'https://gcx-healthcheck-zd-production.up.railway.app/latest_report/',
                         type: 'GET',
                         data: {
-                            instance_guid: context.instanceGuid
+                            instance_guid: context._metadata.installationId
                         }
                     };
                     

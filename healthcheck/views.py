@@ -93,9 +93,9 @@ def health_check(request):
 
 def get_latest_report(request):
     try:
-        instance_guid = request.GET.get('instance_guid')
+        installation_id = request.GET.get('installation_id')
         latest_report = HealthCheckReport.objects.filter(
-            instance_guid=instance_guid
+            installation_id=installation_id
         ).latest('created_at')
         
         formatted_data = format_response_data(latest_report.raw_response)
