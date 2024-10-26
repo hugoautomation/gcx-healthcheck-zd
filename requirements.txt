@@ -14,10 +14,12 @@ django-debug-toolbar==4.2.0
 black==23.10.1
 flake8==6.1.0
 ruff
+
 # Production dependencies
 gunicorn==21.2.0
 whitenoise==6.6.0
 django-cors-headers==4.3.0
+whitenoise
 
 # Security
 django-environ==0.11.2
