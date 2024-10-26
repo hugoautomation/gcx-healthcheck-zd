@@ -6,38 +6,41 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    client.invoke('resize', { width: '100%', height: '800px' });
 
-  // Get CSRF token for Django
-  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    // Get the Zendesk domain
+    client.context().then(function(context) {
+        const domain = context.account.subdomain + '.zendesk.com';
+        document.getElementById('domain').value = domain;
+    });
 
-  client.invoke('resize', { width: '100%', height: '800px' });
+    document.getElementById('healthcheck-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const formData = new FormData();
+        formData.append('url', document.getElementById('domain').value);
+        formData.append('email', document.getElementById('email').value);
+        formData.append('api_token', document.getElementById('token').value);
 
-   // Get the Zendesk domain
-   client.context().then(function(context) {
-    const domain = context.account.subdomain + '.zendesk.com';
-    document.getElementById('domain').value = domain;
-  });
-  document.getElementById('healthcheck-form').addEventListener('submit', (e) => {
-      e.preventDefault();
-      
-      const formData = new FormData();
-      formData.append('url', document.getElementById('domain').value);
-      formData.append('email', document.getElementById('email').value);
-      formData.append('api_token', document.getElementById('token').value);
+        // Show loading state
+        document.getElementById('results').innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="sr-only">Loading...</span></div></div>';
 
-      fetch('/check/', {
-          method: 'POST',
-          headers: {
-              'X-CSRFToken': csrftoken
-          },
-          body: formData
-      })
-      .then(response => response.json())
-      .then(data => {
-          // Your existing template rendering code...
-      })
-      .catch(error => {
-          // Your existing error handling...
-      });
-  });
-})();
+        fetch('/check/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())  // Changed from response.json()
+        .then(html => {
+            document.getElementById('results').innerHTML = html;
+            client.invoke('resize', { width: '100%', height: '800px' });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('results').innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    An error occurred while running the health check. Please try again.
+                </div>
+            `;
+        });
+    });
+});

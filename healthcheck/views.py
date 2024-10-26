@@ -1,14 +1,14 @@
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.views.decorators.csrf import csrf_exempt
 import requests
 from zendeskapp import settings
-from django.views.decorators.csrf import csrf_exempt  # Add this
-
 
 def app(request):
     return render(request, "healthcheck/app.html")
 
-@csrf_exempt  # Add this decorator
+@csrf_exempt
 def health_check(request):
     if request.method == "POST":
         data = request.POST
@@ -26,5 +26,10 @@ def health_check(request):
                 "api_token": data.get("api_token"),
             },
         )
-
-        return JsonResponse(response.json())
+        
+        # Render the template with the API response data
+        html = render_to_string('healthcheck/results.html', {
+            'data': response.json()
+        })
+        
+        return HttpResponse(html)

@@ -1,0 +1,19 @@
+<div class="summary-cards"></div>
+    <div class="card">
+        <h3>Total Issues</h3>
+        <div class="number">{{ data.total_issues }}</div>
+    </div>
+    <div class="card">
+        <h3>Critical Issues</h3>
+        <div class="number">{{ data.critical_issues }}</div>
+    </div>
+</div>
+
+<div class="issues-container">
+    {% for issue in data.issues %}
+        <div class="issue-card {{ issue.severity }}">
+            <h4>{{ issue.title }}</h4>
+            <p>{{ issue.description }}</p>
+        </div>
+    {% endfor %}
+</div>
