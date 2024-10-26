@@ -14,10 +14,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const domain = context.account.subdomain + '.zendesk.com';
         document.getElementById('domain').value = domain;
     });
-
+    document.getElementById('domain').value = domain;
     document.getElementById('healthcheck-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
+        const formData = new FormData();
         const formData = new FormData();
         formData.append('url', document.getElementById('domain').value);
         formData.append('email', document.getElementById('email').value);

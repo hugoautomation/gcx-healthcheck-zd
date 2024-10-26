@@ -12,6 +12,24 @@
       "nav_bar": "https://gcx-healthcheck-zd-production.up.railway.app/"
     }
   },
+  "parameters": [
+    {
+      "name": "admin_email",
+      "type": "text",
+      "required": true,
+      "secure": false,
+      "default": "",
+      "label": "Admin Email (for API call)"
+    },
+    {
+      "name": "api_token",
+      "type": "text",
+      "required": true,
+      "secure": true,
+      "default": "",
+      "label": "API Token"
+    }
+  ],
   "defaultLocale": "en",
   "private": true
 }
