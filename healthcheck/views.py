@@ -61,6 +61,7 @@ def health_check(request):
                 installation_id=int(data.get('installation_id', 0)),
                 subdomain=data.get('subdomain', ''),
                 plan=data.get('plan'),
+                app_guid=data.get('app_guid'),
                 stripe_subscription_id=data.get('stripe_subscription_id'),
                 version=data.get('version', '1.0.0'),
                 raw_response=response_data
@@ -68,7 +69,6 @@ def health_check(request):
             print(f"Saved report {report.id} for {report.subdomain}")
 
             # Process response data for template
-            issues = response_data.get("issues", [])
             formatted_data = format_response_data(response_data)
 
             # Render template

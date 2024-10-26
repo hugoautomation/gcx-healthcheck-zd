@@ -143,7 +143,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Additional instance data
                     instance_guid: context.instanceGuid,
-                    installation_id: context.installationId,
+                    app_guid: context._appGuid,
+                    installation_id: context._metadata.installationId,
                     subdomain: context.account.subdomain,
                     
                     // App metadata

@@ -5,13 +5,14 @@ from django.utils import timezone
 class HealthCheckReport(models.Model):
     """Stores health check reports with raw response data"""
     # Zendesk instance identifiers
-    instance_guid = models.CharField(max_length=255, db_index=True)
+    instance_guid = models.CharField(max_length=320, db_index=True)
     installation_id = models.BigIntegerField()
+    app_guid = models.CharField(max_length=320)
     subdomain = models.CharField(max_length=255)
     
     # App metadata
-    plan = models.CharField(max_length=100, null=True, blank=True)
-    stripe_subscription_id = models.CharField(max_length=255, null=True, blank=True)
+    plan = models.CharField(max_length=320, null=True, blank=True)
+    stripe_subscription_id = models.CharField(max_length=320, null=True, blank=True)
     version = models.CharField(max_length=50)
     
     # Report data
