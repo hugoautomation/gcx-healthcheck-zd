@@ -135,29 +135,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            const options = {
-                url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    // Original auth data
-                    url: `${context.account.subdomain}.zendesk.com`,
-                    email: metadata.settings.admin_email,
-                    api_token: metadata.settings.api_token,
-                    
-                    // Additional instance data
-                    instance_guid: context.instanceGuid,
-                    app_guid: metadata.appId,
-                    installation_id: metadata.installationId,
-                    subdomain: context.account.subdomain,
-                    
-                    // App metadata
-                    plan: metadata.plan?.name,
-                    stripe_subscription_id: metadata.stripe_subscription_id,
-                    version: metadata.version
-                }),
-                secure: true
-            };
+               const options = {
+            url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                // Original auth data
+                url: `${context.account.subdomain}.zendesk.com`,
+                email: '{{setting.admin_email}}',
+                api_token: '{{setting.api_token}}',
+                
+                // Additional instance data
+                instance_guid: context.instanceGuid,
+                app_guid: metadata.appId,
+                installation_id: metadata.installationId,
+                subdomain: context.account.subdomain,
+                
+                // App metadata
+                plan: metadata.plan?.name,
+                stripe_subscription_id: metadata.stripe_subscription_id,
+                version: metadata.version
+            }),
+            secure: true
+        };
 
             console.log('Sending request to /check/...');
             const response = await client.request(options);
