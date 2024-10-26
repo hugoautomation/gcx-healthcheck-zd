@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('ZAF Client initialized successfully');
 
     // Initial resize with maximum height
-    client.invoke('resize', { width: '100%', height: '100%' });
+    client.invoke('resize', { width: '100%', height: '800px' });
 
     // Handle scroll events
     const scrollContainer = document.querySelector('.scrollable-container');

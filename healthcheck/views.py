@@ -53,7 +53,7 @@ def health_check(request):
 
             # Process the response data
             response_data = response.json()
-            
+
             # Get instance details
             instance_info = {
                 "name": response_data.get("name", "Unknown"),
@@ -61,14 +61,14 @@ def health_check(request):
                 "admin_email": response_data.get("admin_email", "Unknown"),
                 "created_at": response_data.get("created_at", "Unknown"),
             }
-            
+
             # Get counts
             counts = response_data.get("counts", {})
             total_counts = response_data.get("sum_totals", {})
-            
+
             # Extract issues from the response
             issues = response_data.get("issues", [])
-            
+
             if not isinstance(issues, list):
                 raise ValueError(f"Unexpected issues format: {issues}")
 
@@ -99,6 +99,7 @@ def health_check(request):
                     "deletion": total_counts.get("sum_deletion", 0),
                     "total_changes": total_counts.get("sum_total_changes", 0),
                 },
+                'categories': sorted(set(issue.get('item_type', 'Unknown') for issue in issues)),
                 "issues": [
                     {
                         "category": issue.get("item_type", "Unknown"),
@@ -107,14 +108,15 @@ def health_check(request):
                         "zendesk_url": issue.get("zendesk_url", "#"),
                     }
                     for issue in issues
-                ] if issues else []
+                ]
+                if issues
+                else [],
             }
 
             print("Formatted data:", formatted_data)
 
             html = render_to_string(
-                "healthcheck/results.html", 
-                {"data": formatted_data}
+                "healthcheck/results.html", {"data": formatted_data}
             )
 
             return HttpResponse(html)

@@ -21,6 +21,33 @@
     </div>
 
     {% if data.issues %}
+        <div class="mb-3">
+            <div class="row">
+                <div class="col-md-4">
+                    <select id="severity-filter" class="form-control">
+                        <option value="all">All Severities</option>
+                        <option value="error">Errors Only</option>
+                        <option value="warning">Warnings Only</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select id="category-filter" class="form-control">
+                        <option value="all">All Categories</option>
+                        {% for category in data.categories %}
+                            <option value="{{ category }}">{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <select id="items-per-page" class="form-control">
+                        <option value="10">10 per page</option>
+                        <option value="20" selected>20 per page</option>
+                        <option value="50">50 per page</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <div id="health-check-content" class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -31,9 +58,11 @@
                         <th>Action</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="issues-table-body">
                     {% for issue in data.issues %}
-                        <tr>
+                        <tr class="issue-row" 
+                            data-severity="{{ issue.severity }}"
+                            data-category="{{ issue.category }}">
                             <td>{{ issue.category }}</td>
                             <td>
                                 <span class="badge {% if issue.severity == 'error' %}bg-danger{% else %}bg-warning{% endif %}">
@@ -53,6 +82,17 @@
                 </tbody>
             </table>
         </div>
+
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                Showing <span id="showing-start">1</span>-<span id="showing-end">20</span> 
+                of <span id="total-filtered">{{ data.total_issues }}</span> issues
+            </div>
+            <div class="btn-group">
+                <button id="prev-page" class="btn btn-outline-secondary">&laquo; Previous</button>
+                <button id="next-page" class="btn btn-outline-secondary">Next &raquo;</button>
+            </div>
+        </div>
     {% else %}
         <div class="alert alert-success" role="alert">
             <h6 class="alert-heading">All Clear!</h6>
@@ -60,3 +100,87 @@
         </div>
     {% endif %}
 {% endif %}
+
+<script>
+    // Pagination and filtering logic
+    const issuesTable = document.getElementById('issues-table-body');
+    const severityFilter = document.getElementById('severity-filter');
+    const categoryFilter = document.getElementById('category-filter');
+    const itemsPerPage = document.getElementById('items-per-page');
+    const prevButton = document.getElementById('prev-page');
+    const nextButton = document.getElementById('next-page');
+    const showingStart = document.getElementById('showing-start');
+    const showingEnd = document.getElementById('showing-end');
+    const totalFiltered = document.getElementById('total-filtered');
+
+    let currentPage = 1;
+    let filteredIssues = [];
+
+    function filterIssues() {
+        const rows = Array.from(issuesTable.getElementsByClassName('issue-row'));
+        const severity = severityFilter.value;
+        const category = categoryFilter.value;
+
+        filteredIssues = rows.filter(row => {
+            const rowSeverity = row.dataset.severity;
+            const rowCategory = row.dataset.category;
+            
+            return (severity === 'all' || rowSeverity === severity) &&
+                   (category === 'all' || rowCategory === category);
+        });
+
+        totalFiltered.textContent = filteredIssues.length;
+        currentPage = 1;
+        updatePagination();
+    }
+
+    function updatePagination() {
+        const itemsPerPageValue = parseInt(itemsPerPage.value);
+        const startIndex = (currentPage - 1) * itemsPerPageValue;
+        const endIndex = Math.min(startIndex + itemsPerPageValue, filteredIssues.length);
+
+        // Hide all rows
+        Array.from(issuesTable.getElementsByClassName('issue-row')).forEach(row => {
+            row.style.display = 'none';
+        });
+
+        // Show only current page rows
+        filteredIssues.slice(startIndex, endIndex).forEach(row => {
+            row.style.display = '';
+        });
+
+        // Update pagination info
+        showingStart.textContent = filteredIssues.length ? startIndex + 1 : 0;
+        showingEnd.textContent = endIndex;
+        
+        // Update button states
+        prevButton.disabled = currentPage === 1;
+        nextButton.disabled = endIndex >= filteredIssues.length;
+    }
+
+    // Event listeners
+    severityFilter.addEventListener('change', filterIssues);
+    categoryFilter.addEventListener('change', filterIssues);
+    itemsPerPage.addEventListener('change', () => {
+        currentPage = 1;
+        updatePagination();
+    });
+
+    prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            updatePagination();
+        }
+    });
+
+    nextButton.addEventListener('click', () => {
+        const maxPages = Math.ceil(filteredIssues.length / parseInt(itemsPerPage.value));
+        if (currentPage < maxPages) {
+            currentPage++;
+            updatePagination();
+        }
+    });
+
+    // Initial setup
+    filterIssues();
+</script>
