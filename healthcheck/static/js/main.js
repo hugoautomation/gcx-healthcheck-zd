@@ -61,8 +61,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     data: JSON.stringify({
                         // Original auth data
                         url: `${context.account.subdomain}.zendesk.com`,
-                        email: metadata.settings.admin_email,
-                        api_token: metadata.settings.api_token,
+                        email: '{{setting.admin_email}}',
+                        api_token: '{{setting.api_token}}',
                         
                         // Additional instance data
                         instance_guid: context.instanceGuid,
