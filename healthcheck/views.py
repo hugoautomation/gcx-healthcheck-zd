@@ -104,7 +104,7 @@ def health_check(request):
                         "category": issue.get("item_type", "Unknown"),
                         "severity": issue.get("type", "warning"),
                         "description": issue.get("message", ""),
-                        "edit_url": issue.get("edit_url", "#"),
+                        "zendesk_url": issue.get("zendesk_url", "#"),
                     }
                     for issue in issues
                 ] if issues else []
