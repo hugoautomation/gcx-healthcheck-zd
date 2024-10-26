@@ -6,33 +6,33 @@ from django.views.decorators.csrf import csrf_exempt
 import requests
 from zendeskapp import settings
 from .models import HealthCheckReport
+from django.utils.timesince import timesince
+
 
 def app(request):
     # Get installation_id from query parameters
-    installation_id = request.GET.get('installation_id')
+    installation_id = request.GET.get("installation_id")
     print(f"Received installation_id: {installation_id}")  # Debug log
-    
+
     initial_data = {}
     if installation_id:
         try:
-            # Convert to integer since it comes as string from URL
-            installation_id = int(installation_id)
-            
-            # Try to get latest report
             latest_report = HealthCheckReport.objects.filter(
                 installation_id=installation_id
-            ).latest('created_at')
-            
-            print(f"Found report for installation {installation_id}")  # Debug log
-            
-            # Format the data
+            ).latest("created_at")
+
+            # Format the data with last_check time
             initial_data = {
-                'data': format_response_data(latest_report.raw_response)
+                "data": format_response_data(
+                    latest_report.raw_response, last_check=latest_report.updated_at
+                )
             }
+            print(f"Found report for installation {installation_id}")  # Debug log
+
         except (ValueError, HealthCheckReport.DoesNotExist) as e:
             print(f"Error getting report: {str(e)}")  # Debug log
             pass
-    
+
     return render(request, "healthcheck/app.html", initial_data)
 
 
@@ -79,9 +79,11 @@ def health_check(request):
             # Get response data
             response_data = response.json()
 
-                      # Update or create report in database
+            # Update or create report in database
             report, created = HealthCheckReport.objects.update_or_create(
-                installation_id=int(data.get("installation_id", 0)),  # This is the lookup field
+                installation_id=int(
+                    data.get("installation_id", 0)
+                ),  # This is the lookup field
                 defaults={
                     "instance_guid": data.get("instance_guid"),
                     "subdomain": data.get("subdomain", ""),
@@ -90,9 +92,9 @@ def health_check(request):
                     "stripe_subscription_id": data.get("stripe_subscription_id"),
                     "version": data.get("version", "1.0.0"),
                     "raw_response": response_data,
-                }
+                },
             )
-            
+
             action = "Created" if created else "Updated"
             print(f"{action} report {report.id} for {report.subdomain}")
 
@@ -118,7 +120,7 @@ def health_check(request):
     return HttpResponse("Method not allowed", status=405)
 
 
-def format_response_data(response_data):
+def format_response_data(response_data, last_check=None):
     """Helper function to format response data consistently"""
     issues = response_data.get("issues", [])
     counts = response_data.get("counts", {})
@@ -131,6 +133,8 @@ def format_response_data(response_data):
             "admin_email": response_data.get("admin_email", "Unknown"),
             "created_at": response_data.get("created_at", "Unknown"),
         },
+        "last_check": last_check.strftime("%Y-%m-%d %H:%M:%S") if last_check else None,
+        "time_since_check": timesince(last_check) if last_check else "Never",
         "total_issues": len(issues),
         "critical_issues": sum(1 for issue in issues if issue.get("type") == "error"),
         "warning_issues": sum(1 for issue in issues if issue.get("type") == "warning"),

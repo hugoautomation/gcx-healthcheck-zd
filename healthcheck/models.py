@@ -20,6 +20,7 @@ class HealthCheckReport(models.Model):
     # Report data
     raw_response = models.JSONField()  # Store the complete API response
     created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)  # Add this line
 
     class Meta:
         ordering = ["-created_at"]
