@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Context:', context);
 
             const options = {
-                url: '/check/',
+                url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
                 type: 'POST',
                 data: {
                     url: `${context.account.subdomain}.zendesk.com`,
