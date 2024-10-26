@@ -13,7 +13,7 @@ def health_check(request):
     if request.method == "POST":
         data = request.POST
         HEALTHCHECK_TOKEN = settings.HEALTHCHECK_TOKEN
-
+        print(data)
         response = requests.post(
             "https://app.configly.io/api/health-check/",
             headers={
@@ -26,6 +26,7 @@ def health_check(request):
                 "api_token": data.get("api_token"),
             },
         )
+        print(response.json())
         
         # Render the template with the API response data
         html = render_to_string('healthcheck/results.html', {
