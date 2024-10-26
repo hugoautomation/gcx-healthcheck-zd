@@ -17,41 +17,42 @@
 
 <h3 class="card-title my-5">Health Check Results</h3>
 
-{% if error %}
-<div class="alert alert-danger" role="alert">
-<h6 class="alert-heading">Error</h6>
-<p>{{ error }}</p>
-</div>
-{% elif data.issues %}
-<div id="health-check-content" class="table-responsive">
-<table class="table table-hover">
-<thead>
-    <tr>
-        <th>Category</th>
-        <th>Severity</th>
-        <th>Issue</th>
-        <th>Description</th>
-    </tr>
-</thead>
-<tbody>
-    {% for issue in data.issues %}
-        <tr>
-            <td>{{ issue.category }}</td>
-            <td>
-                <span class="badge {% if issue.severity == 'error' %}bg-danger{% else %}bg-warning{% endif %}">
-                    {{ issue.severity|title }}
-                </span>
-            </td>
-            <td>{{ issue.title }}</td>
-            <td>{{ issue.description }}</td>
-        </tr>
-    {% endfor %}
-</tbody>
-</table>
-</div>
+{% if data.issues %}
+    <div id="health-check-content" class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Severity</th>
+                    <th>Description</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for issue in data.issues %}
+                    <tr>
+                        <td>{{ issue.category }}</td>
+                        <td>
+                            <span class="badge {% if issue.severity == 'error' %}bg-danger{% else %}bg-warning{% endif %}">
+                                {{ issue.severity|title }}
+                            </span>
+                        </td>
+                        <td>{{ issue.description }}</td>
+                        <td>
+                            <a href="{{ issue.edit_url }}" 
+                               target="_blank" 
+                               class="btn btn-sm btn-outline-dark">
+                                <i class="bi bi-box-arrow-up-right"></i> Edit
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
-<div class="alert alert-success" role="alert">
-<h6 class="alert-heading">All Clear!</h6>
-<p>No issues were found in your Zendesk instance configuration.</p>
-</div>
+    <div class="alert alert-success" role="alert">
+        <h6 class="alert-heading">All Clear!</h6>
+        <p>No issues were found in your Zendesk instance configuration.</p>
+    </div>
 {% endif %}
