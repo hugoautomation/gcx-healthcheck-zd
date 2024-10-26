@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     console.log('ZAF Client initialized successfully');
+    console.log('Client: ',client)
 
     // Initial resize with maximum height
     client.invoke('resize', { width: '100%', height: '800px' });
