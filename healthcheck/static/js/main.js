@@ -8,8 +8,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('ZAF Client initialized successfully');
 
-    // Initial resize
-    client.invoke('resize', { width: '100%', height: '600px' });
+    // Initial resize with maximum height
+    client.invoke('resize', { width: '100%', height: '800px' });
+
+    // Handle scroll events
+    const scrollContainer = document.querySelector('.scrollable-container');
+    scrollContainer.addEventListener('scroll', (e) => {
+        e.stopPropagation();
+    });
 
     document.getElementById('run-check').addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
@@ -18,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resultsDiv.innerHTML = `
             <div class="text-center my-5">
                 <div class="spinner-border text-primary" role="status">
+                    <span class="d-none">Loading...</span>
                 </div>
             </div>
         `;
@@ -46,17 +53,24 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Response:', response);
             resultsDiv.innerHTML = response;
 
-            // Wait for content to be rendered
+            // Reset scroll position
+            scrollContainer.scrollTop = 0;
+
+            // Adjust height after content is rendered
             setTimeout(() => {
-                const contentHeight = Math.max(
-                    resultsDiv.scrollHeight,
-                    document.getElementById('health-check-content')?.scrollHeight || 0,
-                    600
+                const contentHeight = Math.min(
+                    Math.max(
+                        resultsDiv.scrollHeight,
+                        document.getElementById('health-check-content')?.scrollHeight || 0,
+                        600  // minimum height
+                    ),
+                    800  // maximum height
                 );
-                console.log('Resizing to height:', contentHeight + 50);
+
+                console.log('Resizing to height:', contentHeight);
                 client.invoke('resize', { 
                     width: '100%', 
-                    height: `${contentHeight + 50}px`
+                    height: `${contentHeight}px`
                 });
             }, 100);
 
