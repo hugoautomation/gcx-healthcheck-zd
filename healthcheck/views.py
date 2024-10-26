@@ -9,8 +9,26 @@ from .models import HealthCheckReport
 
 
 def app(request):
-    return render(request, "healthcheck/app.html")
-
+    # Get installation_id from query parameters
+    installation_id = request.GET.get('installation_id')
+    
+    initial_data = {}
+    if installation_id:
+        try:
+            # Try to get latest report
+            latest_report = HealthCheckReport.objects.filter(
+                installation_id=installation_id
+            ).latest('created_at')
+            
+            # Format the data
+            initial_data = {
+                'data': format_response_data(latest_report.raw_response)
+            }
+        except HealthCheckReport.DoesNotExist:
+            # No report exists yet
+            pass
+    
+    return render(request, "healthcheck/app.html", initial_data)
 
 @csrf_exempt
 def health_check(request):
@@ -88,20 +106,6 @@ def health_check(request):
             )
 
     return HttpResponse("Method not allowed", status=405)
-
-
-def get_latest_report(request):
-    try:
-        installation_id = request.GET.get("installation_id")
-        latest_report = HealthCheckReport.objects.filter(
-            installation_id=installation_id
-        ).latest("created_at")
-
-        formatted_data = format_response_data(latest_report.raw_response)
-        html = render_to_string("healthcheck/results.html", {"data": formatted_data})
-        return HttpResponse(html)
-    except HealthCheckReport.DoesNotExist:
-        return HttpResponse("")
 
 
 def format_response_data(response_data):

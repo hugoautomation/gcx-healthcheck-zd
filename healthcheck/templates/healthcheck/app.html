@@ -27,12 +27,13 @@
     <div class="container">
         <div class="sticky-header">
             <h2 class="u-semibold u-fs-xl mb-4">Zendesk Healthcheck</h2>
-            
             <button id="run-check" class="btn btn-primary mb-4">Run Health Check</button>
         </div>
         <div class="scrollable-container">
             <div id="results">
-                <!-- Results will be displayed here -->
+                {% if data %}
+                    {% include "healthcheck/results.html" with data=data %}
+                {% endif %}
             </div>
         </div>
     </div>

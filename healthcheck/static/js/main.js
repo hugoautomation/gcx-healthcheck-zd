@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const client = window.ZAFClient ? window.ZAFClient.init() : null;
     const CACHE_KEY = 'healthcheck_results';
     const CACHE_TIMESTAMP_KEY = 'healthcheck_timestamp';
@@ -9,7 +9,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     console.log('ZAF Client initialized successfully');
-    console.log('Client: ',client)
+
+    // Get metadata for installation_id and update URL
+    const metadata = await client.metadata();
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('installation_id', metadata.installationId);
+    window.history.replaceState({}, '', currentUrl);
 
     // Initial resize with maximum height
     client.invoke('resize', { width: '100%', height: '800px' });
@@ -19,33 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
     scrollContainer.addEventListener('scroll', (e) => {
         e.stopPropagation();
     });
-
-    // Load cached results if they exist
-    function loadCachedResults() {
-        const cachedHtml = localStorage.getItem(CACHE_KEY);
-        const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-        
-        if (cachedHtml) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = cachedHtml;
-            initializeFilters();
-            
-            // Add timestamp indicator
-            const timeAgo = timestamp ? new Date(parseInt(timestamp)) : new Date();
-            const timeDiff = Math.round((new Date() - timeAgo) / 1000 / 60); // minutes
-            
-            const timestampDiv = document.createElement('div');
-            timestampDiv.className = 'text-muted small mb-3';
-            timestampDiv.innerHTML = `Last checked: ${timeDiff} minutes ago`;
-            resultsDiv.insertBefore(timestampDiv, resultsDiv.firstChild);
-            
-            return true;
-        }
-        return false;
-    }
-
-    // Try to load cached results on initial load
-    loadCachedResults();
 
     // Filtering function
     function initializeFilters() {
@@ -59,8 +37,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const rows = Array.from(issuesTable.getElementsByClassName('issue-row'));
             const severity = severityFilter.value;
             const category = categoryFilter.value;
-
-            console.log('Filtering:', { severity, category });
 
             rows.forEach(row => {
                 const rowSeverity = row.dataset.severity;
@@ -77,23 +53,22 @@ document.addEventListener('DOMContentLoaded', function() {
         severityFilter.addEventListener('change', filterIssues);
         categoryFilter.addEventListener('change', filterIssues);
 
-        // Store filter states
+        // Apply saved filters if they exist
         const savedSeverity = localStorage.getItem('severity_filter');
         const savedCategory = localStorage.getItem('category_filter');
         
         if (savedSeverity) severityFilter.value = savedSeverity;
         if (savedCategory) categoryFilter.value = savedCategory;
         
-        // Apply saved filters
         filterIssues();
     }
 
+    // Initialize filters for initial load
+    initializeFilters();
+
+    // Handle new health check requests
     document.getElementById('run-check').addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
-        
-        // Clear existing cache when running new check
-        localStorage.removeItem(CACHE_KEY);
-        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
         
         // Show loading state
         resultsDiv.innerHTML = `
@@ -105,69 +80,40 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         try {
-            console.log('Fetching context and metadata...');
-            
-                    // Fetch both context and metadata
-        const [context, metadata] = await Promise.all([
-            client.context(),
-            client.metadata()
-        ]);
-            if (!loadCachedResults()) {
-                // If no cache, fetch latest report from database
-                try {
-                    const options = {
-                        url: 'https://gcx-healthcheck-zd-production.up.railway.app/latest_report/',
-                        type: 'GET',
-                        data: {
-                            installation_id: metadata.installationId
+            const [context, metadata] = await Promise.all([
+                client.context(),
+                client.metadata()
+            ]);
 
-                        }
-                    };
+            const options = {
+                url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    // Original auth data
+                    url: `${context.account.subdomain}.zendesk.com`,
+                    email: metadata.settings.admin_email,
+                    api_token: metadata.settings.api_token,
                     
-                    const response = await client.request(options);
-                    if (response) {
-                        const resultsDiv = document.getElementById('results');
-                        resultsDiv.innerHTML = response;
-                        initializeFilters();
-                    }
-                } catch (error) {
-                    console.error('Error fetching latest report:', error);
-                }
-            }
-
-               const options = {
-            url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({
-                // Original auth data
-                url: `${context.account.subdomain}.zendesk.com`,
-                email: '{{setting.admin_email}}',
-                api_token: '{{setting.api_token}}',
-                
-                // Additional instance data
-                instance_guid: context.instanceGuid,
-                app_guid: metadata.appId,
-                installation_id: metadata.installationId,
-                subdomain: context.account.subdomain,
-                
-                // App metadata
-                plan: metadata.plan?.name,
-                stripe_subscription_id: metadata.stripe_subscription_id,
-                version: metadata.version
-            }),
-            secure: true
-        };
+                    // Additional instance data
+                    instance_guid: context.instanceGuid,
+                    app_guid: metadata.appId,
+                    installation_id: metadata.installationId,
+                    subdomain: context.account.subdomain,
+                    
+                    // App metadata
+                    plan: metadata.plan?.name,
+                    stripe_subscription_id: metadata.stripe_subscription_id,
+                    version: metadata.version
+                }),
+                secure: true
+            };
 
             console.log('Sending request to /check/...');
             const response = await client.request(options);
             
             console.log('Response:', response);
             resultsDiv.innerHTML = response;
-
-            // Cache the results
-            localStorage.setItem(CACHE_KEY, response);
-            localStorage.setItem(CACHE_TIMESTAMP_KEY, new Date().getTime().toString());
 
             // Initialize filters after content is loaded
             initializeFilters();
@@ -186,7 +132,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     800  // maximum height
                 );
 
-                console.log('Resizing to height:', contentHeight);
                 client.invoke('resize', { 
                     width: '100%', 
                     height: `${contentHeight}px`
