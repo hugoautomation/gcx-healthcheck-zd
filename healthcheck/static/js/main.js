@@ -9,21 +9,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial resize
     client.invoke('resize', { width: '100%', height: '600px' });
 
-    // Get the Zendesk domain
-    client.context().then(function(context) {
-        const domain = context.account.subdomain + '.zendesk.com';
-        document.getElementById('domain').value = domain;
-    });
-    document.getElementById('domain').value = domain;
-    document.getElementById('healthcheck-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const formData = new FormData();
-        formData.append('url', document.getElementById('domain').value);
-        formData.append('email', document.getElementById('email').value);
-        formData.append('api_token', document.getElementById('token').value);
-
-        // Show loading state
+    document.getElementById('run-check').addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
+        
+        // Show loading state
         resultsDiv.innerHTML = `
             <div class="text-center my-5">
                 <div class="spinner-border text-primary" role="status">
@@ -33,28 +22,32 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         try {
+            // Get context and parameters
+            const [context, metadata] = await Promise.all([
+                client.context(),
+                client.metadata()
+            ]);
+
+            const formData = new FormData();
+            formData.append('url', context.account.subdomain + '.zendesk.com');
+            formData.append('email', metadata.settings.admin_email);
+            formData.append('api_token', metadata.settings.api_token);
+
             const response = await fetch('/check/', {
                 method: 'POST',
                 body: formData
             });
 
-            console.log('Response status:', response.status);
             const html = await response.text();
-            console.log('Response length:', html.length);
-
-            // Update content
             resultsDiv.innerHTML = html;
 
             // Wait for content to be rendered
             setTimeout(() => {
-                // Get the actual height of the content
                 const contentHeight = Math.max(
                     resultsDiv.scrollHeight,
                     document.getElementById('health-check-content')?.scrollHeight || 0,
-                    600 // minimum height
+                    600
                 );
-                
-                // Resize the app with some padding
                 client.invoke('resize', { 
                     width: '100%', 
                     height: `${contentHeight + 50}px`
@@ -69,7 +62,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p>${error.message || 'An unexpected error occurred. Please try again.'}</p>
                 </div>
             `;
-            client.invoke('resize', { width: '100%', height: '100%' });
         }
     });
 });
