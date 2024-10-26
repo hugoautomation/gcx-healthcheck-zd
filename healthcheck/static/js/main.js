@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p>${error.message || 'An unexpected error occurred. Please try again.'}</p>
                 </div>
             `;
-            client.invoke('resize', { width: '100%', height: '200px' });
+            client.invoke('resize', { width: '100%', height: '100%' });
         }
     });
 });

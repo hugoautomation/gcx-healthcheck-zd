@@ -9,6 +9,7 @@ from zendeskapp import settings
 def app(request):
     return render(request, "healthcheck/app.html")
 
+
 @csrf_exempt
 def health_check(request):
     if request.method == "POST":
@@ -40,7 +41,7 @@ def health_check(request):
             )
 
             print("API Response Status:", response.status_code)
-            print("API Response:", response.text)  # Add this for debugging
+            print("API Response:", response.text)
 
             if response.status_code != 200:
                 return HttpResponse(
@@ -51,13 +52,28 @@ def health_check(request):
                 )
 
             # Process the response data
-            issues = response.json()
+            response_data = response.json()
             
-            # Verify we have valid data
+            # Get instance details
+            instance_info = {
+                "name": response_data.get("name", "Unknown"),
+                "url": response_data.get("instance_url", "Unknown"),
+                "admin_email": response_data.get("admin_email", "Unknown"),
+                "created_at": response_data.get("created_at", "Unknown"),
+            }
+            
+            # Get counts
+            counts = response_data.get("counts", {})
+            total_counts = response_data.get("sum_totals", {})
+            
+            # Extract issues from the response
+            issues = response_data.get("issues", [])
+            
             if not isinstance(issues, list):
-                raise ValueError(f"Unexpected API response format: {issues}")
+                raise ValueError(f"Unexpected issues format: {issues}")
 
             formatted_data = {
+                "instance": instance_info,
                 "total_issues": len(issues),
                 "critical_issues": sum(
                     1 for issue in issues if issue.get("type") == "error"
@@ -65,6 +81,24 @@ def health_check(request):
                 "warning_issues": sum(
                     1 for issue in issues if issue.get("type") == "warning"
                 ),
+                "counts": {
+                    "ticket_fields": counts.get("ticket_fields", {}),
+                    "user_fields": counts.get("user_fields", {}),
+                    "organization_fields": counts.get("organization_fields", {}),
+                    "ticket_forms": counts.get("ticket_forms", {}),
+                    "triggers": counts.get("ticket_triggers", {}),
+                    "macros": counts.get("macros", {}),
+                    "users": counts.get("zendesk_users", {}),
+                    "sla_policies": counts.get("sla_policies", {}),
+                },
+                "totals": {
+                    "total": total_counts.get("sum_total", 0),
+                    "draft": total_counts.get("sum_draft", 0),
+                    "published": total_counts.get("sum_published", 0),
+                    "changed": total_counts.get("sum_changed", 0),
+                    "deletion": total_counts.get("sum_deletion", 0),
+                    "total_changes": total_counts.get("sum_total_changes", 0),
+                },
                 "issues": [
                     {
                         "category": issue.get("item_type", "Unknown"),
@@ -73,10 +107,10 @@ def health_check(request):
                         "edit_url": issue.get("edit_url", "#"),
                     }
                     for issue in issues
-                ] if issues else []  # Ensure we handle empty lists properly
+                ] if issues else []
             }
 
-            print("Formatted data:", formatted_data)  # Add this for debugging
+            print("Formatted data:", formatted_data)
 
             html = render_to_string(
                 "healthcheck/results.html", 
