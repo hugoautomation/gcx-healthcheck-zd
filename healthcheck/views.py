@@ -1,34 +1,9 @@
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.template.loader import render_to_string
-from django.views.decorators.csrf import csrf_exempt
-import requests
-from zendeskapp import settings
-from .models import HealthCheckReport
-
-
-def app(request):
-    return render(request, "healthcheck/app.html")
-
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.template.loader import render_to_string
-from django.views.decorators.csrf import csrf_exempt
-import requests
 import json
-from zendeskapp import settings
-from .models import HealthCheckReport
-
-
-def app(request):
-    return render(request, "healthcheck/app.html")
-
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 import requests
-import json
 from zendeskapp import settings
 from .models import HealthCheckReport
 
@@ -42,12 +17,12 @@ def health_check(request):
     if request.method == "POST":
         try:
             # Extract data from request
-            data = json.loads(request.body) if request.body else request.POST
+            data = json.loads(request.body) if request.body else {}
             print("Received data:", data)
 
             # Prepare URL
             url = data.get("url")
-            if not url.startswith("https://"):
+            if not url or not url.startswith("https://"):
                 url = f"https://{url}"
 
             # Make API request
@@ -83,7 +58,7 @@ def health_check(request):
             # Save report to database
             report = HealthCheckReport.objects.create(
                 instance_guid=data.get('instance_guid'),
-                installation_id=data.get('installation_id'),
+                installation_id=int(data.get('installation_id', 0)),
                 subdomain=data.get('subdomain', ''),
                 plan=data.get('plan'),
                 stripe_subscription_id=data.get('stripe_subscription_id'),
@@ -94,48 +69,7 @@ def health_check(request):
 
             # Process response data for template
             issues = response_data.get("issues", [])
-            counts = response_data.get("counts", {})
-            total_counts = response_data.get("sum_totals", {})
-
-            formatted_data = {
-                "instance": {
-                    "name": response_data.get("name", "Unknown"),
-                    "url": response_data.get("instance_url", "Unknown"),
-                    "admin_email": response_data.get("admin_email", "Unknown"),
-                    "created_at": response_data.get("created_at", "Unknown"),
-                },
-                "total_issues": len(issues),
-                "critical_issues": sum(1 for issue in issues if issue.get("type") == "error"),
-                "warning_issues": sum(1 for issue in issues if issue.get("type") == "warning"),
-                "counts": {
-                    "ticket_fields": counts.get("ticket_fields", {}),
-                    "user_fields": counts.get("user_fields", {}),
-                    "organization_fields": counts.get("organization_fields", {}),
-                    "ticket_forms": counts.get("ticket_forms", {}),
-                    "triggers": counts.get("ticket_triggers", {}),
-                    "macros": counts.get("macros", {}),
-                    "users": counts.get("zendesk_users", {}),
-                    "sla_policies": counts.get("sla_policies", {}),
-                },
-                "totals": {
-                    "total": total_counts.get("sum_total", 0),
-                    "draft": total_counts.get("sum_draft", 0),
-                    "published": total_counts.get("sum_published", 0),
-                    "changed": total_counts.get("sum_changed", 0),
-                    "deletion": total_counts.get("sum_deletion", 0),
-                    "total_changes": total_counts.get("sum_total_changes", 0),
-                },
-                'categories': sorted(set(issue.get('item_type', 'Unknown') for issue in issues)),
-                "issues": [
-                    {
-                        "category": issue.get("item_type", "Unknown"),
-                        "severity": issue.get("type", "warning"),
-                        "description": issue.get("message", ""),
-                        "zendesk_url": issue.get("zendesk_url", "#"),
-                    }
-                    for issue in issues
-                ]
-            }
+            formatted_data = format_response_data(response_data)
 
             # Render template
             html = render_to_string(
@@ -164,26 +98,58 @@ def get_latest_report(request):
             instance_guid=instance_guid
         ).latest('created_at')
         
-        # Use the same formatting logic as health_check view
-        response_data = latest_report.raw_response
-        issues = response_data.get("issues", [])
-        counts = response_data.get("counts", {})
-        total_counts = response_data.get("sum_totals", {})
-
-        formatted_data = {
-            "instance": {
-                "name": response_data.get("name", "Unknown"),
-                "url": response_data.get("instance_url", "Unknown"),
-                "admin_email": response_data.get("admin_email", "Unknown"),
-                "created_at": response_data.get("created_at", "Unknown"),
-            },
-            # ... rest of your formatting logic ...
-        }
-
+        formatted_data = format_response_data(latest_report.raw_response)
         html = render_to_string(
             "healthcheck/results.html", 
             {"data": formatted_data}
         )
         return HttpResponse(html)
     except HealthCheckReport.DoesNotExist:
-        return HttpResponse("")  # Return empty if no report exists
+        return HttpResponse("")
+
+
+def format_response_data(response_data):
+    """Helper function to format response data consistently"""
+    issues = response_data.get("issues", [])
+    counts = response_data.get("counts", {})
+    total_counts = response_data.get("sum_totals", {})
+
+    return {
+        "instance": {
+            "name": response_data.get("name", "Unknown"),
+            "url": response_data.get("instance_url", "Unknown"),
+            "admin_email": response_data.get("admin_email", "Unknown"),
+            "created_at": response_data.get("created_at", "Unknown"),
+        },
+        "total_issues": len(issues),
+        "critical_issues": sum(1 for issue in issues if issue.get("type") == "error"),
+        "warning_issues": sum(1 for issue in issues if issue.get("type") == "warning"),
+        "counts": {
+            "ticket_fields": counts.get("ticket_fields", {}),
+            "user_fields": counts.get("user_fields", {}),
+            "organization_fields": counts.get("organization_fields", {}),
+            "ticket_forms": counts.get("ticket_forms", {}),
+            "triggers": counts.get("ticket_triggers", {}),
+            "macros": counts.get("macros", {}),
+            "users": counts.get("zendesk_users", {}),
+            "sla_policies": counts.get("sla_policies", {}),
+        },
+        "totals": {
+            "total": total_counts.get("sum_total", 0),
+            "draft": total_counts.get("sum_draft", 0),
+            "published": total_counts.get("sum_published", 0),
+            "changed": total_counts.get("sum_changed", 0),
+            "deletion": total_counts.get("sum_deletion", 0),
+            "total_changes": total_counts.get("sum_total_changes", 0),
+        },
+        'categories': sorted(set(issue.get('item_type', 'Unknown') for issue in issues)),
+        "issues": [
+            {
+                "category": issue.get("item_type", "Unknown"),
+                "severity": issue.get("type", "warning"),
+                "description": issue.get("message", ""),
+                "zendesk_url": issue.get("zendesk_url", "#"),
+            }
+            for issue in issues
+        ]
+    }

@@ -134,7 +134,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const options = {
                 url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
                 type: 'POST',
-                data: {
+                contentType: 'application/json',  // Add this line
+                data: JSON.stringify({            // Stringify the data
                     // Original auth data
                     url: `${context.account.subdomain}.zendesk.com`,
                     email: '{{setting.admin_email}}',
@@ -149,7 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     plan: '{{setting.plan}}',
                     stripe_subscription_id: '{{setting.stripe_subscription_id}}',
                     version: '{{setting.version}}'
-                },
+                }),
                 secure: true
             };
 
