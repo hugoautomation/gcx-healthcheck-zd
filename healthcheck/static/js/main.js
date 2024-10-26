@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
       formData.append('email', document.getElementById('email').value);
       formData.append('api_token', document.getElementById('token').value);
 
-      fetch('/healthcheck/check/', {
+      fetch('/check/', {
           method: 'POST',
           headers: {
               'X-CSRFToken': csrftoken
