@@ -111,6 +111,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const [context, metadata] = await Promise.all([
             client.context(),
             client.metadata()
+            client.appGuid()
         ]);
             if (!loadCachedResults()) {
                 // If no cache, fetch latest report from database
@@ -147,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Additional instance data
                 instance_guid: context.instanceGuid,
-                app_guid: metadata.appId,
+                app_guid: appGuid,
                 installation_id: metadata.installationId,
                 subdomain: context.account.subdomain,
                 
