@@ -43,7 +43,7 @@ def health_check(request):
             )
 
             print("API Response Status:", response.status_code)
-            
+
             if response.status_code != 200:
                 return HttpResponse(
                     render_to_string(
@@ -57,14 +57,14 @@ def health_check(request):
 
             # Save report to database
             report = HealthCheckReport.objects.create(
-                instance_guid=data.get('instance_guid'),
-                installation_id=int(data.get('installation_id', 0)),
-                subdomain=data.get('subdomain', ''),
-                plan=data.get('plan'),
-                app_guid=data.get('app_guid'),
-                stripe_subscription_id=data.get('stripe_subscription_id'),
-                version=data.get('version', '1.0.0'),
-                raw_response=response_data
+                instance_guid=data.get("instance_guid"),
+                installation_id=int(data.get("installation_id", 0)),
+                subdomain=data.get("subdomain", ""),
+                plan=data.get("plan"),
+                app_guid=data.get("app_guid"),
+                stripe_subscription_id=data.get("stripe_subscription_id"),
+                version=data.get("version", "1.0.0"),
+                raw_response=response_data,
             )
             print(f"Saved report {report.id} for {report.subdomain}")
 
@@ -73,8 +73,7 @@ def health_check(request):
 
             # Render template
             html = render_to_string(
-                "healthcheck/results.html", 
-                {"data": formatted_data}
+                "healthcheck/results.html", {"data": formatted_data}
             )
 
             return HttpResponse(html)
@@ -93,16 +92,13 @@ def health_check(request):
 
 def get_latest_report(request):
     try:
-        installation_id = request.GET.get('installation_id')
+        installation_id = request.GET.get("installation_id")
         latest_report = HealthCheckReport.objects.filter(
             installation_id=installation_id
-        ).latest('created_at')
-        
+        ).latest("created_at")
+
         formatted_data = format_response_data(latest_report.raw_response)
-        html = render_to_string(
-            "healthcheck/results.html", 
-            {"data": formatted_data}
-        )
+        html = render_to_string("healthcheck/results.html", {"data": formatted_data})
         return HttpResponse(html)
     except HealthCheckReport.DoesNotExist:
         return HttpResponse("")
@@ -142,7 +138,9 @@ def format_response_data(response_data):
             "deletion": total_counts.get("sum_deletion", 0),
             "total_changes": total_counts.get("sum_total_changes", 0),
         },
-        'categories': sorted(set(issue.get('item_type', 'Unknown') for issue in issues)),
+        "categories": sorted(
+            set(issue.get("item_type", "Unknown") for issue in issues)
+        ),
         "issues": [
             {
                 "category": issue.get("item_type", "Unknown"),
@@ -151,5 +149,5 @@ def format_response_data(response_data):
                 "zendesk_url": issue.get("zendesk_url", "#"),
             }
             for issue in issues
-        ]
+        ],
     }
