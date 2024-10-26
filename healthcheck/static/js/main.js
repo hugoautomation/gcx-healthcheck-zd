@@ -109,6 +109,27 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const context = await client.context();
             console.log('Context:', context);
+            if (!loadCachedResults()) {
+                // If no cache, fetch latest report from database
+                try {
+                    const options = {
+                        url: 'https://gcx-healthcheck-zd-production.up.railway.app/latest_report/',
+                        type: 'GET',
+                        data: {
+                            instance_guid: context.instanceGuid
+                        }
+                    };
+                    
+                    const response = await client.request(options);
+                    if (response) {
+                        const resultsDiv = document.getElementById('results');
+                        resultsDiv.innerHTML = response;
+                        initializeFilters();
+                    }
+                } catch (error) {
+                    console.error('Error fetching latest report:', error);
+                }
+            }
 
             const options = {
                 url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',

@@ -155,3 +155,35 @@ def health_check(request):
             )
 
     return HttpResponse("Method not allowed", status=405)
+
+
+def get_latest_report(request):
+    try:
+        instance_guid = request.GET.get('instance_guid')
+        latest_report = HealthCheckReport.objects.filter(
+            instance_guid=instance_guid
+        ).latest('created_at')
+        
+        # Use the same formatting logic as health_check view
+        response_data = latest_report.raw_response
+        issues = response_data.get("issues", [])
+        counts = response_data.get("counts", {})
+        total_counts = response_data.get("sum_totals", {})
+
+        formatted_data = {
+            "instance": {
+                "name": response_data.get("name", "Unknown"),
+                "url": response_data.get("instance_url", "Unknown"),
+                "admin_email": response_data.get("admin_email", "Unknown"),
+                "created_at": response_data.get("created_at", "Unknown"),
+            },
+            # ... rest of your formatting logic ...
+        }
+
+        html = render_to_string(
+            "healthcheck/results.html", 
+            {"data": formatted_data}
+        )
+        return HttpResponse(html)
+    except HealthCheckReport.DoesNotExist:
+        return HttpResponse("")  # Return empty if no report exists
