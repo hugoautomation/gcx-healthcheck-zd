@@ -1,8 +1,18 @@
 {
   "app": {
-    "name": "Zen Tunes",
-    "short_description": "Play the famous zen tunes in your help desk.",
-    "long_description": "Play the famous zen tunes in your help desk and \n listen to the beats it has to offer.",
-    "installation_instructions": "Simply click install."
+    "name": "Zendesk Healthcheck",
+    "short_description": "Comprehensive health check and monitoring for your Zendesk instance",
+    "long_description": "Monitor and maintain your Zendesk instance's health with automated checks for configuration issues, best practices, and potential problems. Get detailed reports on tickets, users, organizations, macros, triggers, and more.\n\nFeatures:\n- Automated health checks\n- Detailed issue reporting\n- Configuration monitoring\n- Best practice recommendations",
+    "installation_instructions": "1. Enter your Zendesk admin email address\n2. Generate and enter an API token from your Zendesk admin settings\n3. Click install to complete setup",
+    "parameters": {
+      "admin_email": {
+        "label": "Admin Email (for API call)",
+        "helpText": "Enter the email address of a Zendesk admin account that will be used for API calls"
+      },
+      "api_token": {
+        "label": "API Token",
+        "helpText": "Enter your Zendesk API token. You can generate this from your admin settings"
+      }
+    }
   }
 }

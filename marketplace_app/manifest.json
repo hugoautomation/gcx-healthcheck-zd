@@ -26,11 +26,14 @@
       "type": "text",
       "required": true,
       "secure": true,
-      "default": "",
       "label": "API Token"
     }
   ],
   "defaultLocale": "en",
-  "private": true,
-  "domainWhitelist": ["gcx-healthcheck-zd-production.up.railway.app", "app.configly.io"]
+  "private": false,
+  "domainWhitelist": ["gcx-healthcheck-zd-production.up.railway.app", "app.configly.io"],
+  "termsOfService": "https://gravitycx.com.au/terms-and-conditions-professional-services",
+  "privacyPolicy": "https://gravitycx.com.au/privacy",
+  "marketingUrl": "https://gravitycx.com.au/",
+  "supportUrl": "https://help.gravitycx.com.au/hc/en-au"
 }

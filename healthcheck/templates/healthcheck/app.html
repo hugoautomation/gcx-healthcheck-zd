@@ -3,9 +3,16 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@zendeskgarden/css-bedrock@10.0.1/dist/index.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@zendeskgarden/css-buttons@9.0.0/dist/index.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@zendeskgarden/css-tables@9.0.0/dist/index.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@zendeskgarden/css-forms@9.0.0/dist/index.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@zendeskgarden/css-utilities@5.0.0/dist/index.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@zendeskgarden/css-variables@7.0.0/dist/index.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@zendeskgarden/css-variables@7.0.0/dist/index.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 
-     <link href="{% static 'css/main.css' %}" rel="stylesheet">
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
     <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
     <script src="{% static 'js/main.js' %}"></script>
     <style>
@@ -20,15 +27,15 @@
             top: 0;
             background: white;
             z-index: 1000;
-            padding: 1rem 0;
+            padding: var(--zd-spacing-md) 0;
         }
     </style>
 </head>
-<body>
-    <div class="container">
+<body class="c-body">
+    <div class="l-wrapper">
         <div class="sticky-header">
-            <h2 class="u-semibold u-fs-xl mb-4">Zendesk Healthcheck</h2>
-            <button id="run-check" class="btn btn-primary mb-4">Run Health Check</button>
+            <h1 class="c-headline--md u-mb-md my-3 font-bold text-2xl">Zendesk Healthcheck</h1>
+            <button id="run-check" class="c-btn c-btn--primary u-mb-md">Run Health Check</button>
         </div>
         <div class="scrollable-container">
             <div id="results">
