@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', async function() {
+    
     const client = window.ZAFClient ? window.ZAFClient.init() : null;
     
     if (!client) {

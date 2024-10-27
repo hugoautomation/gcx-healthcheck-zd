@@ -1,0 +1,12 @@
+{
+    "name": "zendesk-healthcheck",
+    "version": "1.0.0",
+    "scripts": {
+      "build-css": "tailwindcss -i ./healthcheck/static/css/tailwind.css -o ./healthcheck/static/css/main.css --minify",
+      "watch-css": "tailwindcss -i ./healthcheck/static/css/tailwind.css -o ./healthcheck/static/css/main.css --watch"
+    },
+    "devDependencies": {
+      "tailwindcss": "^3.3.0",
+      "@zendeskgarden/tailwindcss": "^3.0.0"
+    }
+  }
