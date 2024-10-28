@@ -201,58 +201,75 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
         ],
     }
 
-
 @csrf_exempt
 def stripe_webhook(request):
-    if request.method == "POST":
-        try:
-            event = json.loads(request.body)
-            if event["type"] == "checkout.session.completed":
-                session = event["data"]["object"]
-                report_id = session.get("client_reference_id")
-
-                if report_id:
-                    try:
-                        # Get and update the report
-                        report = HealthCheckReport.objects.get(id=report_id)
-                        report.is_unlocked = True
-                        report.stripe_payment_id = session["payment_intent"]
-                        report.save()
-
-                        print(f"Successfully unlocked report {report_id}")
-                        return HttpResponse(status=200)
-                    except HealthCheckReport.DoesNotExist:
-                        print(f"Report {report_id} not found")
-                        return HttpResponse("Report not found", status=404)
-
+    if request.method != "POST":
+        return HttpResponse("Method not allowed", status=405)
+        
+    try:
+        event = json.loads(request.body)
+        print("Received webhook event:", event["type"])  # Debug logging
+        
+        if event["type"] == "checkout.session.completed":
+            session = event["data"]["object"]
+            report_id = session.get("client_reference_id")
+            
+            if not report_id:
+                print("No report ID provided in webhook")
                 return HttpResponse("No report ID provided", status=400)
-        except Exception as e:
-            print(f"Webhook error: {str(e)}")
-            return HttpResponse(str(e), status=400)
-    return HttpResponse("Method not allowed", status=405)
-
+                
+            try:
+                report = HealthCheckReport.objects.get(id=report_id)
+                report.is_unlocked = True
+                report.stripe_payment_id = session["payment_intent"]
+                report.save()
+                
+                print(f"Successfully unlocked report {report_id}")
+                return HttpResponse("Success", status=200)
+                
+            except HealthCheckReport.DoesNotExist:
+                print(f"Report {report_id} not found")
+                return HttpResponse("Report not found", status=404)
+                
+    except json.JSONDecodeError:
+        print("Invalid JSON in webhook request")
+        return HttpResponse("Invalid JSON", status=400)
+    except Exception as e:
+        print(f"Webhook error: {str(e)}")
+        return HttpResponse(str(e), status=400)
 
 def check_unlock_status(request):
-    report_id = request.GET.get("report_id")
-
+    report_id = request.GET.get('report_id')
+    if not report_id:
+        return JsonResponse({"error": "No report ID provided"}, status=400)
+    
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-
+        
         if report.is_unlocked:
             # Format the full report data
             report_data = format_response_data(
                 report.raw_response,
                 plan=report.plan,
                 report_id=report.id,
-                last_check=report.created_at,
+                last_check=report.created_at
             )
-
+            
             # Render the template with full data
-            html = render_to_string("healthcheck/results.html", {"data": report_data})
-
-            return JsonResponse({"is_unlocked": True, "html": html})
-
-        return JsonResponse({"is_unlocked": False})
-
+            html = render_to_string('healthcheck/results.html', {
+                'data': report_data
+            })
+            
+            return JsonResponse({
+                'is_unlocked': True,
+                'html': html
+            })
+        
+        return JsonResponse({
+            'is_unlocked': False
+        })
+        
     except HealthCheckReport.DoesNotExist:
-        return JsonResponse({"error": "Report not found"}, status=404)
+        return JsonResponse({
+            'error': 'Report not found'
+        }, status=404)

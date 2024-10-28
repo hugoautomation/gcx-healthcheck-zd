@@ -180,36 +180,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const reportId = this.dataset.reportId;
             const stripePaymentLink = `https://buy.stripe.com/dR68zbfDvboy7mweUU?client_reference_id=${reportId}`;
             
-            // Define the window features
-            const windowFeatures = [
-                'width=600',
-                'height=800',
-                'menubar=no',
-                'toolbar=no',
-                'location=no',
-                'status=no',
-                'scrollbars=yes',
-                'resizable=yes',
-                'centerscreen=yes'
-            ].join(',');
-
             // Open the payment window
             const paymentWindow = window.open(stripePaymentLink, 'StripePayment', windowFeatures);
             
             // Start polling for unlock status
             const pollInterval = setInterval(async () => {
                 try {
-                    const response = await fetch(`/healthcheck/check-unlock-status/?report_id=${reportId}`);
-                    if (response.ok) {
+                    // Update this URL to match your domain
+                    const response = await fetch(`/check-unlock-status/?report_id=${reportId}`);
+                    const data = await response.json();
+                    
+                    if (response.ok && data.is_unlocked) {
                         // Report is unlocked, update the content
-                        const html = await response.text();
-                        document.getElementById('results').innerHTML = html;
+                        document.getElementById('results').innerHTML = data.html;
                         clearInterval(pollInterval);
                     }
                 } catch (error) {
                     console.error('Error checking unlock status:', error);
                 }
-            }, 2000); // Check every 2 seconds
+            }, 2000);
+
 
             // Stop polling if the payment window is closed
             const checkWindow = setInterval(() => {
