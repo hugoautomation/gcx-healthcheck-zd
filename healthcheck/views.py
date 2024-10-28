@@ -17,17 +17,21 @@ def app(request):
     if installation_id:
         try:
             # Always get the latest report
-            latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+            latest_report = HealthCheckReport.get_latest_for_installation(
+                installation_id
+            )
             if latest_report:
                 initial_data = {
                     "data": format_response_data(
                         latest_report.raw_response,
                         last_check=latest_report.updated_at,
                         plan=latest_report.plan,
-                        report_id=latest_report.id
+                        report_id=latest_report.id,
                     )
                 }
-                print(f"Found latest report {latest_report.id} for installation {installation_id}")
+                print(
+                    f"Found latest report {latest_report.id} for installation {installation_id}"
+                )
         except Exception as e:
             print(f"Error getting report: {str(e)}")
             pass
@@ -92,12 +96,9 @@ def health_check(request):
 
             print(f"Created new report {report.id} for {report.subdomain}")
 
-
             # Process response data for template
             formatted_data = format_response_data(
-                response_data,
-                plan=data.get("plan", "Free"),
-                report_id=report.id
+                response_data, plan=data.get("plan", "Free"), report_id=report.id
             )
             # Render template
             html = render_to_string(
@@ -118,7 +119,7 @@ def health_check(request):
     return HttpResponse("Method not allowed", status=405)
 
 
-def format_response_data(response_data,plan="Free", report_id=None, last_check=None):
+def format_response_data(response_data, plan="Free", report_id=None, last_check=None):
     """Helper function to format response data consistently"""
     issues = response_data.get("issues", [])
     counts = response_data.get("counts", {})
@@ -129,7 +130,8 @@ def format_response_data(response_data,plan="Free", report_id=None, last_check=N
         is_unlocked = ReportUnlock.objects.filter(report_id=report_id).exists()
         if not is_unlocked:
             issues = [
-                issue for issue in issues
+                issue
+                for issue in issues
                 if issue.get("item_type") in ["ticket_forms", "ticket_fields"]
             ]
     return {
@@ -179,22 +181,22 @@ def format_response_data(response_data,plan="Free", report_id=None, last_check=N
         ],
     }
 
+
 @csrf_exempt
 def stripe_webhook(request):
     if request.method == "POST":
         try:
             event = json.loads(request.body)
-            if event['type'] == 'checkout.session.completed':
-                session = event['data']['object']
-                report_id = session.get('client_reference_id')  # Changed from metadata
-                
+            if event["type"] == "checkout.session.completed":
+                session = event["data"]["object"]
+                report_id = session.get("client_reference_id")  # Changed from metadata
+
                 if report_id:
                     # Create unlock record
                     ReportUnlock.objects.create(
-                        report_id=report_id,
-                        stripe_payment_id=session['payment_intent']
+                        report_id=report_id, stripe_payment_id=session["payment_intent"]
                     )
-                
+
                 return HttpResponse(status=200)
         except Exception as e:
             return HttpResponse(str(e), status=400)

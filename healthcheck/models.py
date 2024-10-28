@@ -20,14 +20,16 @@ class HealthCheckReport(models.Model):
     # Report data
     raw_response = models.JSONField()  # Store the complete API response
     created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)  # Add this line
+    updated_at = models.DateTimeField(auto_now=True)
 
-   @classmethod
+    @classmethod
     def get_latest_for_installation(cls, installation_id):
         """Get the most recent report for an installation"""
-        return cls.objects.filter(
-            installation_id=installation_id
-        ).order_by('-created_at').first()
+        return (
+            cls.objects.filter(installation_id=installation_id)
+            .order_by("-created_at")
+            .first()
+        )
 
     @property
     def is_latest(self):
@@ -38,27 +40,31 @@ class HealthCheckReport(models.Model):
     @property
     def previous_report(self):
         """Get the previous report for this installation"""
-        return self.__class__.objects.filter(
-            installation_id=self.installation_id,
-            created_at__lt=self.created_at
-        ).order_by('-created_at').first()
+        return (
+            self.__class__.objects.filter(
+                installation_id=self.installation_id, created_at__lt=self.created_at
+            )
+            .order_by("-created_at")
+            .first()
+        )
 
     class Meta:
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["instance_guid", "created_at"]),
-            models.Index(fields=["installation_id", "created_at"]),  # Add this index
+            models.Index(fields=["installation_id", "created_at"]),
         ]
 
 
 class ReportUnlock(models.Model):
     """Tracks when a report has been unlocked via payment"""
+
     report = models.ForeignKey(HealthCheckReport, on_delete=models.CASCADE)
     stripe_payment_id = models.CharField(max_length=320)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def __str__(self):
         return f"Unlock for report {self.report.id} at {self.created_at}"
