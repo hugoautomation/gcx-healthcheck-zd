@@ -28,3 +28,16 @@ class HealthCheckReport(models.Model):
 
     def __str__(self):
         return f"Report for {self.subdomain} at {self.created_at}"
+
+
+class ReportUnlock(models.Model):
+    """Tracks when a report has been unlocked via payment"""
+    report = models.ForeignKey(HealthCheckReport, on_delete=models.CASCADE)
+    stripe_payment_id = models.CharField(max_length=320)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Unlock for report {self.report.id} at {self.created_at}"

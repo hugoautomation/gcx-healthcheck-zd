@@ -174,3 +174,13 @@ function initializeFilters() {
         }
     });
 }
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.unlock-report').forEach(button => {
+        button.addEventListener('click', function() {
+            const reportId = this.dataset.reportId;
+            // Using your specific payment link
+            const stripePaymentLink = `https://buy.stripe.com/dR68zbfDvboy7mweUU?client_reference_id=${reportId}`;
+            window.open(stripePaymentLink, '_blank');
+        });
+    });
+});

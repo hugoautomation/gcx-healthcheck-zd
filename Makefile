@@ -5,13 +5,16 @@ start:
 	@echo "Starting Django server..."
 	@ruff check --fix
 	@ruff format
+	@npm run build-css
 	@sass --watch static/scss:static/css &
 	@railway run python3 manage.py runserver 8000
 
 format:
 	@echo "Formatting Python code..."
+	@npm run build-css
 	@ruff check --fix
 	@ruff format
+	
 
 migrate:
 	@echo "Applying Django migrations..."

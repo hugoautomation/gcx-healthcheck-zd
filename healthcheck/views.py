@@ -5,7 +5,7 @@ from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 import requests
 from zendeskapp import settings
-from .models import HealthCheckReport
+from .models import HealthCheckReport, ReportUnlock
 from django.utils.timesince import timesince
 
 
@@ -99,8 +99,11 @@ def health_check(request):
             print(f"{action} report {report.id} for {report.subdomain}")
 
             # Process response data for template
-            formatted_data = format_response_data(response_data)
-
+            formatted_data = format_response_data(
+                response_data,
+                plan=data.get("plan", "Free"),
+                report_id=report.id
+            )
             # Render template
             html = render_to_string(
                 "healthcheck/results.html", {"data": formatted_data}
@@ -120,12 +123,20 @@ def health_check(request):
     return HttpResponse("Method not allowed", status=405)
 
 
-def format_response_data(response_data, last_check=None):
+def format_response_data(response_data,plan="Free", report_id=None, last_check=None):
     """Helper function to format response data consistently"""
     issues = response_data.get("issues", [])
     counts = response_data.get("counts", {})
     total_counts = response_data.get("sum_totals", {})
-
+    # Filter issues for free plan
+    if plan == "Free" and report_id:
+        # Check if report is unlocked
+        is_unlocked = ReportUnlock.objects.filter(report_id=report_id).exists()
+        if not is_unlocked:
+            issues = [
+                issue for issue in issues
+                if issue.get("item_type") in ["ticket_forms", "ticket_fields"]
+            ]
     return {
         "instance": {
             "name": response_data.get("name", "Unknown"),
@@ -159,6 +170,9 @@ def format_response_data(response_data, last_check=None):
         "categories": sorted(
             set(issue.get("item_type", "Unknown") for issue in issues)
         ),
+        "is_free_plan": plan == "Free",
+        "is_unlocked": is_unlocked if plan == "Free" else True,
+        "report_id": report_id,
         "issues": [
             {
                 "category": issue.get("item_type", "Unknown"),
@@ -169,3 +183,24 @@ def format_response_data(response_data, last_check=None):
             for issue in issues
         ],
     }
+
+@csrf_exempt
+def stripe_webhook(request):
+    if request.method == "POST":
+        try:
+            event = json.loads(request.body)
+            if event['type'] == 'checkout.session.completed':
+                session = event['data']['object']
+                report_id = session.get('client_reference_id')  # Changed from metadata
+                
+                if report_id:
+                    # Create unlock record
+                    ReportUnlock.objects.create(
+                        report_id=report_id,
+                        stripe_payment_id=session['payment_intent']
+                    )
+                
+                return HttpResponse(status=200)
+        except Exception as e:
+            return HttpResponse(str(e), status=400)
+    return HttpResponse(status=405)
