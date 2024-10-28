@@ -201,3 +201,20 @@ def stripe_webhook(request):
         except Exception as e:
             return HttpResponse(str(e), status=400)
     return HttpResponse(status=405)
+
+def check_unlock_status(request):
+    report_id = request.GET.get('report_id')
+    if report_id:
+        is_unlocked = ReportUnlock.objects.filter(report_id=report_id).exists()
+        if is_unlocked:
+            # If unlocked, return the full report HTML
+            report = HealthCheckReport.objects.get(id=report_id)
+            formatted_data = format_response_data(
+                report.raw_response,
+                plan=report.plan,
+                report_id=report.id,
+                last_check=report.updated_at
+            )
+            html = render_to_string('healthcheck/results.html', {'data': formatted_data})
+            return HttpResponse(html)
+    return HttpResponse(status=404)

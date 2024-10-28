@@ -182,19 +182,42 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Define the window features
             const windowFeatures = [
-                'width=600',           // Width in pixels
-                'height=800',          // Height in pixels
-                'menubar=no',          // Hide the browser menu bar
-                'toolbar=no',          // Hide the browser toolbar
-                'location=no',         // Hide the address bar
-                'status=no',           // Hide the status bar
-                'scrollbars=yes',      // Show scrollbars if needed
-                'resizable=yes',       // Allow window resizing
-                'centerscreen=yes'     // Center the window on the screen
+                'width=600',
+                'height=800',
+                'menubar=no',
+                'toolbar=no',
+                'location=no',
+                'status=no',
+                'scrollbars=yes',
+                'resizable=yes',
+                'centerscreen=yes'
             ].join(',');
 
-            // Open the payment link in a new window with specified features
-            window.open(stripePaymentLink, 'StripePayment', windowFeatures);
+            // Open the payment window
+            const paymentWindow = window.open(stripePaymentLink, 'StripePayment', windowFeatures);
+            
+            // Start polling for unlock status
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/healthcheck/check-unlock-status/?report_id=${reportId}`);
+                    if (response.ok) {
+                        // Report is unlocked, update the content
+                        const html = await response.text();
+                        document.getElementById('results').innerHTML = html;
+                        clearInterval(pollInterval);
+                    }
+                } catch (error) {
+                    console.error('Error checking unlock status:', error);
+                }
+            }, 2000); // Check every 2 seconds
+
+            // Stop polling if the payment window is closed
+            const checkWindow = setInterval(() => {
+                if (paymentWindow.closed) {
+                    clearInterval(pollInterval);
+                    clearInterval(checkWindow);
+                }
+            }, 1000);
         });
     });
 });
