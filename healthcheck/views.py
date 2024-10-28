@@ -124,16 +124,28 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
     issues = response_data.get("issues", [])
     counts = response_data.get("counts", {})
     total_counts = response_data.get("sum_totals", {})
-    # Filter issues for free plan
+
+    # Calculate hidden issues for free plan
+    hidden_issues_count = 0
+    hidden_categories = {}
+
     if plan == "Free" and report_id:
-        # Check if report is unlocked
         is_unlocked = ReportUnlock.objects.filter(report_id=report_id).exists()
         if not is_unlocked:
+            # Count issues by category before filtering
+            for issue in issues:
+                category = issue.get("item_type")
+                if category not in ["ticket_forms", "ticket_fields"]:
+                    hidden_issues_count += 1
+                    hidden_categories[category] = hidden_categories.get(category, 0) + 1
+
+            # Filter issues for display
             issues = [
                 issue
                 for issue in issues
                 if issue.get("item_type") in ["ticket_forms", "ticket_fields"]
             ]
+
     return {
         "instance": {
             "name": response_data.get("name", "Unknown"),
@@ -167,6 +179,8 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
         "categories": sorted(
             set(issue.get("item_type", "Unknown") for issue in issues)
         ),
+        "hidden_issues_count": hidden_issues_count,
+        "hidden_categories": hidden_categories,
         "is_free_plan": plan == "Free",
         "is_unlocked": is_unlocked if plan == "Free" else True,
         "report_id": report_id,
@@ -202,8 +216,9 @@ def stripe_webhook(request):
             return HttpResponse(str(e), status=400)
     return HttpResponse(status=405)
 
+
 def check_unlock_status(request):
-    report_id = request.GET.get('report_id')
+    report_id = request.GET.get("report_id")
     if report_id:
         is_unlocked = ReportUnlock.objects.filter(report_id=report_id).exists()
         if is_unlocked:
@@ -213,8 +228,10 @@ def check_unlock_status(request):
                 report.raw_response,
                 plan=report.plan,
                 report_id=report.id,
-                last_check=report.updated_at
+                last_check=report.updated_at,
             )
-            html = render_to_string('healthcheck/results.html', {'data': formatted_data})
+            html = render_to_string(
+                "healthcheck/results.html", {"data": formatted_data}
+            )
             return HttpResponse(html)
     return HttpResponse(status=404)
