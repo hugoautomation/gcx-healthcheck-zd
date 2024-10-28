@@ -22,6 +22,12 @@ class HealthCheckReport(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Payment status
+    is_unlocked = models.BooleanField(default=False)  # New field
+    stripe_payment_id = models.CharField(
+        max_length=320, null=True, blank=True
+    )  # Optional: track payment ID
+
     @classmethod
     def get_latest_for_installation(cls, installation_id):
         """Get the most recent report for an installation"""
@@ -55,16 +61,8 @@ class HealthCheckReport(models.Model):
             models.Index(fields=["installation_id", "created_at"]),
         ]
 
-
-class ReportUnlock(models.Model):
-    """Tracks when a report has been unlocked via payment"""
-
-    report = models.ForeignKey(HealthCheckReport, on_delete=models.CASCADE)
-    stripe_payment_id = models.CharField(max_length=320)
-    created_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"Unlock for report {self.report.id} at {self.created_at}"
+    def save(self, *args, **kwargs):
+        # Auto-unlock for non-Free plans
+        if self.plan != "Free":
+            self.is_unlocked = True
+        super().save(*args, **kwargs)

@@ -1,11 +1,12 @@
 import json
+from django.http import JsonResponse
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 import requests
 from zendeskapp import settings
-from .models import HealthCheckReport, ReportUnlock
+from .models import HealthCheckReport
 from django.utils.timesince import timesince
 
 
@@ -130,7 +131,12 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
     hidden_categories = {}
 
     if plan == "Free" and report_id:
-        is_unlocked = ReportUnlock.objects.filter(report_id=report_id).exists()
+        try:
+            report = HealthCheckReport.objects.get(id=report_id)
+            is_unlocked = report.is_unlocked
+        except HealthCheckReport.DoesNotExist:
+            is_unlocked = False
+
         if not is_unlocked:
             # Count issues by category before filtering
             for issue in issues:
@@ -203,35 +209,50 @@ def stripe_webhook(request):
             event = json.loads(request.body)
             if event["type"] == "checkout.session.completed":
                 session = event["data"]["object"]
-                report_id = session.get("client_reference_id")  # Changed from metadata
+                report_id = session.get("client_reference_id")
 
                 if report_id:
-                    # Create unlock record
-                    ReportUnlock.objects.create(
-                        report_id=report_id, stripe_payment_id=session["payment_intent"]
-                    )
+                    try:
+                        # Get and update the report
+                        report = HealthCheckReport.objects.get(id=report_id)
+                        report.is_unlocked = True
+                        report.stripe_payment_id = session["payment_intent"]
+                        report.save()
 
-                return HttpResponse(status=200)
+                        print(f"Successfully unlocked report {report_id}")
+                        return HttpResponse(status=200)
+                    except HealthCheckReport.DoesNotExist:
+                        print(f"Report {report_id} not found")
+                        return HttpResponse("Report not found", status=404)
+
+                return HttpResponse("No report ID provided", status=400)
         except Exception as e:
+            print(f"Webhook error: {str(e)}")
             return HttpResponse(str(e), status=400)
-    return HttpResponse(status=405)
+    return HttpResponse("Method not allowed", status=405)
 
 
 def check_unlock_status(request):
     report_id = request.GET.get("report_id")
-    if report_id:
-        is_unlocked = ReportUnlock.objects.filter(report_id=report_id).exists()
-        if is_unlocked:
-            # If unlocked, return the full report HTML
-            report = HealthCheckReport.objects.get(id=report_id)
-            formatted_data = format_response_data(
+
+    try:
+        report = HealthCheckReport.objects.get(id=report_id)
+
+        if report.is_unlocked:
+            # Format the full report data
+            report_data = format_response_data(
                 report.raw_response,
                 plan=report.plan,
                 report_id=report.id,
-                last_check=report.updated_at,
+                last_check=report.created_at,
             )
-            html = render_to_string(
-                "healthcheck/results.html", {"data": formatted_data}
-            )
-            return HttpResponse(html)
-    return HttpResponse(status=404)
+
+            # Render the template with full data
+            html = render_to_string("healthcheck/results.html", {"data": report_data})
+
+            return JsonResponse({"is_unlocked": True, "html": html})
+
+        return JsonResponse({"is_unlocked": False})
+
+    except HealthCheckReport.DoesNotExist:
+        return JsonResponse({"error": "Report not found"}, status=404)
