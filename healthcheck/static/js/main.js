@@ -178,9 +178,23 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.unlock-report').forEach(button => {
         button.addEventListener('click', function() {
             const reportId = this.dataset.reportId;
-            // Using your specific payment link
             const stripePaymentLink = `https://buy.stripe.com/dR68zbfDvboy7mweUU?client_reference_id=${reportId}`;
-            window.open(stripePaymentLink, '_blank');
+            
+            // Define the window features
+            const windowFeatures = [
+                'width=600',           // Width in pixels
+                'height=800',          // Height in pixels
+                'menubar=no',          // Hide the browser menu bar
+                'toolbar=no',          // Hide the browser toolbar
+                'location=no',         // Hide the address bar
+                'status=no',           // Hide the status bar
+                'scrollbars=yes',      // Show scrollbars if needed
+                'resizable=yes',       // Allow window resizing
+                'centerscreen=yes'     // Center the window on the screen
+            ].join(',');
+
+            // Open the payment link in a new window with specified features
+            window.open(stripePaymentLink, 'StripePayment', windowFeatures);
         });
     });
 });

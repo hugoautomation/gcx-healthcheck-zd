@@ -9,7 +9,19 @@
 <div class="alert alert-info mb-4">
     <h6 class="alert-heading">Free Plan</h6>
     <p>You're viewing the free version of the report which only shows Ticket Forms and Ticket Fields issues.</p>
-    <button class="btn c-btn  unlock-report" data-report-id="{{ data.report_id }}">
+    
+    {% if data.hidden_issues_count > 0 %}
+    <div class="mb-3">
+        <strong>We found {{ data.hidden_issues_count }} additional issues in other areas:</strong>
+        <ul class="mt-2">
+            {% for category, count in data.hidden_categories.items %}
+                <li>{{ category }}: {{ count }} issue{{ count|pluralize }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <button class="btn c-btn unlock-report" data-report-id="{{ data.report_id }}">
         Unlock Full Report
     </button>
 </div>
@@ -76,7 +88,7 @@
                             <td>
                                 <a href="{{ issue.zendesk_url }}" 
                                    target="_blank" 
-                                   class="btn btn-sm c-btn">
+                                   class="btn btn-sm c-btn c-btn--sm">
                                     <i class="bi bi-box-arrow-up-right"></i> Edit
                                 </a>
                             </td>
