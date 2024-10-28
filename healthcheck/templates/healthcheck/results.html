@@ -5,9 +5,11 @@
     </div>
 {% else %}
     <div class="text-muted small mb-3 d-inline-block">Last checked: {{ data.time_since_check }} ago</div>
-    <a href="{% url 'download_report_csv' data.id %}" class="btn c-btn c-btn--sm d-inline-block float-right">
-        Download CSV Report
-    </a>
+    {% if data.report_id %}  {# Only show download button if we have a report ID #}
+        <a href="{% url 'download_report_csv' data.report_id %}" class="btn c-btn c-btn--sm d-inline-block float-right">
+            Download CSV Report
+        </a>
+    {% endif %}
     {% if data.is_free_plan and not data.is_unlocked %}
         <div class="alert alert-info mb-4">
             <h6 class="alert-heading">Free Plan</h6>
