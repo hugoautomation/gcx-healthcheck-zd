@@ -10,27 +10,26 @@ from django.utils.timesince import timesince
 
 
 def app(request):
-    # Get installation_id from query parameters
     installation_id = request.GET.get("installation_id")
-    print(f"Received installation_id: {installation_id}")  # Debug log
+    print(f"Received installation_id: {installation_id}")
 
     initial_data = {}
     if installation_id:
         try:
-            latest_report = HealthCheckReport.objects.filter(
-                installation_id=installation_id
-            ).latest("created_at")
-
-            # Format the data with last_check time
-            initial_data = {
-                "data": format_response_data(
-                    latest_report.raw_response, last_check=latest_report.updated_at
-                )
-            }
-            print(f"Found report for installation {installation_id}")  # Debug log
-
-        except (ValueError, HealthCheckReport.DoesNotExist) as e:
-            print(f"Error getting report: {str(e)}")  # Debug log
+            # Always get the latest report
+            latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+            if latest_report:
+                initial_data = {
+                    "data": format_response_data(
+                        latest_report.raw_response,
+                        last_check=latest_report.updated_at,
+                        plan=latest_report.plan,
+                        report_id=latest_report.id
+                    )
+                }
+                print(f"Found latest report {latest_report.id} for installation {installation_id}")
+        except Exception as e:
+            print(f"Error getting report: {str(e)}")
             pass
 
     return render(request, "healthcheck/app.html", initial_data)
@@ -80,23 +79,19 @@ def health_check(request):
             response_data = response.json()
 
             # Update or create report in database
-            report, created = HealthCheckReport.objects.update_or_create(
-                installation_id=int(
-                    data.get("installation_id", 0)
-                ),  # This is the lookup field
-                defaults={
-                    "instance_guid": data.get("instance_guid"),
-                    "subdomain": data.get("subdomain", ""),
-                    "plan": data.get("plan"),
-                    "app_guid": data.get("app_guid"),
-                    "stripe_subscription_id": data.get("stripe_subscription_id"),
-                    "version": data.get("version", "1.0.0"),
-                    "raw_response": response_data,
-                },
+            report = HealthCheckReport.objects.create(
+                installation_id=int(data.get("installation_id", 0)),
+                instance_guid=data.get("instance_guid"),
+                subdomain=data.get("subdomain", ""),
+                plan=data.get("plan"),
+                app_guid=data.get("app_guid"),
+                stripe_subscription_id=data.get("stripe_subscription_id"),
+                version=data.get("version", "1.0.0"),
+                raw_response=response_data,
             )
 
-            action = "Created" if created else "Updated"
-            print(f"{action} report {report.id} for {report.subdomain}")
+            print(f"Created new report {report.id} for {report.subdomain}")
+
 
             # Process response data for template
             formatted_data = format_response_data(
