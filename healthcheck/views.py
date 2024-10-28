@@ -8,6 +8,7 @@ import requests
 from zendeskapp import settings
 from .models import HealthCheckReport
 from django.utils.timesince import timesince
+import csv
 
 
 def app(request):
@@ -268,6 +269,40 @@ def check_unlock_status(request):
         return JsonResponse({
             'is_unlocked': False
         })
+        
+    except HealthCheckReport.DoesNotExist:
+        return JsonResponse({
+            'error': 'Report not found'
+        }, status=404)
+
+
+
+def download_report_csv(request, report_id):
+    """Download health check report as CSV"""
+    try:
+        report = HealthCheckReport.objects.get(id=report_id)
+        
+        # Create the HttpResponse object with CSV header
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="healthcheck_report_{report_id}.csv"'
+        
+        # Create CSV writer
+        writer = csv.writer(response)
+        
+        # Write header row
+        writer.writerow(['Type', 'Severity', 'Object Type', 'Description', 'Zendesk URL'])
+        
+        # Write data rows
+        for issue in report.raw_response.get('issues', []):
+            writer.writerow([
+                issue.get('item_type', ''),
+                issue.get('type', ''),
+                issue.get('item_type', ''),
+                issue.get('message', ''),
+                issue.get('zendesk_url', '')
+            ])
+        
+        return response
         
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({
