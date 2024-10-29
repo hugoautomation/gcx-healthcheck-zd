@@ -46,34 +46,34 @@ function showError(element, error, title = 'Error') {
 // Add these functions after the utility functions and before initializeComponents()
 
 function initializeFilters() {
-    const filterButtons = document.querySelectorAll('.filter-button');
-    if (!filterButtons.length) return;
+    const severityFilter = document.getElementById('severity-filter');
+    const categoryFilter = document.getElementById('category-filter');
+    
+    if (!severityFilter || !categoryFilter) return;
 
-    filterButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const category = this.dataset.category;
-            const issueRows = document.querySelectorAll('.issue-row');
-            
-            // Update active state of filter buttons
-            filterButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Show/hide issues based on filter
-            issueRows.forEach(row => {
-                if (category === 'all' || row.dataset.category === category) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
+    function filterIssues() {
+        const selectedSeverity = severityFilter.value;
+        const selectedCategory = categoryFilter.value;
+        const issueRows = document.querySelectorAll('.issue-row');
 
-            adjustContentHeight();
+        issueRows.forEach(row => {
+            const severity = row.dataset.severity;
+            const category = row.dataset.category;
+            const showSeverity = selectedSeverity === 'all' || severity === selectedSeverity;
+            const showCategory = selectedCategory === 'all' || category === selectedCategory;
+            
+            row.style.display = showSeverity && showCategory ? '' : 'none';
         });
-    });
+
+        adjustContentHeight();
+    }
+
+    severityFilter.addEventListener('change', filterIssues);
+    categoryFilter.addEventListener('change', filterIssues);
 }
 
 function initializeUnlockButtons() {
-    const unlockButtons = document.querySelectorAll('.unlock-report-button');
+    const unlockButtons = document.querySelectorAll('.unlock-report');
     if (!unlockButtons.length) return;
 
     unlockButtons.forEach(button => {
