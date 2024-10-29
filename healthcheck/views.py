@@ -1,16 +1,18 @@
-import json
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
-from django.http import HttpResponse
-from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib import messages
+import json
 import requests
 from zendeskapp import settings
 from .models import HealthCheckReport, HealthCheckMonitoring
-from django.utils.timesince import timesince
+from .utils import (
+    format_response_data,
+    get_monitoring_context,
+    format_historical_reports,
+    render_report_components
+)
 import csv
-from django.contrib import messages
-from django.http import HttpResponseRedirect
 
 def app(request):
     initial_data = {}
@@ -19,69 +21,36 @@ def app(request):
 
     if installation_id:
         try:
-            # Get historical reports for this installation
             historical_reports = HealthCheckReport.objects.filter(
                 installation_id=installation_id
             ).order_by("-created_at")[:10]
 
-            # Get the latest report
             latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
 
             if latest_report:
-                # Update unlock status if not on Free plan
                 if client_plan != "Free":
                     HealthCheckReport.update_all_reports_unlock_status(
                         installation_id, client_plan
                     )
 
-                # Format the latest report data
                 report_data = format_response_data(
                     latest_report.raw_response,
                     plan=client_plan,
                     report_id=latest_report.id,
                     last_check=latest_report.created_at,
                 )
-                is_free_plan = client_plan == "Free"
             else:
-                # If no report exists, show a message to run the first check
                 initial_data["error"] = "No health check reports found. Please run your first health check."
                 report_data = None
-                is_free_plan = True
 
-            # Get monitoring settings
-            try:
-                monitoring = HealthCheckMonitoring.objects.get(
-                    installation_id=installation_id
-                )
-                monitoring_context = {
-                    "is_active": monitoring.is_active and not is_free_plan,
-                    "frequency": monitoring.frequency,
-                    "notification_emails": monitoring.notification_emails or [],
-                    "instance_guid": monitoring.instance_guid,
-                    "subdomain": monitoring.subdomain,
-                    "data": {"is_free_plan": is_free_plan},
-                }
-            except HealthCheckMonitoring.DoesNotExist:
-                monitoring_context = {
-                    "is_active": False,
-                    "frequency": "weekly",
-                    "notification_emails": [],
-                    "instance_guid": latest_report.instance_guid if latest_report else "",
-                    "subdomain": latest_report.subdomain if latest_report else "",
-                    "data": {"is_free_plan": is_free_plan},
-                }
+            monitoring_context = get_monitoring_context(
+                installation_id, 
+                client_plan, 
+                latest_report
+            )
 
-            # Update initial data with all contexts
             initial_data.update({
-                "historical_reports": [
-                    {
-                        "id": report.id,
-                        "created_at": report.created_at.strftime("%d %b %Y"),
-                        "is_unlocked": report.is_unlocked,
-                        "total_issues": len(report.raw_response.get("issues", [])),
-                    }
-                    for report in historical_reports
-                ],
+                "historical_reports": format_historical_reports(historical_reports),
                 "data": report_data,
                 **monitoring_context,
             })
@@ -94,6 +63,7 @@ def app(request):
     return render(request, "healthcheck/app.html", initial_data)
 
 
+
 @csrf_exempt
 def health_check(request):
     if request.method == "POST":
@@ -102,7 +72,6 @@ def health_check(request):
             data = json.loads(request.body) if request.body else {}
             installation_id = data.get("installation_id")
             client_plan = data.get("plan", "Free")
-            print("Received data:", data)
 
             # Prepare URL
             url = data.get("url")
@@ -126,20 +95,17 @@ def health_check(request):
                 json=api_payload,
             )
 
-            print("API Response Status:", response.status_code)
-
             if response.status_code != 200:
-                return HttpResponse(
-                    render_to_string(
-                        "healthcheck/results.html",
-                        {"error": f"API Error: {response.text}"},
-                    )
-                )
+                return JsonResponse({
+                    "error": True,
+                    "results_html": f"API Error: {response.text}",
+                    "monitoring_html": ""
+                })
 
             # Get response data
             response_data = response.json()
 
-              # Create report
+            # Create report
             report = HealthCheckReport.objects.create(
                 installation_id=int(installation_id),
                 instance_guid=data.get("instance_guid"),
@@ -155,39 +121,20 @@ def health_check(request):
             formatted_data = format_response_data(
                 response_data, 
                 plan=client_plan, 
-                report_id=report.id
+                report_id=report.id,
+                last_check=report.created_at
             )
 
-            # Get monitoring settings
-            try:
-                monitoring = HealthCheckMonitoring.objects.get(
-                    installation_id=installation_id
-                )
-                monitoring_context = {
-                    "is_active": monitoring.is_active and client_plan != "Free",
-                    "frequency": monitoring.frequency,
-                    "notification_emails": monitoring.notification_emails or [],
-                    "instance_guid": monitoring.instance_guid,
-                    "subdomain": monitoring.subdomain,
-                    "data": {"is_free_plan": client_plan == "Free"},
-                }
-            except HealthCheckMonitoring.DoesNotExist:
-                monitoring_context = {
-                    "is_active": False,
-                    "frequency": "weekly",
-                    "notification_emails": [],
-                    "instance_guid": report.instance_guid,
-                    "subdomain": report.subdomain,
-                    "data": {"is_free_plan": client_plan == "Free"},
-                }
-
-            # Render both templates
-            results_html = render_to_string(
-                "healthcheck/results.html", 
-                {"data": formatted_data}
+            # Get monitoring context
+            monitoring_context = get_monitoring_context(
+                installation_id,
+                client_plan,
+                report
             )
-            monitoring_html = render_to_string(
-                "healthcheck/partials/monitoring_settings.html", 
+
+            # Render both components using utility function
+            results_html, monitoring_html = render_report_components(
+                formatted_data,
                 monitoring_context
             )
 
@@ -197,100 +144,18 @@ def health_check(request):
             })
 
         except Exception as e:
-            print("Error:", str(e))
-            error_html = render_to_string(
-                "healthcheck/results.html",
-                {"error": f"Error processing request: {str(e)}"}
-            )
+            # Use render_report_components for error case too
+            error_data = {"error": f"Error processing request: {str(e)}"}
+            results_html, _ = render_report_components(error_data, {})
+            
             return JsonResponse({
                 "error": True,
-                "results_html": error_html,
+                "results_html": results_html,
                 "monitoring_html": ""
             })
 
     return HttpResponse("Method not allowed", status=405)
 
-
-def format_response_data(response_data, plan="Free", report_id=None, last_check=None):
-    """Helper function to format response data consistently"""
-    issues = response_data.get("issues", [])
-    counts = response_data.get("counts", {})
-    total_counts = response_data.get("sum_totals", {})
-
-    # Calculate hidden issues for free plan
-    hidden_issues_count = 0
-    hidden_categories = {}
-
-    if plan == "Free" and report_id:
-        try:
-            report = HealthCheckReport.objects.get(id=report_id)
-            is_unlocked = report.is_unlocked
-        except HealthCheckReport.DoesNotExist:
-            is_unlocked = False
-
-        if not is_unlocked:
-            # Count issues by category before filtering
-            for issue in issues:
-                category = issue.get("item_type")
-                if category not in ["ticket_forms", "ticket_fields"]:
-                    hidden_issues_count += 1
-                    hidden_categories[category] = hidden_categories.get(category, 0) + 1
-
-            # Filter issues for display
-            issues = [
-                issue
-                for issue in issues
-                if issue.get("item_type") in ["ticket_forms", "ticket_fields"]
-            ]
-
-    return {
-        "instance": {
-            "name": response_data.get("name", "Unknown"),
-            "url": response_data.get("instance_url", "Unknown"),
-            "admin_email": response_data.get("admin_email", "Unknown"),
-            "created_at": response_data.get("created_at", "Unknown"),
-        },
-        "last_check": last_check.strftime("%Y-%m-%d %H:%M:%S") if last_check else None,
-        "time_since_check": timesince(last_check) if last_check else "Never",
-        "total_issues": len(issues),
-        "critical_issues": sum(1 for issue in issues if issue.get("type") == "error"),
-        "warning_issues": sum(1 for issue in issues if issue.get("type") == "warning"),
-        "counts": {
-            "ticket_fields": counts.get("ticket_fields", {}),
-            "user_fields": counts.get("user_fields", {}),
-            "organization_fields": counts.get("organization_fields", {}),
-            "ticket_forms": counts.get("ticket_forms", {}),
-            "triggers": counts.get("ticket_triggers", {}),
-            "macros": counts.get("macros", {}),
-            "users": counts.get("zendesk_users", {}),
-            "sla_policies": counts.get("sla_policies", {}),
-        },
-        "totals": {
-            "total": total_counts.get("sum_total", 0),
-            "draft": total_counts.get("sum_draft", 0),
-            "published": total_counts.get("sum_published", 0),
-            "changed": total_counts.get("sum_changed", 0),
-            "deletion": total_counts.get("sum_deletion", 0),
-            "total_changes": total_counts.get("sum_total_changes", 0),
-        },
-        "categories": sorted(
-            set(issue.get("item_type", "Unknown") for issue in issues)
-        ),
-        "hidden_issues_count": hidden_issues_count,
-        "hidden_categories": hidden_categories,
-        "is_free_plan": plan == "Free",
-        "is_unlocked": is_unlocked if plan == "Free" else True,
-        "report_id": report_id,
-        "issues": [
-            {
-                "category": issue.get("item_type", "Unknown"),
-                "severity": issue.get("type", "warning"),
-                "description": issue.get("message", ""),
-                "zendesk_url": issue.get("zendesk_url", "#"),
-            }
-            for issue in issues
-        ],
-    }
 
 
 @csrf_exempt
@@ -331,32 +196,6 @@ def stripe_webhook(request):
         return HttpResponse(str(e), status=400)
 
 
-def check_unlock_status(request):
-    report_id = request.GET.get("report_id")
-    if not report_id:
-        return JsonResponse({"error": "No report ID provided"}, status=400)
-
-    try:
-        report = HealthCheckReport.objects.get(id=report_id)
-
-        if report.is_unlocked:
-            # Format the full report data
-            report_data = format_response_data(
-                report.raw_response,
-                plan=report.plan,
-                report_id=report.id,
-                last_check=report.created_at,
-            )
-
-            # Render the template with full data
-            html = render_to_string("healthcheck/results.html", {"data": report_data})
-
-            return JsonResponse({"is_unlocked": True, "html": html})
-
-        return JsonResponse({"is_unlocked": False})
-
-    except HealthCheckReport.DoesNotExist:
-        return JsonResponse({"error": "Report not found"}, status=404)
 
 
 def download_report_csv(request, report_id):
@@ -396,6 +235,37 @@ def download_report_csv(request, report_id):
         return JsonResponse({"error": "Report not found"}, status=404)
 
 
+
+def check_unlock_status(request):
+    report_id = request.GET.get("report_id")
+    if not report_id:
+        return JsonResponse({"error": "No report ID provided"}, status=400)
+
+    try:
+        report = HealthCheckReport.objects.get(id=report_id)
+
+        if report.is_unlocked:
+            # Format the full report data
+            report_data = format_response_data(
+                report.raw_response,
+                plan=report.plan,
+                report_id=report.id,
+                last_check=report.created_at,
+            )
+
+            # Use render_report_components utility
+            results_html, _ = render_report_components(report_data, {})
+
+            return JsonResponse({
+                "is_unlocked": True, 
+                "html": results_html
+            })
+
+        return JsonResponse({"is_unlocked": False})
+
+    except HealthCheckReport.DoesNotExist:
+        return JsonResponse({"error": "Report not found"}, status=404)
+
 def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
@@ -410,36 +280,23 @@ def get_historical_report(request, report_id):
             last_check=report.created_at,
         )
 
-        # Get monitoring settings
-        try:
-            monitoring = HealthCheckMonitoring.objects.get(
-                installation_id=installation_id
-            )
-            monitoring_context = {
-                "is_active": monitoring.is_active and report.plan != "Free",
-                "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails,
-                "data": {"is_free_plan": report.plan == "Free"},
-            }
-        except HealthCheckMonitoring.DoesNotExist:
-            monitoring_context = {
-                "is_active": False,
-                "frequency": "weekly",
-                "notification_emails": [],
-                "data": {"is_free_plan": report.plan == "Free"},
-            }
-
-        # Render both templates
-        monitoring_html = render_to_string(
-            "healthcheck/partials/monitoring_settings.html", monitoring_context
-        )
-        results_html = render_to_string(
-            "healthcheck/results.html", {"data": report_data}
+        # Get monitoring context using utility function
+        monitoring_context = get_monitoring_context(
+            installation_id,
+            report.plan,
+            report
         )
 
-        return JsonResponse(
-            {"monitoring_html": monitoring_html, "results_html": results_html}
+        # Use render_report_components utility
+        results_html, monitoring_html = render_report_components(
+            report_data,
+            monitoring_context
         )
+
+        return JsonResponse({
+            "monitoring_html": monitoring_html, 
+            "results_html": results_html
+        })
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
