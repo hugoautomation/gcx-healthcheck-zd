@@ -12,7 +12,6 @@ import csv
 from django.contrib import messages
 from django.http import HttpResponseRedirect
 
-
 def app(request):
     initial_data = {}
 
