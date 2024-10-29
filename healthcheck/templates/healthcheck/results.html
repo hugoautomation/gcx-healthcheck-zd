@@ -15,6 +15,7 @@
     <div class="text-muted small mb-3 d-inline-block">Last checked: {{ data.time_since_check }} ago</div>
 </div>
     <div class="col text-right">
+        <p> data {{ data }}</p>
         {% if data.is_free_plan and not data.is_unlocked %}
             {% if data.report_id %}  {# Only show download button if we have a report ID #}
                 <a href="{% url 'download_report_csv' data.report_id %}" class="btn c-btn c-btn--sm d-inline-block disabled">
