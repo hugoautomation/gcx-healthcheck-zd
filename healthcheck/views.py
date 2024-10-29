@@ -109,7 +109,7 @@ def health_check(request):
 
             if response.status_code != 200:
                 error_data = {"error": f"API Error: {response.text}"}
-                results_html, _ = render_report_components(error_data)
+                results_html = render_report_components(error_data)
                 return JsonResponse({"error": True, "results_html": results_html})
 
             # Get response data
@@ -136,13 +136,13 @@ def health_check(request):
             )
 
             # Render results using utility function
-            results_html, _ = render_report_components(formatted_data)
+            results_html = render_report_components(formatted_data)
 
             return JsonResponse({"error": False, "results_html": results_html})
 
         except Exception as e:
             error_data = {"error": f"Error processing request: {str(e)}"}
-            results_html, _ = render_report_components(error_data)
+            results_html = render_report_components(error_data)
             return JsonResponse({"error": True, "results_html": results_html})
 
     return HttpResponse("Method not allowed", status=405)
@@ -253,7 +253,7 @@ def check_unlock_status(request):
             )
 
             # Use render_report_components utility
-            results_html, _ = render_report_components(report_data)
+            results_html = render_report_components(report_data)
 
             return JsonResponse({"is_unlocked": True, "html": results_html})
 
