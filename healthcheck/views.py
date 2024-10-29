@@ -12,30 +12,29 @@ import csv
 
 
 def app(request):
-    installation_id = request.GET.get("installation_id")
-    print(f"Received installation_id: {installation_id}")
-
     initial_data = {}
-    if installation_id:
+
+    # Get the domain from the request parameters
+    domain = request.GET.get("origin", "")
+    if domain:
         try:
-            # Always get the latest report
-            latest_report = HealthCheckReport.get_latest_for_installation(
-                installation_id
-            )
-            if latest_report:
-                initial_data = {
-                    "data": format_response_data(
-                        latest_report.raw_response,
-                        last_check=latest_report.updated_at,
-                        plan=latest_report.plan,
-                        report_id=latest_report.id,
-                    )
+            # Get the last 10 reports for this domain, ordered by creation date
+            historical_reports = HealthCheckReport.objects.filter(
+                raw_response__instance_url__icontains=domain
+            ).order_by("-created_at")[:10]
+
+            initial_data["historical_reports"] = [
+                {
+                    "id": report.id,
+                    "created_at": report.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "is_unlocked": report.is_unlocked,
+                    "total_issues": len(report.raw_response.get("issues", [])),
                 }
-                print(
-                    f"Found latest report {latest_report.id} for installation {installation_id}"
-                )
+                for report in historical_reports
+            ]
+
         except Exception as e:
-            print(f"Error getting report: {str(e)}")
+            print(f"Error getting historical reports: {str(e)}")
             pass
 
     return render(request, "healthcheck/app.html", initial_data)
@@ -121,7 +120,6 @@ def health_check(request):
     return HttpResponse("Method not allowed", status=405)
 
 
-
 def format_response_data(response_data, plan="Free", report_id=None, last_check=None):
     """Helper function to format response data consistently"""
     issues = response_data.get("issues", [])
@@ -203,36 +201,37 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
         ],
     }
 
+
 @csrf_exempt
 def stripe_webhook(request):
     if request.method != "POST":
         return HttpResponse("Method not allowed", status=405)
-        
+
     try:
         event = json.loads(request.body)
         print("Received webhook event:", event["type"])  # Debug logging
-        
+
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
             report_id = session.get("client_reference_id")
-            
+
             if not report_id:
                 print("No report ID provided in webhook")
                 return HttpResponse("No report ID provided", status=400)
-                
+
             try:
                 report = HealthCheckReport.objects.get(id=report_id)
                 report.is_unlocked = True
                 report.stripe_payment_id = session["payment_intent"]
                 report.save()
-                
+
                 print(f"Successfully unlocked report {report_id}")
                 return HttpResponse("Success", status=200)
-                
+
             except HealthCheckReport.DoesNotExist:
                 print(f"Report {report_id} not found")
                 return HttpResponse("Report not found", status=404)
-                
+
     except json.JSONDecodeError:
         print("Invalid JSON in webhook request")
         return HttpResponse("Invalid JSON", status=400)
@@ -240,72 +239,67 @@ def stripe_webhook(request):
         print(f"Webhook error: {str(e)}")
         return HttpResponse(str(e), status=400)
 
+
 def check_unlock_status(request):
-    report_id = request.GET.get('report_id')
+    report_id = request.GET.get("report_id")
     if not report_id:
         return JsonResponse({"error": "No report ID provided"}, status=400)
-    
+
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        
+
         if report.is_unlocked:
             # Format the full report data
             report_data = format_response_data(
                 report.raw_response,
                 plan=report.plan,
                 report_id=report.id,
-                last_check=report.created_at
+                last_check=report.created_at,
             )
-            
-            # Render the template with full data
-            html = render_to_string('healthcheck/results.html', {
-                'data': report_data
-            })
-            
-            return JsonResponse({
-                'is_unlocked': True,
-                'html': html
-            })
-        
-        return JsonResponse({
-            'is_unlocked': False
-        })
-        
-    except HealthCheckReport.DoesNotExist:
-        return JsonResponse({
-            'error': 'Report not found'
-        }, status=404)
 
+            # Render the template with full data
+            html = render_to_string("healthcheck/results.html", {"data": report_data})
+
+            return JsonResponse({"is_unlocked": True, "html": html})
+
+        return JsonResponse({"is_unlocked": False})
+
+    except HealthCheckReport.DoesNotExist:
+        return JsonResponse({"error": "Report not found"}, status=404)
 
 
 def download_report_csv(request, report_id):
     """Download health check report as CSV"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        
+
         # Create the HttpResponse object with CSV header
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="healthcheck_report_{report_id}.csv"'
-        
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = (
+            f'attachment; filename="healthcheck_report_{report_id}.csv"'
+        )
+
         # Create CSV writer
         writer = csv.writer(response)
-        
+
         # Write header row
-        writer.writerow(['Type', 'Severity', 'Object Type', 'Description', 'Zendesk URL'])
-        
+        writer.writerow(
+            ["Type", "Severity", "Object Type", "Description", "Zendesk URL"]
+        )
+
         # Write data rows
-        for issue in report.raw_response.get('issues', []):
-            writer.writerow([
-                issue.get('item_type', ''),
-                issue.get('type', ''),
-                issue.get('item_type', ''),
-                issue.get('message', ''),
-                issue.get('zendesk_url', '')
-            ])
-        
+        for issue in report.raw_response.get("issues", []):
+            writer.writerow(
+                [
+                    issue.get("item_type", ""),
+                    issue.get("type", ""),
+                    issue.get("item_type", ""),
+                    issue.get("message", ""),
+                    issue.get("zendesk_url", ""),
+                ]
+            )
+
         return response
-        
+
     except HealthCheckReport.DoesNotExist:
-        return JsonResponse({
-            'error': 'Report not found'
-        }, status=404)
+        return JsonResponse({"error": "Report not found"}, status=404)

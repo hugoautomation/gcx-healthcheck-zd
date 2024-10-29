@@ -6,6 +6,9 @@ urlpatterns = [
     path("check/", views.health_check, name="health_check"),
     path("stripe-webhook/", views.stripe_webhook, name="stripe_webhook"),
     path("check-unlock-status/", views.check_unlock_status, name="check_unlock_status"),
-    path('report/<int:report_id>/download/', views.download_report_csv, name='download_report_csv'),
-
+    path(
+        "report/<int:report_id>/download/",
+        views.download_report_csv,
+        name="download_report_csv",
+    ),
 ]
