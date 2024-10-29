@@ -74,18 +74,18 @@ const ZAFClientSingleton = {
             return false;
         }
         return true;
+    },
+
+    getUrlWithParams(baseUrl) {
+        const url = new URL(baseUrl, window.location.origin);
+        const currentParams = new URLSearchParams(window.location.search);
+        
+        // Preserve all necessary parameters
+        ['installation_id', 'plan', 'origin', 'app_guid'].forEach(param => {
+            const value = currentParams.get(param);
+            if (value) url.searchParams.set(param, value);
+        });
+        
+        return url.toString();
     }
 };
-
-getUrlWithParams(baseUrl) {
-    const url = new URL(baseUrl, window.location.origin);
-    const currentParams = new URLSearchParams(window.location.search);
-    
-    // Preserve all necessary parameters
-    ['installation_id', 'plan', 'origin', 'app_guid'].forEach(param => {
-        const value = currentParams.get(param);
-        if (value) url.searchParams.set(param, value);
-    });
-    
-    return url.toString();
-}
