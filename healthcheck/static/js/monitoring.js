@@ -1,4 +1,6 @@
 let client = null;
+let metadata = null;
+let context = null;
 
 // Initialize ZAF client
 async function initializeApp() {
@@ -9,17 +11,41 @@ async function initializeApp() {
             return;
         }
 
+        console.log('ZAF Client initialized successfully');
+
+        [context, metadata] = await Promise.all([
+            client.context(),
+            client.metadata()
+        ]);
+
+        console.log('Metadata:', metadata);
+
+        const currentUrl = new URL(window.location.href);
+        const urlInstallationId = currentUrl.searchParams.get('installation_id');
+        const urlPlan = currentUrl.searchParams.get('plan');
+
+        // If we don't have installation_id or plan in URL, add them and reload
+        if (!urlInstallationId || !urlPlan) {
+            currentUrl.searchParams.set('installation_id', metadata.installationId);
+            currentUrl.searchParams.set('plan', metadata.plan?.name || 'Free');
+            window.location.href = currentUrl.toString();
+            return;
+        }
+
         client.invoke('resize', { width: '100%', height: '800px' });
         initializeForm();
+
     } catch (error) {
         console.error('Error initializing:', error);
+        // Initialize form even if ZAF client fails
+        initializeForm();
     }
 }
 
 function addEmailField(e) {
-    e.preventDefault(); // Prevent button default action
+    e.preventDefault();
     const emailInputs = document.getElementById('email-inputs');
-    const isFreePlan = document.querySelector('form').dataset.isFreePlan === 'true';
+    const isFreePlan = document.getElementById('monitoring-form').dataset.isFreePlan === 'true';
     
     const template = `
         <div class="input-group mb-2">
@@ -28,73 +54,66 @@ function addEmailField(e) {
             <button type="button" class="btn c-btn c-btn--danger remove-email">-</button>
         </div>`;
     
-    // Insert before the last input group (the one with the + button)
     const lastInputGroup = emailInputs.lastElementChild;
     lastInputGroup.insertAdjacentHTML('beforebegin', template);
-    
-    // Add event listener to new remove button
-    const newInputGroup = lastInputGroup.previousElementSibling;
-    const removeButton = newInputGroup.querySelector('.remove-email');
-    removeButton.addEventListener('click', removeEmailField);
 }
 
 function removeEmailField(e) {
-    e.preventDefault(); // Prevent button default action
-    const inputGroup = this.closest('.input-group');
-    if (inputGroup) {
-        inputGroup.remove();
-    }
+    e.preventDefault();
+    e.target.closest('.input-group').remove();
 }
-
 function initializeForm() {
     const form = document.getElementById('monitoring-form');
-    const saveButton = document.getElementById('save-settings-btn');
-    
+    if (!form) return;
+
     // Add email field handler
-    const addButtons = document.querySelectorAll('.add-email');
-    addButtons.forEach(button => {
+    document.querySelectorAll('.add-email').forEach(button => {
+        button.removeEventListener('click', addEmailField);
         button.addEventListener('click', addEmailField);
     });
 
-    // Remove email field handler
-    const removeButtons = document.querySelectorAll('.remove-email');
-    removeButtons.forEach(button => {
-        button.addEventListener('click', removeEmailField);
+    // Remove email field handler - Use event delegation
+    document.getElementById('email-inputs').addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-email')) {
+            removeEmailField(e);
+        }
     });
     
-    if (form && saveButton) {
+    const saveButton = document.getElementById('save-settings-btn');
+    if (saveButton) {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Show loading state
             const spinner = saveButton.querySelector('.spinner-border');
             const btnText = saveButton.querySelector('.btn-text');
             
             try {
-                // Enable loading state
+                // Show loading state
                 spinner.classList.remove('d-none');
                 btnText.textContent = 'Saving...';
                 saveButton.disabled = true;
 
+                // Get all valid emails
                 const emailInputs = form.querySelectorAll('.notification-email');
                 const validEmails = Array.from(emailInputs)
                     .filter(input => input.value.trim() !== '')
                     .map(input => input.value.trim());
 
+                // Create FormData
                 const formData = new FormData(form);
 
-                // Remove existing email fields
+                // Remove existing email fields and add valid ones back
                 for (const pair of formData.entries()) {
                     if (pair[0] === 'notification_emails[]') {
                         formData.delete(pair[0]);
                     }
                 }
 
-                // Add valid emails back
                 validEmails.forEach(email => {
                     formData.append('notification_emails[]', email);
                 });
 
+                // Submit form
                 const response = await fetch(form.action, {
                     method: 'POST',
                     body: formData
@@ -104,8 +123,21 @@ function initializeForm() {
                     throw new Error('Failed to save settings');
                 }
 
-                // Redirect on success
-                window.location.href = formData.get('redirect_url') || '/';
+                // Show success message
+                const alertHtml = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        Settings saved successfully
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>`;
+                const messagesDiv = document.querySelector('.messages');
+                if (messagesDiv) {
+                    messagesDiv.innerHTML = alertHtml;
+                }
+
+                // Reset button state
+                spinner.classList.add('d-none');
+                btnText.textContent = 'Save Settings';
+                saveButton.disabled = false;
 
             } catch (error) {
                 console.error('Error saving settings:', error);
@@ -113,10 +145,21 @@ function initializeForm() {
                 spinner.classList.add('d-none');
                 btnText.textContent = 'Save Settings';
                 saveButton.disabled = false;
-                alert('Failed to save settings. Please try again.');
+
+                // Show error message
+                const alertHtml = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        Failed to save settings. Please try again.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>`;
+                const messagesDiv = document.querySelector('.messages');
+                if (messagesDiv) {
+                    messagesDiv.innerHTML = alertHtml;
+                }
             }
         });
     }
 }
 
+// Initialize on DOM load
 document.addEventListener('DOMContentLoaded', initializeApp);
