@@ -121,6 +121,7 @@ def health_check(request):
     return HttpResponse("Method not allowed", status=405)
 
 
+
 def format_response_data(response_data, plan="Free", report_id=None, last_check=None):
     """Helper function to format response data consistently"""
     issues = response_data.get("issues", [])
