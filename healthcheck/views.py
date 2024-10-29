@@ -10,58 +10,91 @@ from .utils import (
     format_response_data,
     get_monitoring_context,
     format_historical_reports,
-    render_report_components
+    render_report_components,
 )
 import csv
+
 
 def app(request):
     initial_data = {}
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
 
+    print(
+        f"Loading app with installation_id: {installation_id}, plan: {client_plan}"
+    )  # Debug log
+
     if installation_id:
         try:
+            # Get historical reports
             historical_reports = HealthCheckReport.objects.filter(
                 installation_id=installation_id
             ).order_by("-created_at")[:10]
 
-            latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+            # Get latest report
+            latest_report = HealthCheckReport.get_latest_for_installation(
+                installation_id
+            )
+            print(
+                f"Latest report found: {latest_report.id if latest_report else None}"
+            )  # Debug log
 
             if latest_report:
+                # Update unlock status for non-free plans
                 if client_plan != "Free":
                     HealthCheckReport.update_all_reports_unlock_status(
                         installation_id, client_plan
                     )
 
+                # Format the report data
                 report_data = format_response_data(
                     latest_report.raw_response,
                     plan=client_plan,
                     report_id=latest_report.id,
                     last_check=latest_report.created_at,
                 )
+
+                # Get monitoring context
+                monitoring_context = get_monitoring_context(
+                    installation_id, client_plan, latest_report
+                )
+
+                # Update initial data with all necessary context
+                initial_data.update(
+                    {
+                        "historical_reports": format_historical_reports(
+                            historical_reports
+                        ),
+                        "data": report_data,  # This contains the latest report data
+                        **monitoring_context,
+                    }
+                )
+
+                print(
+                    f"Data prepared: {bool(report_data)}, Monitoring: {bool(monitoring_context)}"
+                )  # Debug log
             else:
-                initial_data["error"] = "No health check reports found. Please run your first health check."
-                report_data = None
-
-            monitoring_context = get_monitoring_context(
-                installation_id, 
-                client_plan, 
-                latest_report
-            )
-
-            initial_data.update({
-                "historical_reports": format_historical_reports(historical_reports),
-                "data": report_data,
-                **monitoring_context,
-            })
+                initial_data.update(
+                    {
+                        "error": "No health check reports found. Please run your first health check.",
+                        "historical_reports": [],
+                        "data": None,
+                        **get_monitoring_context(installation_id, client_plan, None),
+                    }
+                )
 
         except Exception as e:
+            print(f"Error in app view: {str(e)}")  # Debug log
             initial_data["error"] = f"Error loading health check data: {str(e)}"
     else:
         initial_data["error"] = "No installation ID provided. Please reload the app."
 
-    return render(request, "healthcheck/app.html", initial_data)
+    # Ensure data is available for templates
+    if "data" not in initial_data:
+        initial_data["data"] = None
 
+    print(f"Final initial_data keys: {initial_data.keys()}")  # Debug log
+    return render(request, "healthcheck/app.html", initial_data)
 
 
 @csrf_exempt
@@ -96,11 +129,13 @@ def health_check(request):
             )
 
             if response.status_code != 200:
-                return JsonResponse({
-                    "error": True,
-                    "results_html": f"API Error: {response.text}",
-                    "monitoring_html": ""
-                })
+                return JsonResponse(
+                    {
+                        "error": True,
+                        "results_html": f"API Error: {response.text}",
+                        "monitoring_html": "",
+                    }
+                )
 
             # Get response data
             response_data = response.json()
@@ -119,43 +154,36 @@ def health_check(request):
 
             # Format response data
             formatted_data = format_response_data(
-                response_data, 
-                plan=client_plan, 
+                response_data,
+                plan=client_plan,
                 report_id=report.id,
-                last_check=report.created_at
+                last_check=report.created_at,
             )
 
             # Get monitoring context
             monitoring_context = get_monitoring_context(
-                installation_id,
-                client_plan,
-                report
+                installation_id, client_plan, report
             )
 
             # Render both components using utility function
             results_html, monitoring_html = render_report_components(
-                formatted_data,
-                monitoring_context
+                formatted_data, monitoring_context
             )
 
-            return JsonResponse({
-                "results_html": results_html,
-                "monitoring_html": monitoring_html
-            })
+            return JsonResponse(
+                {"results_html": results_html, "monitoring_html": monitoring_html}
+            )
 
         except Exception as e:
             # Use render_report_components for error case too
             error_data = {"error": f"Error processing request: {str(e)}"}
             results_html, _ = render_report_components(error_data, {})
-            
-            return JsonResponse({
-                "error": True,
-                "results_html": results_html,
-                "monitoring_html": ""
-            })
+
+            return JsonResponse(
+                {"error": True, "results_html": results_html, "monitoring_html": ""}
+            )
 
     return HttpResponse("Method not allowed", status=405)
-
 
 
 @csrf_exempt
@@ -196,8 +224,6 @@ def stripe_webhook(request):
         return HttpResponse(str(e), status=400)
 
 
-
-
 def download_report_csv(request, report_id):
     """Download health check report as CSV"""
     try:
@@ -235,7 +261,6 @@ def download_report_csv(request, report_id):
         return JsonResponse({"error": "Report not found"}, status=404)
 
 
-
 def check_unlock_status(request):
     report_id = request.GET.get("report_id")
     if not report_id:
@@ -256,15 +281,13 @@ def check_unlock_status(request):
             # Use render_report_components utility
             results_html, _ = render_report_components(report_data, {})
 
-            return JsonResponse({
-                "is_unlocked": True, 
-                "html": results_html
-            })
+            return JsonResponse({"is_unlocked": True, "html": results_html})
 
         return JsonResponse({"is_unlocked": False})
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
+
 
 def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
@@ -282,21 +305,17 @@ def get_historical_report(request, report_id):
 
         # Get monitoring context using utility function
         monitoring_context = get_monitoring_context(
-            installation_id,
-            report.plan,
-            report
+            installation_id, report.plan, report
         )
 
         # Use render_report_components utility
         results_html, monitoring_html = render_report_components(
-            report_data,
-            monitoring_context
+            report_data, monitoring_context
         )
 
-        return JsonResponse({
-            "monitoring_html": monitoring_html, 
-            "results_html": results_html
-        })
+        return JsonResponse(
+            {"monitoring_html": monitoring_html, "results_html": results_html}
+        )
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)

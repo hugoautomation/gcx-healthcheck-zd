@@ -2,6 +2,7 @@ from django.template.loader import render_to_string
 from .models import HealthCheckReport, HealthCheckMonitoring
 from django.utils.timesince import timesince
 
+
 def format_response_data(response_data, plan="Free", report_id=None, last_check=None):
     """Helper function to format response data consistently"""
     issues = response_data.get("issues", [])
@@ -64,7 +65,9 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
             "deletion": total_counts.get("sum_deletion", 0),
             "total_changes": total_counts.get("sum_total_changes", 0),
         },
-        "categories": sorted(set(issue.get("item_type", "Unknown") for issue in issues)),
+        "categories": sorted(
+            set(issue.get("item_type", "Unknown") for issue in issues)
+        ),
         "hidden_issues_count": hidden_issues_count,
         "hidden_categories": hidden_categories,
         "is_free_plan": plan == "Free",
@@ -81,14 +84,13 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
         ],
     }
 
+
 def get_monitoring_context(installation_id, client_plan, latest_report=None):
     """Helper function to get monitoring settings context"""
     is_free_plan = client_plan == "Free"
-    
+
     try:
-        monitoring = HealthCheckMonitoring.objects.get(
-            installation_id=installation_id
-        )
+        monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
         return {
             "is_active": monitoring.is_active and not is_free_plan,
             "frequency": monitoring.frequency,
@@ -107,6 +109,7 @@ def get_monitoring_context(installation_id, client_plan, latest_report=None):
             "data": {"is_free_plan": is_free_plan},
         }
 
+
 def format_historical_reports(reports):
     """Helper function to format historical reports for display"""
     return [
@@ -119,14 +122,13 @@ def format_historical_reports(reports):
         for report in reports
     ]
 
+
 def render_report_components(formatted_data, monitoring_context):
     """Helper function to render both report components"""
     results_html = render_to_string(
-        "healthcheck/results.html", 
-        {"data": formatted_data}
+        "healthcheck/results.html", {"data": formatted_data}
     )
     monitoring_html = render_to_string(
-        "healthcheck/partials/monitoring_settings.html", 
-        monitoring_context
+        "healthcheck/partials/monitoring_settings.html", monitoring_context
     )
     return results_html, monitoring_html
