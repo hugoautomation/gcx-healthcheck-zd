@@ -3,7 +3,7 @@
         <h5 class="mb-0">Automated Monitoring Settings</h5>
     </div>
     <div class="card-body">
-        <form method="POST" action="monitoring-settings/" data-is-free-plan="{{ is_free_plan|lower }}">
+        <form method="POST" action="monitoring-settings/" data-is-free-plan="{{ is_free_plan|lower }}" id="monitoring-form">
             <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
             <input type="hidden" name="redirect_url" value="{{ request.get_full_path }}">
         
@@ -69,12 +69,12 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const form = document.querySelector('#monitoring-form');
+            const form = document.getElementById('monitoring-form');
             const saveButton = document.getElementById('save-settings-btn');
             
             if (form && saveButton) {
-                form.addEventListener('submit', function(e) {
-                    e.preventDefault(); // Prevent default submission
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
                     
                     // Show loading state
                     const spinner = saveButton.querySelector('.spinner-border');
@@ -83,48 +83,52 @@
                     spinner.classList.remove('d-none');
                     btnText.textContent = 'Saving...';
                     saveButton.disabled = true;
-    
-                    // Get all email inputs that have values
-                    const emailInputs = form.querySelectorAll('.notification-email');
-                    const validEmails = Array.from(emailInputs)
-                        .filter(input => input.value.trim() !== '')
-                        .map(input => input.value.trim());
-    
-                    // Create a FormData object
-                    const formData = new FormData(form);
-    
-                    // Remove existing email fields
-                    for (const pair of formData.entries()) {
-                        if (pair[0] === 'notification_emails[]') {
-                            formData.delete(pair[0]);
+        
+                    try {
+                        // Get all email inputs that have values
+                        const emailInputs = form.querySelectorAll('.notification-email');
+                        const validEmails = Array.from(emailInputs)
+                            .filter(input => input.value.trim() !== '')
+                            .map(input => input.value.trim());
+        
+                        // Create FormData
+                        const formData = new FormData(form);
+        
+                        // Remove existing email fields and add valid ones back
+                        for (const pair of formData.entries()) {
+                            if (pair[0] === 'notification_emails[]') {
+                                formData.delete(pair[0]);
+                            }
                         }
+                        validEmails.forEach(email => {
+                            formData.append('notification_emails[]', email);
+                        });
+        
+                        // Submit form via fetch
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            body: formData
+                        });
+        
+                        if (!response.ok) {
+                            throw new Error('Failed to save settings');
+                        }
+        
+                        // Redirect to the URL provided by the server
+                        const redirectUrl = formData.get('redirect_url') || '/';
+                        window.location.href = redirectUrl;
+        
+                    } catch (error) {
+                        console.error('Error saving settings:', error);
+                        // Reset button state
+                        spinner.classList.add('d-none');
+                        btnText.textContent = 'Save Settings';
+                        saveButton.disabled = false;
+                        // Show error message
+                        alert('Failed to save settings. Please try again.');
                     }
-    
-                    // Add valid emails back
-                    validEmails.forEach(email => {
-                        formData.append('notification_emails[]', email);
-                    });
-    
-                    // Submit the form
-                    form.submit();
                 });
             }
         });
-    
-        function addEmailField(button) {
-            const template = `
-                <div class="input-group mb-2">
-                    <input type="email" class="form-control notification-email" name="notification_emails[]" 
-                           ${button.closest('form').dataset.isFreePlan === 'true' ? 'disabled' : ''}>
-                    <button type="button" class="btn c-btn c-btn--danger rounded-end remove-email" onclick="removeEmailField(this)">-</button>
-                </div>`;
-            button.closest('.input-group').insertAdjacentHTML('beforebegin', template);
-            adjustContentHeight();
-        }
-    
-        function removeEmailField(button) {
-            button.closest('.input-group').remove();
-            adjustContentHeight();
-        }
-    </script>
+        </script>
 </div>
