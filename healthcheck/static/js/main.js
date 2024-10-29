@@ -187,6 +187,7 @@ function initializeHistoricalReports() {
 
 
 // Main Initialization
+// Main Initialization
 async function initializeApp() {
     try {
         client = window.ZAFClient ? window.ZAFClient.init() : null;
@@ -206,9 +207,12 @@ async function initializeApp() {
 
         const currentUrl = new URL(window.location.href);
         const urlInstallationId = currentUrl.searchParams.get('installation_id');
+        const urlPlan = currentUrl.searchParams.get('plan');
 
-        if (!urlInstallationId) {
+        // If we don't have installation_id or plan in URL, add them and reload
+        if (!urlInstallationId || !urlPlan) {
             currentUrl.searchParams.set('installation_id', metadata.installationId);
+            currentUrl.searchParams.set('plan', metadata.plan?.name || 'Free');
             window.location.href = currentUrl.toString();
             return;
         }

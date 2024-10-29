@@ -15,10 +15,11 @@ from django.http import HttpResponseRedirect
 def app(request):
     initial_data = {}
 
-    # Get installation_id and report_id from the request parameters
+    # Get installation_id, report_id, and plan from the request parameters
     installation_id = request.GET.get("installation_id")
     report_id = request.GET.get("report_id")
-
+    client_plan = request.GET.get("plan", "Free")  # Default to Free if not provided
+    print(f"Client plan: {client_plan}")
     if installation_id:
         try:
             # Get historical reports for this installation
@@ -37,18 +38,18 @@ def app(request):
 
             if current_report:
                 # Check if plan is not Free and update unlock status for all reports
-                if current_report.plan and current_report.plan != "Free":
+                if client_plan != "Free":
                     HealthCheckReport.update_all_reports_unlock_status(
-                        installation_id, current_report.plan
+                        installation_id, client_plan
                     )
 
                 report_data = format_response_data(
                     current_report.raw_response,
-                    plan=current_report.plan,
+                    plan=client_plan,  # Use client_plan instead of current_report.plan
                     report_id=current_report.id,
                     last_check=current_report.created_at,
                 )
-                is_free_plan = current_report.plan == "Free"
+                is_free_plan = client_plan == "Free"
             else:
                 report_data = None
                 is_free_plan = True
@@ -85,13 +86,24 @@ def app(request):
                     }
                     for report in historical_reports
                 ],
-                "data": report_data,
-                **monitoring_context  # Add monitoring context to initial_data
+                "data": report_data,  # This will contain the latest report data
+                **monitoring_context
             })
+
+            # If there's no report_data but we have historical reports, load the latest one
+            if not report_data and historical_reports:
+                latest_report = historical_reports[0]  # First one is the latest due to ordering
+                report_data = format_response_data(
+                    latest_report.raw_response,
+                    plan=client_plan,
+                    report_id=latest_report.id,
+                    last_check=latest_report.created_at,
+                )
+                initial_data["data"] = report_data
 
         except Exception as e:
             print(f"Error getting reports: {str(e)}")
-            pass
+            initial_data["error"] = str(e)
 
     return render(request, "healthcheck/app.html", initial_data)
 
