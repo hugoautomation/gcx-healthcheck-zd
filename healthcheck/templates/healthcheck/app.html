@@ -44,8 +44,8 @@
             </div>
         </div>
         <div class="scrollable-container">
+            {% include "healthcheck/partials/monitoring_settings.html" %}
             <div id="results">
-                {% include "healthcheck/partials/monitoring_settings.html" %}
                 {% include "healthcheck/results.html" with data=data %}
             </div>
         </div>
