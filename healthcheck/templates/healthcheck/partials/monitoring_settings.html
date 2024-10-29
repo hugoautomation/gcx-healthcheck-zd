@@ -3,10 +3,8 @@
         <h5 class="mb-0">Automated Monitoring Settings</h5>
     </div>
     <div class="card-body">
-        <form id="monitoring-form" 
-              hx-post="{% url 'monitoring_settings' %}"
-              hx-trigger="submit"
-              hx-target="body">
+        <form id="monitoring-form">
+
             <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
             <div class="form-group">
                 <label>Monitoring Status</label>

@@ -353,3 +353,80 @@ async function loadMonitoringSettings() {
 if (document.getElementById('monitoring-form')) {
     loadMonitoringSettings();
 }
+
+
+function initializeHistoricalReports() {
+    document.querySelectorAll('.historical-report').forEach(link => {
+        link.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const reportId = this.dataset.reportId;
+            const resultsDiv = document.getElementById('results');
+
+            // Show loading state
+            resultsDiv.innerHTML = `
+                <div class="text-center my-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="d-none">Loading...</span>
+                    </div>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(`report/${reportId}/`);
+                if (response.ok) {
+                    const html = await response.text();
+                    resultsDiv.innerHTML = html;
+                    
+                    // Initialize components after loading new content
+                    initializeFilters();
+                    initializeUnlockButtons();
+                    
+                    // Adjust height after content is rendered
+                    if (client) {
+                        setTimeout(() => {
+                            const contentHeight = Math.min(
+                                Math.max(
+                                    resultsDiv.scrollHeight,
+                                    document.getElementById('health-check-content')?.scrollHeight || 0,
+                                    600  // minimum height
+                                ),
+                                800  // maximum height
+                            );
+
+                            client.invoke('resize', { 
+                                width: '100%', 
+                                height: `${contentHeight}px`
+                            });
+                        }, 100);
+                    }
+                } else {
+                    throw new Error('Failed to load report');
+                }
+            } catch (error) {
+                console.error('Error loading historical report:', error);
+                resultsDiv.innerHTML = `
+                    <div class="alert alert-danger" role="alert">
+                        <h5>Error Loading Report</h5>
+                        <p>${error.message || 'An unexpected error occurred. Please try again.'}</p>
+                    </div>
+                `;
+            }
+        });
+    });
+}
+
+// Add this to your DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', async function () {
+    try {
+        // ... existing initialization code ...
+
+        // Initialize components
+        initializeFilters();
+        initializeUnlockButtons();
+        initializeRunCheck();
+        initializeHistoricalReports(); // Add this line
+
+    } catch (error) {
+        console.error('Error initializing:', error);
+    }
+});
