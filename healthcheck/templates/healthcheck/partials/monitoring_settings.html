@@ -1,46 +1,61 @@
-
-<div class="card mb-4">
+<div class="card mb-4" id="monitoring-settings">
     <div class="card-header">
         <h5 class="mb-0">Automated Monitoring Settings</h5>
     </div>
     <div class="card-body">
-        <form id="monitoring-form">
+        <form id="monitoring-form" 
+              hx-post="{% url 'monitoring_settings' %}"
+              hx-trigger="submit"
+              hx-target="#monitoring-settings"
+              hx-swap="outerHTML">
+            <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
             <div class="form-group">
                 <label>Monitoring Status</label>
                 <div class="custom-control custom-switch">
-                    <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" {% if data.is_free_plan %}disabled{% endif %}>
+                    <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" 
+                           {% if is_active %}checked{% endif %} 
+                           {% if data.is_free_plan %}disabled{% endif %}>
                     <label class="custom-control-label" for="is_active">Active</label>
                 </div>
             </div>
             
             <div class="form-group">
                 <label for="frequency">Check Frequency</label>
-                <select class="form-control" id="frequency" name="frequency" {% if data.is_free_plan %}disabled{% endif %}>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
+                <select class="form-control" id="frequency" name="frequency" 
+                        {% if data.is_free_plan %}disabled{% endif %}>
+                    <option value="daily" {% if frequency == 'daily' %}selected{% endif %}>Daily</option>
+                    <option value="weekly" {% if frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+                    <option value="monthly" {% if frequency == 'monthly' %}selected{% endif %}>Monthly</option>
                 </select>
             </div>
             
             <div class="form-group">
                 <label for="notification_emails">Notification Emails</label>
                 <div id="email-inputs">
+                    {% for email in notification_emails %}
                     <div class="input-group mb-2">
-                        <input type="email" class="form-control" name="notification_emails[]"
-                        {% if data.is_free_plan %}disabled{% endif %}>
+                        <input type="email" class="form-control" name="notification_emails[]" 
+                               value="{{ email }}" {% if data.is_free_plan %}disabled{% endif %}>
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-danger remove-email">-</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="input-group mb-2">
+                        <input type="email" class="form-control" name="notification_emails[]" 
+                               {% if data.is_free_plan %}disabled{% endif %}>
                         <div class="input-group-append">
                             <button type="button" class="btn btn-success add-email">+</button>
                         </div>
                     </div>
-
                 </div>
             </div>
+            
             {% if data.is_free_plan %}
             <button class="btn c-btn c-btn--primary c-btn--sm" href="#">Subscribe to Unlock</button>
             {% else %}
             <button type="submit" class="btn c-btn c-btn--primary c-btn--sm">Save Settings</button>
             {% endif %}
-
         </form>
     </div>
 </div>

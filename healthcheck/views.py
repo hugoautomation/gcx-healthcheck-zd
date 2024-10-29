@@ -350,11 +350,10 @@ def get_historical_report(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
-
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
-    installation_id = request.GET.get("installation_id")
+    installation_id = request.GET.get("installation_id") or request.POST.get("installation_id")
     if not installation_id:
         return JsonResponse({"error": "Installation ID required"}, status=400)
 
@@ -363,34 +362,45 @@ def monitoring_settings(request):
             monitoring = HealthCheckMonitoring.objects.get(
                 installation_id=installation_id
             )
-            return JsonResponse(
-                {
-                    "is_active": monitoring.is_active,
-                    "frequency": monitoring.frequency,
-                    "notification_emails": monitoring.notification_emails,
-                }
-            )
+            context = {
+                "is_active": monitoring.is_active,
+                "frequency": monitoring.frequency,
+                "notification_emails": monitoring.notification_emails,
+                "data": {"is_free_plan": False}  # Add your plan check logic here
+            }
         except HealthCheckMonitoring.DoesNotExist:
-            return JsonResponse(
-                {
-                    "is_active": False,
-                    "frequency": "weekly",
-                    "notification_emails": [],
-                }
-            )
+            context = {
+                "is_active": False,
+                "frequency": "weekly",
+                "notification_emails": [],
+                "data": {"is_free_plan": False}  # Add your plan check logic here
+            }
+        return render(request, "healthcheck/partials/monitoring_settings.html", context)
 
     elif request.method == "POST":
-        data = json.loads(request.body)
+        # Handle form data instead of JSON
+        is_active = request.POST.get("is_active") == "on"
+        frequency = request.POST.get("frequency", "weekly")
+        notification_emails = request.POST.getlist("notification_emails[]")
+        # Filter out empty email fields
+        notification_emails = [email for email in notification_emails if email.strip()]
+
         monitoring, created = HealthCheckMonitoring.objects.update_or_create(
             installation_id=installation_id,
             defaults={
-                "instance_guid": data.get("instance_guid"),
-                "subdomain": data.get("subdomain"),
-                "is_active": data.get("is_active", True),
-                "frequency": data.get("frequency", "weekly"),
-                "notification_emails": data.get("notification_emails", []),
+                "is_active": is_active,
+                "frequency": frequency,
+                "notification_emails": notification_emails,
             },
         )
-        return JsonResponse({"status": "success"})
+
+        # Return the updated partial template
+        context = {
+            "is_active": monitoring.is_active,
+            "frequency": monitoring.frequency,
+            "notification_emails": monitoring.notification_emails,
+            "data": {"is_free_plan": False}  # Add your plan check logic here
+        }
+        return render(request, "healthcheck/partials/monitoring_settings.html", context)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
