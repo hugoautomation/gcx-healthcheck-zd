@@ -11,24 +11,12 @@ from django.utils.timesince import timesince
 import csv
 from django.contrib import messages
 from django.http import HttpResponseRedirect
-import logging
-
-logger = logging.getLogger('healthcheck')
-
-
 
 
 def app(request):
-    logger.debug("App view called")
     initial_data = {}
-
-    # Get installation_id, report_id, and plan from the request parameters
     installation_id = request.GET.get("installation_id")
-    report_id = request.GET.get("report_id")
-    client_plan = request.GET.get("plan", "Free")  # Default to Free if not provided
-    logger.debug(
-        f"Installation ID: {installation_id}, Report ID: {report_id}, Client plan: {client_plan}"
-    )
+    client_plan = request.GET.get("plan", "Free")
 
     if installation_id:
         try:
@@ -36,41 +24,28 @@ def app(request):
             historical_reports = HealthCheckReport.objects.filter(
                 installation_id=installation_id
             ).order_by("-created_at")[:10]
-            logger.debug(f"Found {len(historical_reports)} historical reports")
 
-            # Get the current report (either specified by ID or latest)
-            if report_id:
-                current_report = HealthCheckReport.objects.get(id=report_id)
-                logger.debug(f"Loading specific report: {report_id}")
-            else:
-                # Use the helper method to get latest report
-                current_report = HealthCheckReport.get_latest_for_installation(
-                    installation_id
-                )
-                logger.debug(
-                    f"Latest report found: {current_report.id if current_report else None}"
-                )
+            # Use the helper method to get latest report
+            latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
 
-            if current_report:
-                logger.debug(f"Processing report {current_report.id} with plan: {client_plan}")
-                # Check if plan is not Free and update unlock status for all reports
+            if latest_report:
+                # Update unlock status if not on Free plan
                 if client_plan != "Free":
                     HealthCheckReport.update_all_reports_unlock_status(
                         installation_id, client_plan
                     )
 
+                # Format the latest report data
                 report_data = format_response_data(
-                    current_report.raw_response,
+                    latest_report.raw_response,
                     plan=client_plan,
-                    report_id=current_report.id,
-                    last_check=current_report.created_at,
+                    report_id=latest_report.id,
+                    last_check=latest_report.created_at,
                 )
                 is_free_plan = client_plan == "Free"
-                logger.debug("Report data formatted successfully")
             else:
                 report_data = None
                 is_free_plan = True
-                logger.debug("No current report found")
 
             # Get monitoring settings
             try:
@@ -85,90 +60,35 @@ def app(request):
                     "subdomain": monitoring.subdomain,
                     "data": {"is_free_plan": is_free_plan},
                 }
-                logger.debug("Monitoring settings loaded")
             except HealthCheckMonitoring.DoesNotExist:
                 monitoring_context = {
                     "is_active": False,
                     "frequency": "weekly",
                     "notification_emails": [],
-                    "instance_guid": current_report.instance_guid
-                    if current_report
-                    else "",
-                    "subdomain": current_report.subdomain if current_report else "",
+                    "instance_guid": latest_report.instance_guid if latest_report else "",
+                    "subdomain": latest_report.subdomain if latest_report else "",
                     "data": {"is_free_plan": is_free_plan},
                 }
-                logger.debug("Default monitoring settings created")
 
             # Update initial data with all contexts
-            initial_data.update(
-                {
-                    "historical_reports": [
-                        {
-                            "id": report.id,
-                            "created_at": report.created_at.strftime("%d %b %Y"),
-                            "is_unlocked": report.is_unlocked,
-                            "total_issues": len(report.raw_response.get("issues", [])),
-                        }
-                        for report in historical_reports
-                    ],
-                    "data": report_data,
-                    **monitoring_context,
-                }
-            )
-            logger.debug(f"Initial data updated with report data: {report_data is not None}")
-
-            # If there's no report_data but we have historical reports, load the latest one
-            if not report_data and historical_reports:
-                latest_report = historical_reports[0]
-                logger.debug(
-                    f"Loading latest report from historical reports: {latest_report.id}"
-                )
-                report_data = format_response_data(
-                    latest_report.raw_response,
-                    plan=client_plan,
-                    report_id=latest_report.id,
-                    last_check=latest_report.created_at,
-                )
-                initial_data["data"] = report_data
-                logger.debug("Latest historical report loaded as current report")
+            initial_data.update({
+                "historical_reports": [
+                    {
+                        "id": report.id,
+                        "created_at": report.created_at.strftime("%d %b %Y"),
+                        "is_unlocked": report.is_unlocked,
+                        "total_issues": len(report.raw_response.get("issues", [])),
+                    }
+                    for report in historical_reports
+                ],
+                "data": report_data,
+                **monitoring_context,
+            })
 
         except Exception as e:
-            logger.error(f"Error getting reports: {str(e)}")
             initial_data["error"] = str(e)
 
-    logger.debug(f"Rendering template with data: {bool(initial_data.get('data'))}")
     return render(request, "healthcheck/app.html", initial_data)
-
-
-def get_latest_report(request):
-    installation_id = request.GET.get("installation_id")
-    if not installation_id:
-        return JsonResponse({"error": "Installation ID required"}, status=400)
-
-    try:
-        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
-        if not latest_report:
-            return JsonResponse({"error": "No reports found"}, status=404)
-
-        report_data = format_response_data(
-            latest_report.raw_response,
-            plan=latest_report.plan,
-            report_id=latest_report.id,
-            last_check=latest_report.created_at,
-        )
-
-        results_html = render_to_string(
-            "healthcheck/results.html", {"data": report_data}, request=request
-        )
-
-        return JsonResponse(
-            {
-                "results_html": results_html,
-            }
-        )
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
 
 
 @csrf_exempt
