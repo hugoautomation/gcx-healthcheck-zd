@@ -9,6 +9,8 @@ from zendeskapp import settings
 from .models import HealthCheckReport, HealthCheckMonitoring
 from django.utils.timesince import timesince
 import csv
+from django.contrib import messages
+from django.http import HttpResponseRedirect
 
 
 def app(request):
@@ -47,21 +49,46 @@ def app(request):
                     report_id=current_report.id,
                     last_check=current_report.created_at,
                 )
+                is_free_plan = current_report.plan == "Free"
+            else:
+                report_data = None
+                is_free_plan = True
 
-            initial_data.update(
-                {
-                    "historical_reports": [
-                        {
-                            "id": report.id,
-                            "created_at": report.created_at.strftime("%d %b %Y"),
-                            "is_unlocked": report.is_unlocked,
-                            "total_issues": len(report.raw_response.get("issues", [])),
-                        }
-                        for report in historical_reports
-                    ],
-                    "data": report_data if current_report else None,
+            # Get monitoring settings
+            try:
+                monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
+                monitoring_context = {
+                    "is_active": monitoring.is_active and not is_free_plan,
+                    "frequency": monitoring.frequency,
+                    "notification_emails": monitoring.notification_emails or [],
+                    "instance_guid": monitoring.instance_guid,
+                    "subdomain": monitoring.subdomain,
+                    "data": {"is_free_plan": is_free_plan},
                 }
-            )
+            except HealthCheckMonitoring.DoesNotExist:
+                monitoring_context = {
+                    "is_active": False,
+                    "frequency": "weekly",
+                    "notification_emails": [],
+                    "instance_guid": current_report.instance_guid if current_report else "",
+                    "subdomain": current_report.subdomain if current_report else "",
+                    "data": {"is_free_plan": is_free_plan},
+                }
+
+            # Update initial data with all contexts
+            initial_data.update({
+                "historical_reports": [
+                    {
+                        "id": report.id,
+                        "created_at": report.created_at.strftime("%d %b %Y"),
+                        "is_unlocked": report.is_unlocked,
+                        "total_issues": len(report.raw_response.get("issues", [])),
+                    }
+                    for report in historical_reports
+                ],
+                "data": report_data,
+                **monitoring_context  # Add monitoring context to initial_data
+            })
 
         except Exception as e:
             print(f"Error getting reports: {str(e)}")
@@ -382,127 +409,53 @@ def get_historical_report(request, report_id):
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
-
+    
 
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
-    installation_id = request.GET.get("installation_id") or request.POST.get(
-        "installation_id"
-    )
+    installation_id = request.POST.get("installation_id")
     if not installation_id:
-        return JsonResponse({"error": "Installation ID required"}, status=400)
+        messages.error(request, "Installation ID required")
+        return HttpResponseRedirect(request.POST.get('redirect_url', '/'))
 
     # Get the latest report to check plan status
     latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
     is_free_plan = latest_report.plan == "Free" if latest_report else True
 
-    if request.method == "GET":
-        try:
-            monitoring = HealthCheckMonitoring.objects.get(
-                installation_id=installation_id
-            )
-            context = {
-                "is_active": monitoring.is_active and not is_free_plan,
-                "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails
-                or [],  # Ensure it's never None
-                "instance_guid": latest_report.instance_guid if latest_report else "",
-                "subdomain": latest_report.subdomain if latest_report else "",
-                "data": {"is_free_plan": is_free_plan},
-            }
-        except HealthCheckMonitoring.DoesNotExist:
-            # Create default monitoring settings if they don't exist
-            if latest_report and not is_free_plan:
-                monitoring = HealthCheckMonitoring.objects.create(
-                    installation_id=installation_id,
-                    instance_guid=latest_report.instance_guid,
-                    subdomain=latest_report.subdomain,
-                    is_active=False,
-                    frequency="weekly",
-                    notification_emails=[],
-                )
-                context = {
-                    "is_active": False,
-                    "frequency": "weekly",
-                    "notification_emails": [],
-                    "instance_guid": latest_report.instance_guid,
-                    "subdomain": latest_report.subdomain,
-                    "data": {"is_free_plan": is_free_plan},
-                }
-            else:
-                context = {
-                    "is_active": False,
-                    "frequency": "weekly",
-                    "notification_emails": [],
-                    "instance_guid": "",
-                    "subdomain": "",
-                    "data": {"is_free_plan": is_free_plan},
-                }
-        return render(request, "healthcheck/partials/monitoring_settings.html", context)
-
-    elif request.method == "POST":
+    if request.method == "POST":
         if is_free_plan:
-            return JsonResponse(
-                {"error": "Monitoring not available for free plan"}, status=403
-            )
+            messages.error(request, "Monitoring not available for free plan")
+            return HttpResponseRedirect(request.POST.get('redirect_url', '/'))
 
         try:
-            # Parse form data
-            data = json.loads(request.body) if request.body else request.POST
-            is_active = data.get("is_active") == "true"
-            frequency = data.get("frequency", "weekly")
-            notification_emails = (
-                data.getlist("notification_emails[]")
-                if hasattr(data, "getlist")
-                else data.get("notification_emails", [])
-            )
-
+            is_active = request.POST.get("is_active") == "on"
+            frequency = request.POST.get("frequency", "weekly")
+            notification_emails = request.POST.getlist("notification_emails[]")
+            
             # Filter out empty email fields
-            notification_emails = [
-                email for email in notification_emails if email and email.strip()
-            ]
+            notification_emails = [email for email in notification_emails if email and email.strip()]
 
             # Update or create monitoring settings
-            monitoring, created = HealthCheckMonitoring.objects.update_or_create(
+            monitoring, _ = HealthCheckMonitoring.objects.update_or_create(
                 installation_id=installation_id,
                 defaults={
-                    "instance_guid": latest_report.instance_guid
-                    if latest_report
-                    else "",
+                    "instance_guid": latest_report.instance_guid if latest_report else "",
                     "subdomain": latest_report.subdomain if latest_report else "",
                     "is_active": is_active,
                     "frequency": frequency,
                     "notification_emails": notification_emails,
-                },
-            )
-
-            # Return updated context
-            context = {
-                "is_active": monitoring.is_active and not is_free_plan,
-                "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails,
-                "instance_guid": monitoring.instance_guid,
-                "subdomain": monitoring.subdomain,
-                "data": {"is_free_plan": is_free_plan},
-            }
-
-            # Return success response with updated HTML
-            return JsonResponse(
-                {
-                    "status": "success",
-                    "html": render_to_string(
-                        "healthcheck/partials/monitoring_settings.html", context
-                    ),
                 }
             )
-
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+            
+            messages.success(request, "Settings saved successfully")
+            
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+            messages.error(request, f"Error saving settings: {str(e)}")
+        
+        return HttpResponseRedirect(request.POST.get('redirect_url', '/'))
 
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    return HttpResponseRedirect(request.GET.get('redirect_url', '/'))
 
 
 @csrf_exempt

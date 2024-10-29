@@ -6,9 +6,10 @@
         <form method="POST" action="monitoring-settings/">
             <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
             <input type="hidden" name="redirect_url" value="{{ request.get_full_path }}">
-            
-            <!-- Monitoring Status -->
-            <div class="mb-3">
+        
+            <div class="row">
+                <!-- Monitoring Status -->
+                <div class="mb-3 col-md-6">
                 <label class="form-label">Monitoring Status</label>
                 <div class="form-check form-switch">
                     <input type="checkbox" class="form-check-input" id="is_active" name="is_active" 
@@ -19,7 +20,7 @@
             </div>
             
             <!-- Check Frequency -->
-            <div class="mb-3">
+            <div class="mb-3 col-md-6">
                 <label for="frequency" class="form-label">Check Frequency</label>
                 <select class="form-select" id="frequency" name="frequency" 
                         {% if data.is_free_plan %}disabled{% endif %}>
@@ -30,7 +31,7 @@
             </div>
             
             <!-- Notification Emails -->
-            <div class="mb-3">
+            <div class="mb-3 col-12">
                 <label for="notification_emails" class="form-label">Notification Emails</label>
                 <div id="email-inputs">
                     {% for email in notification_emails %}
@@ -48,6 +49,7 @@
                 </div>
             </div>
             
+        </div>
             {% if data.is_free_plan %}
             <a href="upgrade/" class="btn c-btn c-btn--primary c-btn--sm">Subscribe to Unlock</a>
             {% else %}
