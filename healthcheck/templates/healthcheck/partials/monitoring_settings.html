@@ -1,66 +1,58 @@
-<div class="accordion mb-4" id="monitoring-settings">
-    <div class="accordion-item">
-        <h2 class="accordion-header">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
-                    data-bs-target="#monitoringSettingsBody" aria-expanded="false" 
-                    aria-controls="monitoringSettingsBody" aria-controls="monitoringSettingsBody">
-                <h5 class="mb-0">Automated Monitoring Settings</h5>
-            </button>
-        </h2>
-        <div id="monitoringSettingsBody" class="accordion-collapse collapse" 
-             data-bs-parent="#monitoring-settings">
-            <div class="accordion-body">
-                <form id="monitoring-form">
-                    <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
-                    
-                    <!-- Monitoring Status -->
-                    <div class="mb-3">
-                        <label class="form-label">Monitoring Status</label>
-                        <div class="form-check form-switch">
-                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" 
-                                   {% if is_active %}checked{% endif %} 
-                                   {% if data.is_free_plan %}disabled{% endif %}>
-                            <label class="form-check-label" for="is_active">Active</label>
-                        </div>
-                    </div>
-                    
-                    <!-- Check Frequency -->
-                    <div class="mb-3">
-                        <label for="frequency" class="form-label">Check Frequency</label>
-                        <select class="form-select" id="frequency" name="frequency" 
-                                {% if data.is_free_plan %}disabled{% endif %}>
-                            <option value="daily" {% if frequency == 'daily' %}selected{% endif %}>Daily</option>
-                            <option value="weekly" {% if frequency == 'weekly' %}selected{% endif %}>Weekly</option>
-                            <option value="monthly" {% if frequency == 'monthly' %}selected{% endif %}>Monthly</option>
-                        </select>
-                    </div>
-                    
-                    <!-- Notification Emails -->
-                    <div class="mb-3">
-                        <label for="notification_emails" class="form-label">Notification Emails</label>
-                        <div id="email-inputs">
-                            {% for email in notification_emails %}
-                            <div class="input-group mb-2">
-                                <input type="email" class="form-control" name="notification_emails[]" 
-                                       value="{{ email }}" {% if data.is_free_plan %}disabled{% endif %}>
-                                <button type="button" class="btn c-btn c-btn--danger remove-email">-</button>
-                            </div>
-                            {% endfor %}
-                            <div class="input-group mb-2">
-                                <input type="email" class="form-control" name="notification_emails[]" 
-                                       {% if data.is_free_plan %}disabled{% endif %}>
-                                <button type="button" class="btn c-btn c-btn--success add-email">+</button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {% if data.is_free_plan %}
-                    <button class="btn c-btn c-btn--primary c-btn--sm">Subscribe to Unlock</button>
-                    {% else %}
-                    <button type="submit" class="btn c-btn c-btn--primary c-btn--sm">Save Settings</button>
-                    {% endif %}
-                </form>
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Automated Monitoring Settings</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="monitoring-settings/">
+            <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
+            <input type="hidden" name="redirect_url" value="{{ request.get_full_path }}">
+            
+            <!-- Monitoring Status -->
+            <div class="mb-3">
+                <label class="form-label">Monitoring Status</label>
+                <div class="form-check form-switch">
+                    <input type="checkbox" class="form-check-input" id="is_active" name="is_active" 
+                           {% if is_active %}checked{% endif %} 
+                           {% if data.is_free_plan %}disabled{% endif %}>
+                    <label class="form-check-label" for="is_active">Active</label>
+                </div>
             </div>
-        </div>
+            
+            <!-- Check Frequency -->
+            <div class="mb-3">
+                <label for="frequency" class="form-label">Check Frequency</label>
+                <select class="form-select" id="frequency" name="frequency" 
+                        {% if data.is_free_plan %}disabled{% endif %}>
+                    <option value="daily" {% if frequency == 'daily' %}selected{% endif %}>Daily</option>
+                    <option value="weekly" {% if frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+                    <option value="monthly" {% if frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+                </select>
+            </div>
+            
+            <!-- Notification Emails -->
+            <div class="mb-3">
+                <label for="notification_emails" class="form-label">Notification Emails</label>
+                <div id="email-inputs">
+                    {% for email in notification_emails %}
+                    <div class="input-group mb-2">
+                        <input type="email" class="form-control" name="notification_emails[]" 
+                               value="{{ email }}" {% if data.is_free_plan %}disabled{% endif %}>
+                        <button type="button" class="btn c-btn c-btn--danger remove-email" onclick="removeEmailField(this)">-</button>
+                    </div>
+                    {% endfor %}
+                    <div class="input-group mb-2">
+                        <input type="email" class="form-control" name="notification_emails[]" 
+                               {% if data.is_free_plan %}disabled{% endif %}>
+                        <button type="button" class="btn c-btn c-btn--success add-email" onclick="addEmailField(this)">+</button>
+                    </div>
+                </div>
+            </div>
+            
+            {% if data.is_free_plan %}
+            <a href="upgrade/" class="btn c-btn c-btn--primary c-btn--sm">Subscribe to Unlock</a>
+            {% else %}
+            <button type="submit" class="btn c-btn c-btn--primary c-btn--sm">Save Settings</button>
+            {% endif %}
+        </form>
     </div>
 </div>
