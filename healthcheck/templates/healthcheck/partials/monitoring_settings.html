@@ -8,14 +8,14 @@
             <div class="form-group">
                 <label>Monitoring Status</label>
                 <div class="custom-control custom-switch">
-                    <input type="checkbox" class="custom-control-input" id="is_active" name="is_active">
+                    <input type="checkbox" class="custom-control-input" id="is_active" name="is_active" {% if data.is_free_plan %}disabled{% endif %}>
                     <label class="custom-control-label" for="is_active">Active</label>
                 </div>
             </div>
             
             <div class="form-group">
                 <label for="frequency">Check Frequency</label>
-                <select class="form-control" id="frequency" name="frequency">
+                <select class="form-control" id="frequency" name="frequency" {% if data.is_free_plan %}disabled{% endif %}>
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
                     <option value="monthly">Monthly</option>
@@ -25,16 +25,18 @@
             <div class="form-group">
                 <label for="notification_emails">Notification Emails</label>
                 <div id="email-inputs">
+                    {% if data.is_free_plan %}
                     <div class="input-group mb-2">
-                        <input type="email" class="form-control" name="notification_emails[]">
+                        <input type="email" class="form-control" name="notification_emails[]"
+                        {% if data.is_free_plan %}disabled{% endif %}>
                         <div class="input-group-append">
                             <button type="button" class="btn btn-success add-email">+</button>
                         </div>
                     </div>
+
                 </div>
             </div>
-          <p> is_free_plan: {{ data.is_free_plan}} </p> 
-            {% if not data.is_free_plan %}
+            {% if data.is_free_plan %}
             <button type="submit" class="btn c-btn c-btn--primary c-btn--sm" href="#">Subscribe to Unlock</button>
             {% else %}
             <button type="submit" class="btn c-btn c-btn--primary c-btn--sm">Save Settings</button>
