@@ -378,6 +378,7 @@ def get_historical_report(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
+
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
@@ -399,13 +400,39 @@ def monitoring_settings(request):
             context = {
                 "is_active": monitoring.is_active and not is_free_plan,
                 "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails or [],
+                "notification_emails": monitoring.notification_emails or [],  # Ensure it's never None
                 "instance_guid": latest_report.instance_guid if latest_report else "",
                 "subdomain": latest_report.subdomain if latest_report else "",
                 "data": {"is_free_plan": is_free_plan},
             }
         except HealthCheckMonitoring.DoesNotExist:
-            # ... existing GET logic ...
+            # Create default monitoring settings if they don't exist
+            if latest_report and not is_free_plan:
+                monitoring = HealthCheckMonitoring.objects.create(
+                    installation_id=installation_id,
+                    instance_guid=latest_report.instance_guid,
+                    subdomain=latest_report.subdomain,
+                    is_active=False,
+                    frequency="weekly",
+                    notification_emails=[],
+                )
+                context = {
+                    "is_active": False,
+                    "frequency": "weekly",
+                    "notification_emails": [],
+                    "instance_guid": latest_report.instance_guid,
+                    "subdomain": latest_report.subdomain,
+                    "data": {"is_free_plan": is_free_plan},
+                }
+            else:
+                context = {
+                    "is_active": False,
+                    "frequency": "weekly",
+                    "notification_emails": [],
+                    "instance_guid": "",
+                    "subdomain": "",
+                    "data": {"is_free_plan": is_free_plan},
+                }
         return render(request, "healthcheck/partials/monitoring_settings.html", context)
 
     elif request.method == "POST":
@@ -452,10 +479,13 @@ def monitoring_settings(request):
                 "html": render_to_string("healthcheck/partials/monitoring_settings.html", context)
             })
 
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
 
 
 @csrf_exempt
