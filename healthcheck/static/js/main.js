@@ -143,13 +143,12 @@ async function handlePlanChange(data) {
         console.error('Error updating plan:', error);
     }
 }
-
-// Component Initialization Functions
 function initializeRunCheck() {
     const runCheckButton = document.getElementById('run-check');
     if (!runCheckButton) return;
 
     runCheckButton.addEventListener('click', async () => {
+        console.log('Run Health Check button clicked'); // Add this line
         const resultsDiv = document.getElementById('results');
         showLoadingState(resultsDiv);
 
@@ -159,20 +158,12 @@ function initializeRunCheck() {
             }
 
             const options = {
-                url: 'check/',
+                url: '/check/',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
-                    url: `${context.account.subdomain}.zendesk.com`,
-                    email: '{{setting.admin_email}}',
-                    api_token: '{{setting.api_token}}',
-                    instance_guid: context.instanceGuid,
-                    app_guid: metadata.appId,
                     installation_id: metadata.installationId,
-                    subdomain: context.account.subdomain,
-                    plan: metadata.plan?.name,
-                    stripe_subscription_id: metadata.stripe_subscription_id,
-                    version: metadata.version
+                    // Add other necessary data here
                 }),
                 secure: true
             };
