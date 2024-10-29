@@ -267,7 +267,6 @@ def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        installation_id = request.GET.get("installation_id")
 
         # Format the report data
         report_data = format_response_data(
@@ -277,10 +276,7 @@ def get_historical_report(request, report_id):
             last_check=report.created_at,
         )
 
-        # Get monitoring context using utility function
-        monitoring_context = get_monitoring_context(
-            installation_id, report.plan, report
-        )
+    
 
         # Use render_report_components utility
         results_html = render_report_components(
