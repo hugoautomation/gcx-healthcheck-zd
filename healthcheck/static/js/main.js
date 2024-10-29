@@ -1,16 +1,21 @@
+let client = null;
+let metadata = null;
+let context = null;
+
 document.addEventListener('DOMContentLoaded', async function() {
-    const client = window.ZAFClient ? window.ZAFClient.init() : null;
-    
-    if (!client) {
-        console.error('ZAF Client could not be initialized');
-        return;
-    }
-
-    console.log('ZAF Client initialized successfully');
-
     try {
+        // Initialize ZAF client
+        client = window.ZAFClient ? window.ZAFClient.init() : null;
+        
+        if (!client) {
+            console.error('ZAF Client could not be initialized');
+            return;
+        }
+
+        console.log('ZAF Client initialized successfully');
+
         // Get metadata and context at startup
-        const [context, metadata] = await Promise.all([
+        [context, metadata] = await Promise.all([
             client.context(),
             client.metadata()
         ]);
@@ -25,109 +30,102 @@ document.addEventListener('DOMContentLoaded', async function() {
             // If not in URL, add it and reload
             currentUrl.searchParams.set('installation_id', metadata.installationId);
             window.location.href = currentUrl.toString();
-            return; // Stop execution since page will reload
+            return;
         }
 
-        // Initial resize with maximum height
+        // Initial resize
         client.invoke('resize', { width: '100%', height: '800px' });
 
-        // Handle scroll events
-        const scrollContainer = document.querySelector('.scrollable-container');
-        scrollContainer.addEventListener('scroll', (e) => {
-            e.stopPropagation();
-        });
-
-        // Initialize filters and unlock buttons for initial load
+        // Initialize components
         initializeFilters();
         initializeUnlockButtons();
-
-        // Handle new health check requests
-        document.getElementById('run-check').addEventListener('click', async () => {
-            const resultsDiv = document.getElementById('results');
-            
-            // Show loading state
-            resultsDiv.innerHTML = `
-                <div class="text-center my-5">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="d-none">Loading...</span>
-                    </div>
-                </div>
-            `;
-
-            try {
-                const options = {
-                    url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        // Original auth data
-                        url: `${context.account.subdomain}.zendesk.com`,
-                        email: '{{setting.admin_email}}',
-                        api_token: '{{setting.api_token}}',
-                        
-                        // Additional instance data
-                        instance_guid: context.instanceGuid,
-                        app_guid: metadata.appId,
-                        installation_id: metadata.installationId,
-                        subdomain: context.account.subdomain,
-                        
-                        // App metadata
-                        plan: metadata.plan?.name,
-                        stripe_subscription_id: metadata.stripe_subscription_id,
-                        version: metadata.version
-                    }),
-                    secure: true
-                };
-
-                console.log('Sending request to /check/...');
-                const response = await client.request(options);
-                
-                console.log('Response:', response);
-                resultsDiv.innerHTML = response;
-
-                // Initialize filters and unlock buttons after content is loaded
-                initializeFilters();
-                initializeUnlockButtons();
-
-                // Reset scroll position
-                scrollContainer.scrollTop = 0;
-
-                // Adjust height after content is rendered
-                setTimeout(() => {
-                    const contentHeight = Math.min(
-                        Math.max(
-                            resultsDiv.scrollHeight,
-                            document.getElementById('health-check-content')?.scrollHeight || 0,
-                            600  // minimum height
-                        ),
-                        800  // maximum height
-                    );
-
-                    client.invoke('resize', { 
-                        width: '100%', 
-                        height: `${contentHeight}px`
-                    });
-                }, 100);
-
-            } catch (error) {
-                console.error('Detailed error:', {
-                    message: error.message,
-                    stack: error.stack,
-                    error: error
-                });
-                resultsDiv.innerHTML = `
-                    <div class="alert alert-danger" role="alert">
-                        <h5>Error Running Health Check</h5>
-                        <p>${error.message || 'An unexpected error occurred. Please try again.'}</p>
-                    </div>
-                `;
-            }
-        });
+        initializeRunCheck();
 
     } catch (error) {
         console.error('Error initializing:', error);
     }
 });
+
+function initializeRunCheck() {
+    const runCheckButton = document.getElementById('run-check');
+    if (!runCheckButton) return;
+
+    runCheckButton.addEventListener('click', async () => {
+        const resultsDiv = document.getElementById('results');
+        
+        // Show loading state
+        resultsDiv.innerHTML = `
+            <div class="text-center my-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="d-none">Loading...</span>
+                </div>
+            </div>
+        `;
+
+        try {
+            if (!client || !context || !metadata) {
+                throw new Error('Client, context, or metadata not initialized');
+            }
+
+            const options = {
+                url: '/check/',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    url: `${context.account.subdomain}.zendesk.com`,
+                    email: '{{setting.admin_email}}',
+                    api_token: '{{setting.api_token}}',
+                    
+                    instance_guid: context.instanceGuid,
+                    app_guid: metadata.appId,
+                    installation_id: metadata.installationId,
+                    subdomain: context.account.subdomain,
+                    
+                    plan: metadata.plan?.name,
+                    stripe_subscription_id: metadata.stripe_subscription_id,
+                    version: metadata.version
+                }),
+                secure: true
+            };
+
+            console.log('Sending request to /check/...');
+            const response = await client.request(options);
+            
+            console.log('Response:', response);
+            resultsDiv.innerHTML = response;
+
+            // Initialize filters and unlock buttons after content is loaded
+            initializeFilters();
+            initializeUnlockButtons();
+
+            // Adjust height after content is rendered
+            setTimeout(() => {
+                const contentHeight = Math.min(
+                    Math.max(
+                        resultsDiv.scrollHeight,
+                        document.getElementById('health-check-content')?.scrollHeight || 0,
+                        600  // minimum height
+                    ),
+                    800  // maximum height
+                );
+
+                client.invoke('resize', { 
+                    width: '100%', 
+                    height: `${contentHeight}px`
+                });
+            }, 100);
+
+        } catch (error) {
+            console.error('Health check error:', error);
+            resultsDiv.innerHTML = `
+                <div class="alert alert-danger" role="alert">
+                    <h5>Error Running Health Check</h5>
+                    <p>${error.message || 'An unexpected error occurred. Please try again.'}</p>
+                </div>
+            `;
+        }
+    });
+}
 
 // Filtering function
 function initializeFilters() {
