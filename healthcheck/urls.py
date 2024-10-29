@@ -16,4 +16,5 @@ urlpatterns = [
         views.get_historical_report,
         name="get_historical_report",
     ),
+    path("monitoring-settings/", views.monitoring_settings, name="monitoring_settings"),
 ]

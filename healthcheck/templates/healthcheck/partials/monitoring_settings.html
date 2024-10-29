@@ -1,0 +1,41 @@
+{% if not data.is_free_plan %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Automated Monitoring Settings</h5>
+    </div>
+    <div class="card-body">
+        <form id="monitoring-form">
+            <div class="form-group">
+                <label>Monitoring Status</label>
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="is_active" name="is_active">
+                    <label class="custom-control-label" for="is_active">Active</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="frequency">Check Frequency</label>
+                <select class="form-control" id="frequency" name="frequency">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="notification_emails">Notification Emails</label>
+                <div id="email-inputs">
+                    <div class="input-group mb-2">
+                        <input type="email" class="form-control" name="notification_emails[]">
+                        <div class="input-group-append">
+                            <button type="button" class="btn btn-success add-email">+</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn c-btn c-btn--primary">Save Settings</button>
+        </form>
+    </div>
+</div>
+{% endif %}

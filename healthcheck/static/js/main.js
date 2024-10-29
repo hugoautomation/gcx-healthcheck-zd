@@ -226,3 +226,93 @@ function initializeUnlockButtons() {
         }
     });
 }
+
+
+
+// Add email input field
+document.querySelector('.add-email')?.addEventListener('click', function() {
+    const emailInputs = document.getElementById('email-inputs');
+    const newInput = document.createElement('div');
+    newInput.className = 'input-group mb-2';
+    newInput.innerHTML = `
+        <input type="email" class="form-control" name="notification_emails[]">
+        <div class="input-group-append">
+            <button type="button" class="btn btn-danger remove-email">-</button>
+        </div>
+    `;
+    emailInputs.appendChild(newInput);
+});
+
+// Remove email input field
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-email')) {
+        e.target.closest('.input-group').remove();
+    }
+});
+
+// Handle form submission
+document.getElementById('monitoring-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        is_active: document.getElementById('is_active').checked,
+        frequency: document.getElementById('frequency').value,
+        notification_emails: Array.from(document.getElementsByName('notification_emails[]'))
+            .map(input => input.value)
+            .filter(email => email.trim() !== '')
+    };
+
+    try {
+        const response = await fetch('/monitoring-settings/?installation_id=' + installationId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (response.ok) {
+            alert('Settings saved successfully!');
+        } else {
+            throw new Error('Failed to save settings');
+        }
+    } catch (error) {
+        alert('Error saving settings: ' + error.message);
+    }
+});
+
+// Load existing settings
+async function loadMonitoringSettings() {
+    try {
+        const response = await fetch('/monitoring-settings/?installation_id=' + installationId);
+        if (response.ok) {
+            const settings = await response.json();
+            document.getElementById('is_active').checked = settings.is_active;
+            document.getElementById('frequency').value = settings.frequency;
+            
+            // Clear existing email inputs
+            const emailInputs = document.getElementById('email-inputs');
+            emailInputs.innerHTML = '';
+            
+            // Add email inputs for existing emails
+            settings.notification_emails.forEach(email => {
+                const input = document.createElement('div');
+                input.className = 'input-group mb-2';
+                input.innerHTML = `
+                    <input type="email" class="form-control" name="notification_emails[]" value="${email}">
+                    <div class="input-group-append">
+                        <button type="button" class="btn btn-danger remove-email">-</button>
+                    </div>
+                `;
+                emailInputs.appendChild(input);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading monitoring settings:', error);
+    }
+}
+
+// Load settings when form exists
+if (document.getElementById('monitoring-form')) {
+    loadMonitoringSettings();
+}

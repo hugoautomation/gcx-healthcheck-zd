@@ -1,6 +1,10 @@
 # Create your models here.
+from datetime import timedelta
+from dateutil.relativedelta import relativedelta
 from django.db import models
 from django.utils import timezone
+from django.contrib.postgres.fields import ArrayField
+from django.core.validators import EmailValidator
 
 
 class HealthCheckReport(models.Model):
@@ -66,3 +70,58 @@ class HealthCheckReport(models.Model):
         if self.plan != "Free":
             self.is_unlocked = True
         super().save(*args, **kwargs)
+
+
+class HealthCheckMonitoring(models.Model):
+    """Manages automated health check monitoring settings"""
+
+    FREQUENCY_CHOICES = [
+        ("daily", "Daily"),
+        ("weekly", "Weekly"),
+        ("monthly", "Monthly"),
+    ]
+
+    # Link to installation
+    installation_id = models.BigIntegerField(unique=True)
+    instance_guid = models.CharField(max_length=320)
+    subdomain = models.CharField(max_length=255)
+
+    # Monitoring settings
+    is_active = models.BooleanField(default=True)
+    frequency = models.CharField(
+        max_length=10, choices=FREQUENCY_CHOICES, default="weekly"
+    )
+    notification_emails = ArrayField(
+        models.EmailField(validators=[EmailValidator()]),
+        blank=True,
+        help_text="List of email addresses to receive reports",
+    )
+
+    # Metadata
+    last_check = models.DateTimeField(null=True, blank=True)
+    next_check = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def schedule_next_check(self):
+        """Calculate and set the next check date based on frequency"""
+        if not self.last_check:
+            self.last_check = timezone.now()
+
+        if self.frequency == "daily":
+            self.next_check = self.last_check + timedelta(days=1)
+        elif self.frequency == "weekly":
+            self.next_check = self.last_check + timedelta(weeks=1)
+        else:  # monthly
+            self.next_check = self.last_check + relativedelta(months=1)
+
+    def save(self, *args, **kwargs):
+        if not self.next_check:
+            self.schedule_next_check()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["installation_id"]),
+            models.Index(fields=["next_check"]),
+        ]

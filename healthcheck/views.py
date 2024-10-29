@@ -6,19 +6,18 @@ from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 import requests
 from zendeskapp import settings
-from .models import HealthCheckReport
+from .models import HealthCheckReport, HealthCheckMonitoring
 from django.utils.timesince import timesince
 import csv
 
 
 def app(request):
     initial_data = {}
-    
-    # Get the domain and installation_id from the request parameters
-    domain = request.GET.get("origin", "")
+
+    # Get installation_id and report_id from the request parameters
     installation_id = request.GET.get("installation_id")
     report_id = request.GET.get("report_id")
-    
+
     if installation_id:
         try:
             # Get historical reports for this installation
@@ -31,8 +30,10 @@ def app(request):
                 current_report = HealthCheckReport.objects.get(id=report_id)
             else:
                 # Use the helper method to get latest report
-                current_report = HealthCheckReport.get_latest_for_installation(installation_id)
-            
+                current_report = HealthCheckReport.get_latest_for_installation(
+                    installation_id
+                )
+
             if current_report:
                 report_data = format_response_data(
                     current_report.raw_response,
@@ -40,25 +41,28 @@ def app(request):
                     report_id=current_report.id,
                     last_check=current_report.created_at,
                 )
-            
-            initial_data.update({
-                "historical_reports": [
-                    {
-                        "id": report.id,
-                        "created_at": report.created_at.strftime("%d %b %Y"),  # Changed this line
-                        "is_unlocked": report.is_unlocked,
-                        "total_issues": len(report.raw_response.get("issues", [])),
-                    }
-                    for report in historical_reports
-                ],
-                "data": report_data if current_report else None,
-            })
+
+            initial_data.update(
+                {
+                    "historical_reports": [
+                        {
+                            "id": report.id,
+                            "created_at": report.created_at.strftime("%d %b %Y"),
+                            "is_unlocked": report.is_unlocked,
+                            "total_issues": len(report.raw_response.get("issues", [])),
+                        }
+                        for report in historical_reports
+                    ],
+                    "data": report_data if current_report else None,
+                }
+            )
 
         except Exception as e:
             print(f"Error getting reports: {str(e)}")
             pass
 
     return render(request, "healthcheck/app.html", initial_data)
+
 
 @csrf_exempt
 def health_check(request):
@@ -345,3 +349,48 @@ def get_historical_report(request, report_id):
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
+
+
+@csrf_exempt
+def monitoring_settings(request):
+    """Handle monitoring settings updates"""
+    installation_id = request.GET.get("installation_id")
+    if not installation_id:
+        return JsonResponse({"error": "Installation ID required"}, status=400)
+
+    if request.method == "GET":
+        try:
+            monitoring = HealthCheckMonitoring.objects.get(
+                installation_id=installation_id
+            )
+            return JsonResponse(
+                {
+                    "is_active": monitoring.is_active,
+                    "frequency": monitoring.frequency,
+                    "notification_emails": monitoring.notification_emails,
+                }
+            )
+        except HealthCheckMonitoring.DoesNotExist:
+            return JsonResponse(
+                {
+                    "is_active": False,
+                    "frequency": "weekly",
+                    "notification_emails": [],
+                }
+            )
+
+    elif request.method == "POST":
+        data = json.loads(request.body)
+        monitoring, created = HealthCheckMonitoring.objects.update_or_create(
+            installation_id=installation_id,
+            defaults={
+                "instance_guid": data.get("instance_guid"),
+                "subdomain": data.get("subdomain"),
+                "is_active": data.get("is_active", True),
+                "frequency": data.get("frequency", "weekly"),
+                "notification_emails": data.get("notification_emails", []),
+            },
+        )
+        return JsonResponse({"status": "success"})
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
