@@ -68,17 +68,15 @@ function initializeForm() {
     const form = document.getElementById('monitoring-form');
     if (!form) return;
         // Handle back button
-        const backButton = document.querySelector('.btn-secondary');
+        const backButton = document.querySelector('.back-to-dashboard');
         if (backButton) {
             backButton.addEventListener('click', function(e) {
                 e.preventDefault();
-                if (client) {
-                    // Use ZAF client to navigate back
-                    client.invoke('navigate', { url: 'app' });
-                } else {
-                    // Fallback to regular navigation
-                    window.location.href = this.href;
-                }
+                const currentUrl = new URL(window.location.href);
+                const installationId = currentUrl.searchParams.get('installation_id');
+                const plan = currentUrl.searchParams.get('plan');
+                
+                window.location.href = `../?installation_id=${installationId}&plan=${plan}`;
             });
         }
 
