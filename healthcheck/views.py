@@ -63,8 +63,7 @@ def app(request):
                         "historical_reports": format_historical_reports(
                             historical_reports
                         ),
-                    "data": report_data if 'report_data' in locals() else None,
-
+                        "data": report_data,  # Just pass the report_data directly
                     }
                 )
 
