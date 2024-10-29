@@ -162,8 +162,16 @@ function initializeRunCheck() {
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
+                    url: `${context.account.subdomain}.zendesk.com`,
+                    email: '{{setting.admin_email}}',
+                    api_token: '{{setting.api_token}}',
+                    instance_guid: context.instanceGuid,
+                    app_guid: metadata.appId,
                     installation_id: metadata.installationId,
-                    // Add other necessary data here
+                    subdomain: context.account.subdomain,
+                    plan: metadata.plan?.name,
+                    stripe_subscription_id: metadata.stripe_subscription_id,
+                    version: metadata.version
                 }),
                 secure: true
             };
