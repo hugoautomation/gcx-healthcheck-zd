@@ -47,65 +47,6 @@ function showError(element, error, title = 'Error') {
     `;
 }
 
-function initializeMonitoringForm() {
-    const form = document.querySelector('#monitoring-form');
-    const saveButton = document.getElementById('save-settings-btn');
-    
-    if (form && saveButton) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Show loading state
-            const spinner = saveButton.querySelector('.spinner-border');
-            const btnText = saveButton.querySelector('.btn-text');
-            
-            spinner.classList.remove('d-none');
-            btnText.textContent = 'Saving...';
-            saveButton.disabled = true;
-
-            // Get all email inputs that have values
-            const emailInputs = form.querySelectorAll('.notification-email');
-            const validEmails = Array.from(emailInputs)
-                .filter(input => input.value.trim() !== '')
-                .map(input => input.value.trim());
-
-            // Create a FormData object
-            const formData = new FormData(form);
-
-            // Remove existing email fields
-            for (const pair of formData.entries()) {
-                if (pair[0] === 'notification_emails[]') {
-                    formData.delete(pair[0]);
-                }
-            }
-
-            // Add valid emails back
-            validEmails.forEach(email => {
-                formData.append('notification_emails[]', email);
-            });
-
-            // Submit the form
-            form.submit();
-        });
-    }
-}
-
-function addEmailField(button) {
-    const template = `
-        <div class="input-group mb-2">
-            <input type="email" class="form-control notification-email" name="notification_emails[]" 
-                   ${button.closest('form').dataset.isFreePlan === 'true' ? 'disabled' : ''}>
-            <button type="button" class="btn c-btn c-btn--danger rounded-end remove-email" onclick="removeEmailField(this)">-</button>
-        </div>`;
-    button.closest('.input-group').insertAdjacentHTML('beforebegin', template);
-    adjustContentHeight();
-}
-
-function removeEmailField(button) {
-    button.closest('.input-group').remove();
-    adjustContentHeight();
-}
-
 // Add these functions after the utility functions and before initializeComponents()
 
 function initializeFilters() {
@@ -238,7 +179,7 @@ function initializeHistoricalReports() {
                 const response = await fetch(`report/${this.dataset.reportId}/?installation_id=${metadata.installationId}`);
                 if (response.ok) {
                     const data = await response.json();
-                    resultsDiv.innerHTML = data.monitoring_html + data.results_html;
+                    resultsDiv.innerHTML = data.results_html;
                     initializeComponents();
                 } else {
                     throw new Error('Failed to load report');

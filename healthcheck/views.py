@@ -14,12 +14,12 @@ from .utils import (
 )
 import csv
 
+
+# Update the app view to remove monitoring context
 def app(request):
     initial_data = {}
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
-
-    print(f"Loading app with installation_id: {installation_id}, plan: {client_plan}")
 
     if installation_id:
         try:
@@ -30,7 +30,6 @@ def app(request):
 
             # Get latest report
             latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
-            print(f"Latest report found: {latest_report.id if latest_report else None}")
 
             if latest_report:
                 # Update unlock status for non-free plans
@@ -47,28 +46,17 @@ def app(request):
                     last_check=latest_report.created_at,
                 )
 
-                # Get monitoring context
-                monitoring_context = get_monitoring_context(
-                    installation_id, 
-                    client_plan, 
-                    latest_report
-                )
-
-                # Update initial data with all necessary context
+                # Update initial data with report context only
                 initial_data.update({
                     "historical_reports": format_historical_reports(historical_reports),
-                    "data": report_data,  # Complete report data
-                    "monitoring_settings": monitoring_context["monitoring_settings"],
-                    "is_free_plan": monitoring_context["is_free_plan"],
+                    "data": report_data,
                 })
 
-                print(f"Report data keys: {report_data.keys() if report_data else None}")
             else:
                 initial_data.update({
                     "error": "No health check reports found. Please run your first health check.",
                     "historical_reports": [],
                     "data": None,
-                    **get_monitoring_context(installation_id, client_plan, None)
                 })
 
         except Exception as e:
@@ -77,12 +65,6 @@ def app(request):
     else:
         initial_data["error"] = "No installation ID provided. Please reload the app."
 
-    # Ensure data is available for templates
-    if "data" not in initial_data:
-        initial_data["data"] = None
-
-    print(f"Final initial_data keys: {initial_data.keys()}")
-    print(f"Final data content: {initial_data.get('data')}")
     return render(request, "healthcheck/app.html", initial_data)
 
 
@@ -118,13 +100,12 @@ def health_check(request):
             )
 
             if response.status_code != 200:
-                return JsonResponse(
-                    {
-                        "error": True,
-                        "results_html": f"API Error: {response.text}",
-                        "monitoring_html": "",
-                    }
-                )
+                error_data = {"error": f"API Error: {response.text}"}
+                results_html, _ = render_report_components(error_data, {})
+                return JsonResponse({
+                    "error": True,
+                    "results_html": results_html
+                })
 
             # Get response data
             response_data = response.json()
@@ -149,31 +130,34 @@ def health_check(request):
                 last_check=report.created_at,
             )
 
-            # Get monitoring context
-            monitoring_context = get_monitoring_context(
-                installation_id, client_plan, report
-            )
+            # Render results using utility function
+            results_html, _ = render_report_components(formatted_data, {})
 
-            # Render both components using utility function
-            results_html, monitoring_html = render_report_components(
-                formatted_data, monitoring_context
-            )
-
-            return JsonResponse(
-                {"results_html": results_html, "monitoring_html": monitoring_html}
-            )
+            return JsonResponse({
+                "error": False,
+                "results_html": results_html
+            })
 
         except Exception as e:
-            # Use render_report_components for error case too
             error_data = {"error": f"Error processing request: {str(e)}"}
             results_html, _ = render_report_components(error_data, {})
-
-            return JsonResponse(
-                {"error": True, "results_html": results_html, "monitoring_html": ""}
-            )
+            return JsonResponse({
+                "error": True,
+                "results_html": results_html
+            })
 
     return HttpResponse("Method not allowed", status=405)
 
+def monitoring(request):
+    installation_id = request.GET.get('installation_id')
+    client_plan = request.GET.get('plan', 'Free')
+    
+    if not installation_id:
+        messages.error(request, "Installation ID required")
+        return HttpResponseRedirect('/')
+        
+    context = get_monitoring_context(installation_id, client_plan, None)
+    return render(request, 'healthcheck/monitoring.html', context)
 
 @csrf_exempt
 def stripe_webhook(request):
