@@ -60,7 +60,13 @@
                 </div>
             </div>
         </div>
-        <!-- ... rest of the template ... -->
+        <div class="scrollable-container">
+            <div id="results">
+                {% if data %}
+                    {% include "healthcheck/results.html" with data=data %}
+                {% endif %}
+            </div>
+        </div>
     </div>
     
     <!-- Add Bootstrap JS and dependencies at the end of the body -->
