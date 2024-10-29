@@ -12,8 +12,6 @@
             <div class="accordion-body">
                 <form id="monitoring-form">
                     <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
-                    <input type="hidden" name="instance_guid" value="{{ instance_guid }}">
-                    <input type="hidden" name="subdomain" value="{{ subdomain }}">
                     
                     <!-- Monitoring Status -->
                     <div class="mb-3">
@@ -41,17 +39,13 @@
                     <div class="mb-3">
                         <label for="notification_emails" class="form-label">Notification Emails</label>
                         <div id="email-inputs">
-                            {% if notification_emails %}
-                                {% for email in notification_emails %}
-                                    {% if email %}
-                                    <div class="input-group mb-2">
-                                        <input type="email" class="form-control" name="notification_emails[]" 
-                                               value="{{ email }}" {% if data.is_free_plan %}disabled{% endif %}>
-                                        <button type="button" class="btn c-btn c-btn--danger remove-email">-</button>
-                                    </div>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endif %}
+                            {% for email in notification_emails %}
+                            <div class="input-group mb-2">
+                                <input type="email" class="form-control" name="notification_emails[]" 
+                                       value="{{ email }}" {% if data.is_free_plan %}disabled{% endif %}>
+                                <button type="button" class="btn c-btn c-btn--danger remove-email">-</button>
+                            </div>
+                            {% endfor %}
                             <div class="input-group mb-2">
                                 <input type="email" class="form-control" name="notification_emails[]" 
                                        {% if data.is_free_plan %}disabled{% endif %}>
