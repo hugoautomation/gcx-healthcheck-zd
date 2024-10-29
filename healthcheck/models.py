@@ -52,17 +52,14 @@ class HealthCheckReport(models.Model):
             # Update all reports for this installation based on the new plan
             cls.update_all_reports_unlock_status(installation_id, new_plan)
 
-
-
     @classmethod
     def update_all_reports_unlock_status(cls, installation_id, plan):
         """Update unlock status for all reports of an installation based on plan"""
         should_unlock = plan != "Free"
         cls.objects.filter(installation_id=installation_id).update(
             is_unlocked=should_unlock,
-            plan=plan  # Optionally update plan for all reports
+            plan=plan,  # Optionally update plan for all reports
         )
-
 
     @property
     def is_latest(self):
@@ -93,10 +90,11 @@ class HealthCheckReport(models.Model):
         if self.plan != "Free":
             self.is_unlocked = True
             # Update all other reports for this installation
-            if not kwargs.pop('skip_others', False):  # Add skip flag to prevent recursion
+            if not kwargs.pop(
+                "skip_others", False
+            ):  # Add skip flag to prevent recursion
                 self.__class__.update_all_reports_unlock_status(
-                    self.installation_id, 
-                    self.plan
+                    self.installation_id, self.plan
                 )
         super().save(*args, **kwargs)
 

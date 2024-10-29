@@ -38,8 +38,7 @@ def app(request):
                 # Check if plan is not Free and update unlock status for all reports
                 if current_report.plan and current_report.plan != "Free":
                     HealthCheckReport.update_all_reports_unlock_status(
-                        installation_id, 
-                        current_report.plan
+                        installation_id, current_report.plan
                     )
 
                 report_data = format_response_data(
@@ -335,6 +334,7 @@ def download_report_csv(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
+
 def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
@@ -351,32 +351,38 @@ def get_historical_report(request, report_id):
 
         # Get monitoring settings
         try:
-            monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
+            monitoring = HealthCheckMonitoring.objects.get(
+                installation_id=installation_id
+            )
             monitoring_context = {
                 "is_active": monitoring.is_active and report.plan != "Free",
                 "frequency": monitoring.frequency,
                 "notification_emails": monitoring.notification_emails,
-                "data": {"is_free_plan": report.plan == "Free"}
+                "data": {"is_free_plan": report.plan == "Free"},
             }
         except HealthCheckMonitoring.DoesNotExist:
             monitoring_context = {
                 "is_active": False,
                 "frequency": "weekly",
                 "notification_emails": [],
-                "data": {"is_free_plan": report.plan == "Free"}
+                "data": {"is_free_plan": report.plan == "Free"},
             }
 
         # Render both templates
-        monitoring_html = render_to_string("healthcheck/partials/monitoring_settings.html", monitoring_context)
-        results_html = render_to_string("healthcheck/results.html", {"data": report_data})
+        monitoring_html = render_to_string(
+            "healthcheck/partials/monitoring_settings.html", monitoring_context
+        )
+        results_html = render_to_string(
+            "healthcheck/results.html", {"data": report_data}
+        )
 
-        return JsonResponse({
-            "monitoring_html": monitoring_html,
-            "results_html": results_html
-        })
+        return JsonResponse(
+            {"monitoring_html": monitoring_html, "results_html": results_html}
+        )
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
+
 
 
 @csrf_exempt
@@ -400,7 +406,7 @@ def monitoring_settings(request):
             context = {
                 "is_active": monitoring.is_active and not is_free_plan,
                 "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails or [],  # Ensure it's never None
+                "notification_emails": monitoring.notification_emails or [],
                 "instance_guid": latest_report.instance_guid if latest_report else "",
                 "subdomain": latest_report.subdomain if latest_report else "",
                 "data": {"is_free_plan": is_free_plan},
@@ -443,10 +449,22 @@ def monitoring_settings(request):
 
         try:
             # Parse form data
-            data = json.loads(request.body) if request.body else request.POST
-            is_active = data.get("is_active") == "true"
+            try:
+                data = json.loads(request.body)
+            except (json.JSONDecodeError, TypeError):
+                data = request.POST
+
+            # Handle checkbox value
+            is_active = str(data.get("is_active", "")).lower() in ["true", "on", "1"]
             frequency = data.get("frequency", "weekly")
-            notification_emails = data.getlist("notification_emails[]") if hasattr(data, 'getlist') else data.get("notification_emails", [])
+            
+            # Handle email list from both JSON and form data
+            if hasattr(data, 'getlist'):
+                notification_emails = data.getlist("notification_emails[]")
+            else:
+                notification_emails = data.get("notification_emails", [])
+                if isinstance(notification_emails, str):
+                    notification_emails = [notification_emails]
             
             # Filter out empty email fields
             notification_emails = [email for email in notification_emails if email and email.strip()]
@@ -479,14 +497,11 @@ def monitoring_settings(request):
                 "html": render_to_string("healthcheck/partials/monitoring_settings.html", context)
             })
 
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
+            print(f"Error in monitoring settings: {str(e)}")  # Add logging
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
-
-
 
 @csrf_exempt
 def update_installation_plan(request):
