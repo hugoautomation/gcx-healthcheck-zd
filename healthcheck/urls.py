@@ -22,4 +22,5 @@ urlpatterns = [
         views.update_installation_plan,
         name="update_installation_plan",
     ),
+    path("report/latest/", views.get_latest_report, name="get_latest_report"),
 ]

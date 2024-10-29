@@ -12,6 +12,7 @@ import csv
 from django.contrib import messages
 from django.http import HttpResponseRedirect
 
+
 def app(request):
     print("App view called")
     initial_data = {}
@@ -57,7 +58,9 @@ def app(request):
 
             # Get monitoring settings
             try:
-                monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
+                monitoring = HealthCheckMonitoring.objects.get(
+                    installation_id=installation_id
+                )
                 monitoring_context = {
                     "is_active": monitoring.is_active and not is_free_plan,
                     "frequency": monitoring.frequency,
@@ -71,29 +74,35 @@ def app(request):
                     "is_active": False,
                     "frequency": "weekly",
                     "notification_emails": [],
-                    "instance_guid": current_report.instance_guid if current_report else "",
+                    "instance_guid": current_report.instance_guid
+                    if current_report
+                    else "",
                     "subdomain": current_report.subdomain if current_report else "",
                     "data": {"is_free_plan": is_free_plan},
                 }
 
             # Update initial data with all contexts
-            initial_data.update({
-                "historical_reports": [
-                    {
-                        "id": report.id,
-                        "created_at": report.created_at.strftime("%d %b %Y"),
-                        "is_unlocked": report.is_unlocked,
-                        "total_issues": len(report.raw_response.get("issues", [])),
-                    }
-                    for report in historical_reports
-                ],
-                "data": report_data,  # This will contain the latest report data
-                **monitoring_context
-            })
+            initial_data.update(
+                {
+                    "historical_reports": [
+                        {
+                            "id": report.id,
+                            "created_at": report.created_at.strftime("%d %b %Y"),
+                            "is_unlocked": report.is_unlocked,
+                            "total_issues": len(report.raw_response.get("issues", [])),
+                        }
+                        for report in historical_reports
+                    ],
+                    "data": report_data,  # This will contain the latest report data
+                    **monitoring_context,
+                }
+            )
 
             # If there's no report_data but we have historical reports, load the latest one
             if not report_data and historical_reports:
-                latest_report = historical_reports[0]  # First one is the latest due to ordering
+                latest_report = historical_reports[
+                    0
+                ]  # First one is the latest due to ordering
                 report_data = format_response_data(
                     latest_report.raw_response,
                     plan=client_plan,
@@ -107,6 +116,37 @@ def app(request):
             initial_data["error"] = str(e)
 
     return render(request, "healthcheck/app.html", initial_data)
+
+
+def get_latest_report(request):
+    installation_id = request.GET.get("installation_id")
+    if not installation_id:
+        return JsonResponse({"error": "Installation ID required"}, status=400)
+
+    try:
+        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+        if not latest_report:
+            return JsonResponse({"error": "No reports found"}, status=404)
+
+        report_data = format_response_data(
+            latest_report.raw_response,
+            plan=latest_report.plan,
+            report_id=latest_report.id,
+            last_check=latest_report.created_at,
+        )
+
+        results_html = render_to_string(
+            "healthcheck/results.html", {"data": report_data}, request=request
+        )
+
+        return JsonResponse(
+            {
+                "results_html": results_html,
+            }
+        )
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @csrf_exempt
@@ -421,7 +461,7 @@ def get_historical_report(request, report_id):
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
-    
+
 
 @csrf_exempt
 def monitoring_settings(request):
@@ -429,7 +469,7 @@ def monitoring_settings(request):
     installation_id = request.POST.get("installation_id")
     if not installation_id:
         messages.error(request, "Installation ID required")
-        return HttpResponseRedirect(request.POST.get('redirect_url', '/'))
+        return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
     # Get the latest report to check plan status
     latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
@@ -438,36 +478,40 @@ def monitoring_settings(request):
     if request.method == "POST":
         if is_free_plan:
             messages.error(request, "Monitoring not available for free plan")
-            return HttpResponseRedirect(request.POST.get('redirect_url', '/'))
+            return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
         try:
             is_active = request.POST.get("is_active") == "on"
             frequency = request.POST.get("frequency", "weekly")
             notification_emails = request.POST.getlist("notification_emails[]")
-            
+
             # Filter out empty email fields
-            notification_emails = [email for email in notification_emails if email and email.strip()]
+            notification_emails = [
+                email for email in notification_emails if email and email.strip()
+            ]
 
             # Update or create monitoring settings
             monitoring, _ = HealthCheckMonitoring.objects.update_or_create(
                 installation_id=installation_id,
                 defaults={
-                    "instance_guid": latest_report.instance_guid if latest_report else "",
+                    "instance_guid": latest_report.instance_guid
+                    if latest_report
+                    else "",
                     "subdomain": latest_report.subdomain if latest_report else "",
                     "is_active": is_active,
                     "frequency": frequency,
                     "notification_emails": notification_emails,
-                }
+                },
             )
-            
+
             messages.success(request, "Settings saved successfully")
-            
+
         except Exception as e:
             messages.error(request, f"Error saving settings: {str(e)}")
-        
-        return HttpResponseRedirect(request.POST.get('redirect_url', '/'))
 
-    return HttpResponseRedirect(request.GET.get('redirect_url', '/'))
+        return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
+
+    return HttpResponseRedirect(request.GET.get("redirect_url", "/"))
 
 
 @csrf_exempt
