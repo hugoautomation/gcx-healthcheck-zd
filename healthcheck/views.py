@@ -13,6 +13,7 @@ from django.contrib import messages
 from django.http import HttpResponseRedirect
 
 def app(request):
+    print("App view called")
     initial_data = {}
 
     # Get installation_id, report_id, and plan from the request parameters

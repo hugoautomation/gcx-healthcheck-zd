@@ -46,9 +46,7 @@
         <div class="scrollable-container">
             <div id="results">
                 {% include "healthcheck/partials/monitoring_settings.html" %}
-                {% if data %}
-                    {% include "healthcheck/results.html" with data=data %}
-                {% endif %}
+                {% include "healthcheck/results.html" with data=data %}
             </div>
         </div>
     </div>
