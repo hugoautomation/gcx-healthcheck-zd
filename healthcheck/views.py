@@ -328,11 +328,11 @@ def download_report_csv(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
-
 def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
+        installation_id = request.GET.get("installation_id")
 
         # Format the report data
         report_data = format_response_data(
@@ -342,10 +342,31 @@ def get_historical_report(request, report_id):
             last_check=report.created_at,
         )
 
-        # Render the template with the data
-        html = render_to_string("healthcheck/results.html", {"data": report_data})
+        # Get monitoring settings
+        try:
+            monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
+            monitoring_context = {
+                "is_active": monitoring.is_active and report.plan != "Free",
+                "frequency": monitoring.frequency,
+                "notification_emails": monitoring.notification_emails,
+                "data": {"is_free_plan": report.plan == "Free"}
+            }
+        except HealthCheckMonitoring.DoesNotExist:
+            monitoring_context = {
+                "is_active": False,
+                "frequency": "weekly",
+                "notification_emails": [],
+                "data": {"is_free_plan": report.plan == "Free"}
+            }
 
-        return JsonResponse({"html": html})
+        # Render both templates
+        monitoring_html = render_to_string("healthcheck/partials/monitoring_settings.html", monitoring_context)
+        results_html = render_to_string("healthcheck/results.html", {"data": report_data})
+
+        return JsonResponse({
+            "monitoring_html": monitoring_html,
+            "results_html": results_html
+        })
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
