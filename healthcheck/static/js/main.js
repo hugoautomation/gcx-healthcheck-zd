@@ -135,7 +135,6 @@ function initializeComponents() {
         console.error('Error initializing components:', error);
     }
 }
-
 function initializeRunCheck() {
     const runCheckButton = document.getElementById('run-check');
     if (!runCheckButton) return;
@@ -169,8 +168,9 @@ function initializeRunCheck() {
                 secure: true
             };
 
-            const response = await client.request(options);
-            const data = JSON.parse(response);
+            // The response is already parsed
+            const data = await client.request(options);
+            console.log('Response data:', data); // Add this for debugging
             
             if (data.error) {
                 resultsDiv.innerHTML = data.results_html;
