@@ -227,19 +227,7 @@ function initializeUnlockButtons() {
 
 
 
-// Add email input field
-document.querySelector('.add-email')?.addEventListener('click', function() {
-    const emailInputs = document.getElementById('email-inputs');
-    const newInput = document.createElement('div');
-    newInput.className = 'input-group mb-2';
-    newInput.innerHTML = `
-        <input type="email" class="form-control" name="notification_emails[]">
-        <div class="input-group-append">
-            <button type="button" class="btn btn-danger remove-email">-</button>
-        </div>
-    `;
-    emailInputs.appendChild(newInput);
-});
+
 
 // Remove email input field
 document.addEventListener('click', function(e) {
