@@ -7,10 +7,16 @@ function adjustContentHeight() {
     if (!client) return;
     
     setTimeout(() => {
-        const contentHeight = Math.min(
+        const resultsDiv = document.getElementById('results');
+        const monitoringSettings = document.getElementById('monitoring-settings');
+        const healthCheckContent = document.getElementById('health-check-content');
+        
+        // Calculate total height including all visible elements
+        const totalHeight = Math.min(
             Math.max(
-                document.getElementById('results').scrollHeight,
-                document.getElementById('health-check-content')?.scrollHeight || 0,
+                (resultsDiv?.scrollHeight || 0) +
+                (monitoringSettings?.scrollHeight || 0),
+                healthCheckContent?.scrollHeight || 0,
                 600  // minimum height
             ),
             800  // maximum height
@@ -18,7 +24,7 @@ function adjustContentHeight() {
 
         client.invoke('resize', { 
             width: '100%', 
-            height: `${contentHeight}px`
+            height: `${totalHeight}px`
         });
     }, 100);
 }
@@ -102,12 +108,27 @@ function initializeUnlockButtons() {
     });
 }
 
+function initializeAccordion() {
+    const accordion = document.getElementById('monitoring-settings');
+    if (!accordion) return;
+
+    // Ensure proper height adjustment when accordion is toggled
+    accordion.addEventListener('shown.bs.collapse', () => {
+        adjustContentHeight();
+    });
+
+    accordion.addEventListener('hidden.bs.collapse', () => {
+        adjustContentHeight();
+    });
+}
+
 // Update initializeComponents to include error handling
 function initializeComponents() {
     try {
         initializeFilters();
         initializeUnlockButtons();
         initializeMonitoringForm();
+        initializeAccordion(); // Add this line
         adjustContentHeight();
     } catch (error) {
         console.error('Error initializing components:', error);
