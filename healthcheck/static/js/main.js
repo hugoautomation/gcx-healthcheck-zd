@@ -169,9 +169,10 @@ function initializeRunCheck() {
                 secure: true
             };
 
-            const response = await client.request(options);
-            console.log('Response:', response); // Add this line
-            resultsDiv.innerHTML = response;
+// Alternative approach if you modify your backend response
+const response = await client.request(options);
+const { results_html, monitoring_html } = JSON.parse(response);
+resultsDiv.innerHTML = monitoring_html + results_html;
             initializeComponents();
 
         } catch (error) {

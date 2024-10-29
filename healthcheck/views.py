@@ -12,7 +12,6 @@ import csv
 from django.contrib import messages
 from django.http import HttpResponseRedirect
 
-
 def app(request):
     initial_data = {}
     installation_id = request.GET.get("installation_id")
@@ -25,7 +24,7 @@ def app(request):
                 installation_id=installation_id
             ).order_by("-created_at")[:10]
 
-            # Use the helper method to get latest report
+            # Get the latest report
             latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
 
             if latest_report:
@@ -44,6 +43,8 @@ def app(request):
                 )
                 is_free_plan = client_plan == "Free"
             else:
+                # If no report exists, show a message to run the first check
+                initial_data["error"] = "No health check reports found. Please run your first health check."
                 report_data = None
                 is_free_plan = True
 
@@ -86,7 +87,9 @@ def app(request):
             })
 
         except Exception as e:
-            initial_data["error"] = str(e)
+            initial_data["error"] = f"Error loading health check data: {str(e)}"
+    else:
+        initial_data["error"] = "No installation ID provided. Please reload the app."
 
     return render(request, "healthcheck/app.html", initial_data)
 
@@ -97,6 +100,8 @@ def health_check(request):
         try:
             # Extract data from request
             data = json.loads(request.body) if request.body else {}
+            installation_id = data.get("installation_id")
+            client_plan = data.get("plan", "Free")
             print("Received data:", data)
 
             # Prepare URL
@@ -134,39 +139,74 @@ def health_check(request):
             # Get response data
             response_data = response.json()
 
-            # Update or create report in database
+              # Create report
             report = HealthCheckReport.objects.create(
-                installation_id=int(data.get("installation_id", 0)),
+                installation_id=int(installation_id),
                 instance_guid=data.get("instance_guid"),
                 subdomain=data.get("subdomain", ""),
-                plan=data.get("plan"),
+                plan=client_plan,
                 app_guid=data.get("app_guid"),
                 stripe_subscription_id=data.get("stripe_subscription_id"),
                 version=data.get("version", "1.0.0"),
                 raw_response=response_data,
             )
 
-            print(f"Created new report {report.id} for {report.subdomain}")
-
-            # Process response data for template
+            # Format response data
             formatted_data = format_response_data(
-                response_data, plan=data.get("plan", "Free"), report_id=report.id
-            )
-            # Render template
-            html = render_to_string(
-                "healthcheck/results.html", {"data": formatted_data}
+                response_data, 
+                plan=client_plan, 
+                report_id=report.id
             )
 
-            return HttpResponse(html)
+            # Get monitoring settings
+            try:
+                monitoring = HealthCheckMonitoring.objects.get(
+                    installation_id=installation_id
+                )
+                monitoring_context = {
+                    "is_active": monitoring.is_active and client_plan != "Free",
+                    "frequency": monitoring.frequency,
+                    "notification_emails": monitoring.notification_emails or [],
+                    "instance_guid": monitoring.instance_guid,
+                    "subdomain": monitoring.subdomain,
+                    "data": {"is_free_plan": client_plan == "Free"},
+                }
+            except HealthCheckMonitoring.DoesNotExist:
+                monitoring_context = {
+                    "is_active": False,
+                    "frequency": "weekly",
+                    "notification_emails": [],
+                    "instance_guid": report.instance_guid,
+                    "subdomain": report.subdomain,
+                    "data": {"is_free_plan": client_plan == "Free"},
+                }
+
+            # Render both templates
+            results_html = render_to_string(
+                "healthcheck/results.html", 
+                {"data": formatted_data}
+            )
+            monitoring_html = render_to_string(
+                "healthcheck/partials/monitoring_settings.html", 
+                monitoring_context
+            )
+
+            return JsonResponse({
+                "results_html": results_html,
+                "monitoring_html": monitoring_html
+            })
 
         except Exception as e:
             print("Error:", str(e))
-            return HttpResponse(
-                render_to_string(
-                    "healthcheck/results.html",
-                    {"error": f"Error processing request: {str(e)}"},
-                )
+            error_html = render_to_string(
+                "healthcheck/results.html",
+                {"error": f"Error processing request: {str(e)}"}
             )
+            return JsonResponse({
+                "error": True,
+                "results_html": error_html,
+                "monitoring_html": ""
+            })
 
     return HttpResponse("Method not allowed", status=405)
 
