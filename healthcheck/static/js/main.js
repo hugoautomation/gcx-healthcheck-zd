@@ -75,6 +75,30 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
 });
 
+// Add this near the top of your file
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    // Reinitialize components after content swap
+    initializeFilters();
+    initializeUnlockButtons();
+    
+    // Adjust height
+    if (client) {
+        const contentHeight = Math.min(
+            Math.max(
+                document.getElementById('results').scrollHeight,
+                document.getElementById('health-check-content')?.scrollHeight || 0,
+                600  // minimum height
+            ),
+            800  // maximum height
+        );
+
+        client.invoke('resize', { 
+            width: '100%', 
+            height: `${contentHeight}px`
+        });
+    }
+});
+
 function initializeRunCheck() {
     const runCheckButton = document.getElementById('run-check');
     if (!runCheckButton) return;
