@@ -20,6 +20,15 @@ def app(request):
     initial_data = {}
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
+    app_guid = request.GET.get("app_guid")
+    origin = request.GET.get("origin")
+
+    initial_data["url_params"] = {
+        "installation_id": installation_id,
+        "plan": client_plan,
+        "app_guid": app_guid,
+        "origin": origin
+    }
 
     if installation_id:
         try:
@@ -54,7 +63,8 @@ def app(request):
                         "historical_reports": format_historical_reports(
                             historical_reports
                         ),
-                        "data": report_data,
+                    "data": report_data if 'report_data' in locals() else None,
+
                     }
                 )
 
@@ -151,12 +161,24 @@ def health_check(request):
 def monitoring(request):
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
+    app_guid = request.GET.get("app_guid")
+    origin = request.GET.get("origin")
 
     if not installation_id:
         messages.error(request, "Installation ID required")
         return HttpResponseRedirect("/")
 
+    # Get monitoring context
     context = get_monitoring_context(installation_id, client_plan, None)
+    
+    # Add URL parameters to context
+    context["url_params"] = {
+        "installation_id": installation_id,
+        "plan": client_plan,
+        "app_guid": app_guid,
+        "origin": origin
+    }
+
     return render(request, "healthcheck/monitoring.html", context)
 
 
