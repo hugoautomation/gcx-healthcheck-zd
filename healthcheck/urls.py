@@ -21,7 +21,6 @@ urlpatterns = [
         "update-installation-plan/",
         views.update_installation_plan,
         name="update_installation_plan",
-    ),    
-    path('monitoring/', views.monitoring, name='monitoring'),
-
+    ),
+    path("monitoring/", views.monitoring, name="monitoring"),
 ]

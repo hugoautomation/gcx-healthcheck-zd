@@ -29,7 +29,9 @@ def app(request):
             ).order_by("-created_at")[:10]
 
             # Get latest report
-            latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+            latest_report = HealthCheckReport.get_latest_for_installation(
+                installation_id
+            )
 
             if latest_report:
                 # Update unlock status for non-free plans
@@ -47,17 +49,23 @@ def app(request):
                 )
 
                 # Update initial data with report context only
-                initial_data.update({
-                    "historical_reports": format_historical_reports(historical_reports),
-                    "data": report_data,
-                })
+                initial_data.update(
+                    {
+                        "historical_reports": format_historical_reports(
+                            historical_reports
+                        ),
+                        "data": report_data,
+                    }
+                )
 
             else:
-                initial_data.update({
-                    "error": "No health check reports found. Please run your first health check.",
-                    "historical_reports": [],
-                    "data": None,
-                })
+                initial_data.update(
+                    {
+                        "error": "No health check reports found. Please run your first health check.",
+                        "historical_reports": [],
+                        "data": None,
+                    }
+                )
 
         except Exception as e:
             print(f"Error in app view: {str(e)}")
@@ -102,10 +110,7 @@ def health_check(request):
             if response.status_code != 200:
                 error_data = {"error": f"API Error: {response.text}"}
                 results_html, _ = render_report_components(error_data, {})
-                return JsonResponse({
-                    "error": True,
-                    "results_html": results_html
-                })
+                return JsonResponse({"error": True, "results_html": results_html})
 
             # Get response data
             response_data = response.json()
@@ -133,31 +138,27 @@ def health_check(request):
             # Render results using utility function
             results_html, _ = render_report_components(formatted_data, {})
 
-            return JsonResponse({
-                "error": False,
-                "results_html": results_html
-            })
+            return JsonResponse({"error": False, "results_html": results_html})
 
         except Exception as e:
             error_data = {"error": f"Error processing request: {str(e)}"}
             results_html, _ = render_report_components(error_data, {})
-            return JsonResponse({
-                "error": True,
-                "results_html": results_html
-            })
+            return JsonResponse({"error": True, "results_html": results_html})
 
     return HttpResponse("Method not allowed", status=405)
 
+
 def monitoring(request):
-    installation_id = request.GET.get('installation_id')
-    client_plan = request.GET.get('plan', 'Free')
-    
+    installation_id = request.GET.get("installation_id")
+    client_plan = request.GET.get("plan", "Free")
+
     if not installation_id:
         messages.error(request, "Installation ID required")
-        return HttpResponseRedirect('/')
-        
+        return HttpResponseRedirect("/")
+
     context = get_monitoring_context(installation_id, client_plan, None)
-    return render(request, 'healthcheck/monitoring.html', context)
+    return render(request, "healthcheck/monitoring.html", context)
+
 
 @csrf_exempt
 def stripe_webhook(request):

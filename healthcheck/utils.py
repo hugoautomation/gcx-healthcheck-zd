@@ -127,12 +127,10 @@ def format_historical_reports(reports):
     ]
 
 
-def render_report_components(formatted_data, monitoring_context):
+def render_report_components(formatted_data):
     """Helper function to render both report components"""
     results_html = render_to_string(
         "healthcheck/results.html", {"data": formatted_data}
     )
-    monitoring_html = render_to_string(
-        "healthcheck/partials/monitoring_settings.html", monitoring_context
-    )
-    return results_html, monitoring_html
+
+    return results_html
