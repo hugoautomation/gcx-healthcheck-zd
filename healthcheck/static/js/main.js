@@ -2,15 +2,44 @@ let client = null;
 let metadata = null;
 let context = null;
 
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', async function () {
     try {
         // Initialize ZAF client
         client = window.ZAFClient ? window.ZAFClient.init() : null;
-        
+
         if (!client) {
             console.error('ZAF Client could not be initialized');
             return;
         }
+        // Add this to your existing client initialization code
+        client.on('plan.changed', async function (data) {
+            try {
+                const response = await fetch('/update-installation-plan/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        installation_id: metadata.installationId,
+                        plan: data.newPlan
+                    })
+                });
+
+                if (response.ok) {
+                    // Refresh the monitoring settings display
+                    const monitoringSettings = document.getElementById('monitoring-settings');
+                    if (monitoringSettings) {
+                        const settingsResponse = await fetch(`/monitoring-settings/?installation_id=${metadata.installationId}`);
+                        if (settingsResponse.ok) {
+                            const html = await settingsResponse.text();
+                            monitoringSettings.outerHTML = html;
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating plan:', error);
+            }
+        });
 
         console.log('ZAF Client initialized successfully');
 
@@ -19,13 +48,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             client.context(),
             client.metadata()
         ]);
-        
+
         console.log('Metadata:', metadata);
-        
+
         // Check if installation_id is already in URL
         const currentUrl = new URL(window.location.href);
         const urlInstallationId = currentUrl.searchParams.get('installation_id');
-        
+
         if (!urlInstallationId) {
             // If not in URL, add it and reload
             currentUrl.searchParams.set('installation_id', metadata.installationId);
@@ -52,7 +81,7 @@ function initializeRunCheck() {
 
     runCheckButton.addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
-        
+
         // Show loading state
         resultsDiv.innerHTML = `
             <div class="text-center my-5">
@@ -75,12 +104,12 @@ function initializeRunCheck() {
                     url: `${context.account.subdomain}.zendesk.com`,
                     email: '{{setting.admin_email}}',
                     api_token: '{{setting.api_token}}',
-                    
+
                     instance_guid: context.instanceGuid,
                     app_guid: metadata.appId,
                     installation_id: metadata.installationId,
                     subdomain: context.account.subdomain,
-                    
+
                     plan: metadata.plan?.name,
                     stripe_subscription_id: metadata.stripe_subscription_id,
                     version: metadata.version
@@ -90,7 +119,7 @@ function initializeRunCheck() {
 
             console.log('Sending request to /check/...');
             const response = await client.request(options);
-            
+
             console.log('Response:', response);
             resultsDiv.innerHTML = response;
 
@@ -109,8 +138,8 @@ function initializeRunCheck() {
                     800  // maximum height
                 );
 
-                client.invoke('resize', { 
-                    width: '100%', 
+                client.invoke('resize', {
+                    width: '100%',
                     height: `${contentHeight}px`
                 });
             }, 100);
@@ -143,10 +172,10 @@ function initializeFilters() {
         rows.forEach(row => {
             const rowSeverity = row.dataset.severity;
             const rowCategory = row.dataset.category;
-            
+
             const matchesSeverity = severity === 'all' || rowSeverity === severity;
             const matchesCategory = category === 'all' || rowCategory === category;
-            
+
             row.style.display = matchesSeverity && matchesCategory ? '' : 'none';
         });
     }
@@ -158,14 +187,14 @@ function initializeFilters() {
     // Apply saved filters if they exist
     const savedSeverity = localStorage.getItem('severity_filter');
     const savedCategory = localStorage.getItem('category_filter');
-    
+
     if (savedSeverity) severityFilter.value = savedSeverity;
     if (savedCategory) categoryFilter.value = savedCategory;
-    
+
     filterIssues();
 
     // Save filter states when changed
-    document.addEventListener('change', function(e) {
+    document.addEventListener('change', function (e) {
         if (e.target.id === 'severity-filter') {
             localStorage.setItem('severity_filter', e.target.value);
         } else if (e.target.id === 'category-filter') {
@@ -179,27 +208,27 @@ function initializeUnlockButtons() {
     document.querySelectorAll('.unlock-report').forEach(button => {
         // Remove existing event listeners to prevent duplicates
         button.replaceWith(button.cloneNode(true));
-        
+
         // Get the fresh button reference after replacement
         const newButton = document.querySelector(`.unlock-report[data-report-id="${button.dataset.reportId}"]`);
-        
+
         if (newButton) {
-            newButton.addEventListener('click', function() {
+            newButton.addEventListener('click', function () {
                 const reportId = this.dataset.reportId;
                 const stripePaymentLink = `https://buy.stripe.com/dR68zbfDvboy7mweUU?client_reference_id=${reportId}`;
-                
+
                 // Define window features
                 const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
-                
+
                 // Open the payment window
                 const paymentWindow = window.open(stripePaymentLink, 'StripePayment', windowFeatures);
-                
+
                 // Start polling for unlock status
                 const pollInterval = setInterval(async () => {
                     try {
                         const response = await fetch(`/check-unlock-status/?report_id=${reportId}`);
                         const data = await response.json();
-                        
+
                         if (response.ok && data.is_unlocked) {
                             // Report is unlocked, update the content
                             document.getElementById('results').innerHTML = data.html;
@@ -230,16 +259,16 @@ function initializeUnlockButtons() {
 
 
 // Remove email input field
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
     if (e.target.classList.contains('remove-email')) {
         e.target.closest('.input-group').remove();
     }
 });
 
 // Handle form submission
-document.getElementById('monitoring-form')?.addEventListener('submit', async function(e) {
+document.getElementById('monitoring-form')?.addEventListener('submit', async function (e) {
     e.preventDefault();
-    
+
     const formData = {
         is_active: document.getElementById('is_active').checked,
         frequency: document.getElementById('frequency').value,
@@ -275,11 +304,11 @@ async function loadMonitoringSettings() {
             const settings = await response.json();
             document.getElementById('is_active').checked = settings.is_active;
             document.getElementById('frequency').value = settings.frequency;
-            
+
             // Clear existing email inputs
             const emailInputs = document.getElementById('email-inputs');
             emailInputs.innerHTML = '';
-            
+
             // Add email inputs for existing emails
             settings.notification_emails.forEach(email => {
                 const input = document.createElement('div');

@@ -349,7 +349,9 @@ def get_historical_report(request, report_id):
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
+    
 
+    
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
@@ -357,28 +359,35 @@ def monitoring_settings(request):
     if not installation_id:
         return JsonResponse({"error": "Installation ID required"}, status=400)
 
+    # Get the latest report to check plan status
+    latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+    is_free_plan = latest_report.plan == "Free" if latest_report else True
+
     if request.method == "GET":
         try:
             monitoring = HealthCheckMonitoring.objects.get(
                 installation_id=installation_id
             )
             context = {
-                "is_active": monitoring.is_active,
+                "is_active": monitoring.is_active and not is_free_plan,
                 "frequency": monitoring.frequency,
                 "notification_emails": monitoring.notification_emails,
-                "data": {"is_free_plan": False}  # Add your plan check logic here
+                "data": {"is_free_plan": is_free_plan}
             }
         except HealthCheckMonitoring.DoesNotExist:
             context = {
                 "is_active": False,
                 "frequency": "weekly",
                 "notification_emails": [],
-                "data": {"is_free_plan": False}  # Add your plan check logic here
+                "data": {"is_free_plan": is_free_plan}
             }
         return render(request, "healthcheck/partials/monitoring_settings.html", context)
 
     elif request.method == "POST":
-        # Handle form data instead of JSON
+        if is_free_plan:
+            return JsonResponse({"error": "Monitoring not available for free plan"}, status=403)
+        
+        # Handle form data
         is_active = request.POST.get("is_active") == "on"
         frequency = request.POST.get("frequency", "weekly")
         notification_emails = request.POST.getlist("notification_emails[]")
@@ -396,11 +405,45 @@ def monitoring_settings(request):
 
         # Return the updated partial template
         context = {
-            "is_active": monitoring.is_active,
+            "is_active": monitoring.is_active and not is_free_plan,
             "frequency": monitoring.frequency,
             "notification_emails": monitoring.notification_emails,
-            "data": {"is_free_plan": False}  # Add your plan check logic here
+            "data": {"is_free_plan": is_free_plan}
         }
         return render(request, "healthcheck/partials/monitoring_settings.html", context)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@csrf_exempt
+def update_installation_plan(request):
+    """Handle plan updates from Zendesk"""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        installation_id = data.get("installation_id")
+        new_plan = data.get("plan")
+        
+        if not installation_id or not new_plan:
+            return JsonResponse({"error": "Missing required fields"}, status=400)
+            
+        # Update the latest report's plan
+        HealthCheckReport.update_latest_report_plan(installation_id, new_plan)
+        
+        # Update monitoring settings if downgrading to free plan
+        if new_plan == "Free":
+            try:
+                monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
+                monitoring.is_active = False  # Disable monitoring for free plan
+                monitoring.save()
+            except HealthCheckMonitoring.DoesNotExist:
+                pass
+        
+        return JsonResponse({"status": "success"})
+        
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
