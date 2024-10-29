@@ -400,50 +400,40 @@ def monitoring_settings(request):
             context = {
                 "is_active": monitoring.is_active and not is_free_plan,
                 "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails,
+                "notification_emails": monitoring.notification_emails or [],  # Ensure it's never None
+                "instance_guid": latest_report.instance_guid if latest_report else "",
+                "subdomain": latest_report.subdomain if latest_report else "",
                 "data": {"is_free_plan": is_free_plan},
             }
         except HealthCheckMonitoring.DoesNotExist:
-            context = {
-                "is_active": False,
-                "frequency": "weekly",
-                "notification_emails": [],
-                "data": {"is_free_plan": is_free_plan},
-            }
+            # Create default monitoring settings if they don't exist
+            if latest_report and not is_free_plan:
+                monitoring = HealthCheckMonitoring.objects.create(
+                    installation_id=installation_id,
+                    instance_guid=latest_report.instance_guid,
+                    subdomain=latest_report.subdomain,
+                    is_active=False,
+                    frequency="weekly",
+                    notification_emails=[],
+                )
+                context = {
+                    "is_active": False,
+                    "frequency": "weekly",
+                    "notification_emails": [],
+                    "instance_guid": latest_report.instance_guid,
+                    "subdomain": latest_report.subdomain,
+                    "data": {"is_free_plan": is_free_plan},
+                }
+            else:
+                context = {
+                    "is_active": False,
+                    "frequency": "weekly",
+                    "notification_emails": [],
+                    "instance_guid": "",
+                    "subdomain": "",
+                    "data": {"is_free_plan": is_free_plan},
+                }
         return render(request, "healthcheck/partials/monitoring_settings.html", context)
-
-    elif request.method == "POST":
-        if is_free_plan:
-            return JsonResponse(
-                {"error": "Monitoring not available for free plan"}, status=403
-            )
-
-        # Handle form data
-        is_active = request.POST.get("is_active") == "on"
-        frequency = request.POST.get("frequency", "weekly")
-        notification_emails = request.POST.getlist("notification_emails[]")
-        # Filter out empty email fields
-        notification_emails = [email for email in notification_emails if email.strip()]
-
-        monitoring, created = HealthCheckMonitoring.objects.update_or_create(
-            installation_id=installation_id,
-            defaults={
-                "is_active": is_active,
-                "frequency": frequency,
-                "notification_emails": notification_emails,
-            },
-        )
-
-        # Return the updated partial template
-        context = {
-            "is_active": monitoring.is_active and not is_free_plan,
-            "frequency": monitoring.frequency,
-            "notification_emails": monitoring.notification_emails,
-            "data": {"is_free_plan": is_free_plan},
-        }
-        return render(request, "healthcheck/partials/monitoring_settings.html", context)
-
-    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 
 @csrf_exempt
