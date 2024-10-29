@@ -25,7 +25,6 @@
             <div class="form-group">
                 <label for="notification_emails">Notification Emails</label>
                 <div id="email-inputs">
-                    {% if data.is_free_plan %}
                     <div class="input-group mb-2">
                         <input type="email" class="form-control" name="notification_emails[]"
                         {% if data.is_free_plan %}disabled{% endif %}>
