@@ -16,7 +16,7 @@
                     <h2 class="text-2xl font-semibold">Monitoring Settings</h2>
                 </div>
                 <div class="col-auto">
-                    <a href="{% url 'app' %}?installation_id={{ request.GET.installation_id }}&plan={{ request.GET.plan }}" 
+                    <a href="{% url 'app' %}?installation_id={{ url_params.installation_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}" 
                     class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                 </div>
             </div>

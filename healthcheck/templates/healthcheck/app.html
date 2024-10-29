@@ -16,8 +16,9 @@
                     <h2 class="text-2xl font-semibold">Zendesk Healthcheck</h2>
                 </div>
                 <div class="col-auto">
-                    <a href="{% url 'monitoring' %}?installation_id={{ request.GET.installation_id }}&plan={{ request.GET.plan }}" 
-                       class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring Settings</a>
+                   <!-- Update the monitoring settings link -->
+<a href="{% url 'monitoring' %}?installation_id={{ url_params.installation_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}" 
+class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring Settings</a>
                     {% if historical_reports %}
                     <div class="dropdown d-inline">
                         <button class="btn c-btn c-btn--sm c-btn--secondary dropdown-toggle d-inline-block" type="button" id="historyDropdown" data-bs-toggle="dropdown" aria-expanded="false">
