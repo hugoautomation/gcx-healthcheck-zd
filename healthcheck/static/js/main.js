@@ -81,7 +81,7 @@ function initializeRunCheck() {
 
     runCheckButton.addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
-
+        
         // Show loading state
         resultsDiv.innerHTML = `
             <div class="text-center my-5">
@@ -97,19 +97,19 @@ function initializeRunCheck() {
             }
 
             const options = {
-                url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
+                url: 'check/',  // Changed from hardcoded URL to relative path
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
                     url: `${context.account.subdomain}.zendesk.com`,
                     email: '{{setting.admin_email}}',
                     api_token: '{{setting.api_token}}',
-
+                    
                     instance_guid: context.instanceGuid,
                     app_guid: metadata.appId,
                     installation_id: metadata.installationId,
                     subdomain: context.account.subdomain,
-
+                    
                     plan: metadata.plan?.name,
                     stripe_subscription_id: metadata.stripe_subscription_id,
                     version: metadata.version
@@ -117,7 +117,7 @@ function initializeRunCheck() {
                 secure: true
             };
 
-            console.log('Sending request to /check/...');
+            console.log('Sending request to health_check/...');
             const response = await client.request(options);
 
             console.log('Response:', response);

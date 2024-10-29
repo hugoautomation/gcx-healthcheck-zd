@@ -40,7 +40,7 @@ class HealthCheckReport(models.Model):
             .order_by("-created_at")
             .first()
         )
-    
+
     @classmethod
     def update_latest_report_plan(cls, installation_id, new_plan):
         """Update the plan for the latest report of an installation"""
@@ -48,7 +48,7 @@ class HealthCheckReport(models.Model):
         if latest_report:
             latest_report.plan = new_plan
             latest_report.save()
-            
+
             # If downgrading to free plan, also reset unlocked status
             if new_plan == "Free":
                 latest_report.is_unlocked = False
