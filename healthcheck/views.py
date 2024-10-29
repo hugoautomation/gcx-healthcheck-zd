@@ -309,25 +309,19 @@ def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        
+
         # Format the report data
         report_data = format_response_data(
             report.raw_response,
             plan=report.plan,
             report_id=report.id,
-            last_check=report.created_at
+            last_check=report.created_at,
         )
-        
+
         # Render the template with the data
-        html = render_to_string('healthcheck/results.html', {
-            'data': report_data
-        })
-        
-        return JsonResponse({
-            'html': html
-        })
-        
+        html = render_to_string("healthcheck/results.html", {"data": report_data})
+
+        return JsonResponse({"html": html})
+
     except HealthCheckReport.DoesNotExist:
-        return JsonResponse({
-            'error': 'Report not found'
-        }, status=404)
+        return JsonResponse({"error": "Report not found"}, status=404)
