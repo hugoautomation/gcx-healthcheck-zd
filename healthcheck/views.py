@@ -14,15 +14,12 @@ from .utils import (
 )
 import csv
 
-
 def app(request):
     initial_data = {}
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
 
-    print(
-        f"Loading app with installation_id: {installation_id}, plan: {client_plan}"
-    )  # Debug log
+    print(f"Loading app with installation_id: {installation_id}, plan: {client_plan}")
 
     if installation_id:
         try:
@@ -32,12 +29,8 @@ def app(request):
             ).order_by("-created_at")[:10]
 
             # Get latest report
-            latest_report = HealthCheckReport.get_latest_for_installation(
-                installation_id
-            )
-            print(
-                f"Latest report found: {latest_report.id if latest_report else None}"
-            )  # Debug log
+            latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+            print(f"Latest report found: {latest_report.id if latest_report else None}")
 
             if latest_report:
                 # Update unlock status for non-free plans
@@ -56,35 +49,30 @@ def app(request):
 
                 # Get monitoring context
                 monitoring_context = get_monitoring_context(
-                    installation_id, client_plan, latest_report
+                    installation_id, 
+                    client_plan, 
+                    latest_report
                 )
 
                 # Update initial data with all necessary context
-                initial_data.update(
-                    {
-                        "historical_reports": format_historical_reports(
-                            historical_reports
-                        ),
-                        "data": report_data,  # This contains the latest report data
-                        **monitoring_context,
-                    }
-                )
+                initial_data.update({
+                    "historical_reports": format_historical_reports(historical_reports),
+                    "data": report_data,  # Complete report data
+                    "monitoring_settings": monitoring_context["monitoring_settings"],
+                    "is_free_plan": monitoring_context["is_free_plan"],
+                })
 
-                print(
-                    f"Data prepared: {bool(report_data)}, Monitoring: {bool(monitoring_context)}"
-                )  # Debug log
+                print(f"Report data keys: {report_data.keys() if report_data else None}")
             else:
-                initial_data.update(
-                    {
-                        "error": "No health check reports found. Please run your first health check.",
-                        "historical_reports": [],
-                        "data": None,
-                        **get_monitoring_context(installation_id, client_plan, None),
-                    }
-                )
+                initial_data.update({
+                    "error": "No health check reports found. Please run your first health check.",
+                    "historical_reports": [],
+                    "data": None,
+                    **get_monitoring_context(installation_id, client_plan, None)
+                })
 
         except Exception as e:
-            print(f"Error in app view: {str(e)}")  # Debug log
+            print(f"Error in app view: {str(e)}")
             initial_data["error"] = f"Error loading health check data: {str(e)}"
     else:
         initial_data["error"] = "No installation ID provided. Please reload the app."
@@ -93,7 +81,8 @@ def app(request):
     if "data" not in initial_data:
         initial_data["data"] = None
 
-    print(f"Final initial_data keys: {initial_data.keys()}")  # Debug log
+    print(f"Final initial_data keys: {initial_data.keys()}")
+    print(f"Final data content: {initial_data.get('data')}")
     return render(request, "healthcheck/app.html", initial_data)
 
 

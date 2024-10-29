@@ -91,23 +91,27 @@ def get_monitoring_context(installation_id, client_plan, latest_report=None):
 
     try:
         monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
-        return {
+        monitoring_data = {
             "is_active": monitoring.is_active and not is_free_plan,
             "frequency": monitoring.frequency,
             "notification_emails": monitoring.notification_emails or [],
             "instance_guid": monitoring.instance_guid,
             "subdomain": monitoring.subdomain,
-            "data": {"is_free_plan": is_free_plan},
         }
     except HealthCheckMonitoring.DoesNotExist:
-        return {
+        monitoring_data = {
             "is_active": False,
             "frequency": "weekly",
             "notification_emails": [],
             "instance_guid": latest_report.instance_guid if latest_report else "",
             "subdomain": latest_report.subdomain if latest_report else "",
-            "data": {"is_free_plan": is_free_plan},
         }
+
+    # Return monitoring settings separately from report data
+    return {
+        "monitoring_settings": monitoring_data,
+        "is_free_plan": is_free_plan,
+    }
 
 
 def format_historical_reports(reports):
