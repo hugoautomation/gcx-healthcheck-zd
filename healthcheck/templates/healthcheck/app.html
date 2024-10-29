@@ -41,7 +41,10 @@
         </button>
         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="historyDropdown">
             {% for report in historical_reports %}
-                <a class="dropdown-item" href="?report_id={{ report.id }}&installation_id={{ request.GET.installation_id }}&origin={{ request.GET.origin }}">
+                <a class="dropdown-item" 
+                   hx-get="report/{{ report.id }}/"
+                   hx-target="#results"
+                   hx-trigger="click">
                     {{ report.created_at }}
                     <span class="badge {% if report.is_unlocked %}badge-success{% else %}badge-secondary{% endif %} ml-2">
                         {{ report.total_issues }} issues

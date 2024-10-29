@@ -97,19 +97,17 @@ function initializeRunCheck() {
             }
 
             const options = {
-                url: 'check/',  // Changed from hardcoded URL to relative path
+                url: 'check/',  // Changed to match URL configuration
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
                     url: `${context.account.subdomain}.zendesk.com`,
                     email: '{{setting.admin_email}}',
                     api_token: '{{setting.api_token}}',
-                    
                     instance_guid: context.instanceGuid,
                     app_guid: metadata.appId,
                     installation_id: metadata.installationId,
                     subdomain: context.account.subdomain,
-                    
                     plan: metadata.plan?.name,
                     stripe_subscription_id: metadata.stripe_subscription_id,
                     version: metadata.version
@@ -117,9 +115,9 @@ function initializeRunCheck() {
                 secure: true
             };
 
-            console.log('Sending request to health_check/...');
+            console.log('Sending request to check/...');
             const response = await client.request(options);
-
+            
             console.log('Response:', response);
             resultsDiv.innerHTML = response;
 
@@ -138,8 +136,8 @@ function initializeRunCheck() {
                     800  // maximum height
                 );
 
-                client.invoke('resize', {
-                    width: '100%',
+                client.invoke('resize', { 
+                    width: '100%', 
                     height: `${contentHeight}px`
                 });
             }, 100);
