@@ -12,7 +12,6 @@ import csv
 from django.contrib import messages
 from django.http import HttpResponseRedirect
 
-
 def app(request):
     print("App view called")
     initial_data = {}
@@ -21,24 +20,29 @@ def app(request):
     installation_id = request.GET.get("installation_id")
     report_id = request.GET.get("report_id")
     client_plan = request.GET.get("plan", "Free")  # Default to Free if not provided
-    print(f"Client plan: {client_plan}")
+    print(f"Installation ID: {installation_id}, Report ID: {report_id}, Client plan: {client_plan}")
+
     if installation_id:
         try:
             # Get historical reports for this installation
             historical_reports = HealthCheckReport.objects.filter(
                 installation_id=installation_id
             ).order_by("-created_at")[:10]
+            print(f"Found {len(historical_reports)} historical reports")
 
             # Get the current report (either specified by ID or latest)
             if report_id:
                 current_report = HealthCheckReport.objects.get(id=report_id)
+                print(f"Loading specific report: {report_id}")
             else:
                 # Use the helper method to get latest report
                 current_report = HealthCheckReport.get_latest_for_installation(
                     installation_id
                 )
+                print(f"Latest report found: {current_report.id if current_report else None}")
 
             if current_report:
+                print(f"Processing report {current_report.id} with plan: {client_plan}")
                 # Check if plan is not Free and update unlock status for all reports
                 if client_plan != "Free":
                     HealthCheckReport.update_all_reports_unlock_status(
@@ -47,14 +51,16 @@ def app(request):
 
                 report_data = format_response_data(
                     current_report.raw_response,
-                    plan=client_plan,  # Use client_plan instead of current_report.plan
+                    plan=client_plan,
                     report_id=current_report.id,
                     last_check=current_report.created_at,
                 )
                 is_free_plan = client_plan == "Free"
+                print("Report data formatted successfully")
             else:
                 report_data = None
                 is_free_plan = True
+                print("No current report found")
 
             # Get monitoring settings
             try:
@@ -69,17 +75,17 @@ def app(request):
                     "subdomain": monitoring.subdomain,
                     "data": {"is_free_plan": is_free_plan},
                 }
+                print("Monitoring settings loaded")
             except HealthCheckMonitoring.DoesNotExist:
                 monitoring_context = {
                     "is_active": False,
                     "frequency": "weekly",
                     "notification_emails": [],
-                    "instance_guid": current_report.instance_guid
-                    if current_report
-                    else "",
+                    "instance_guid": current_report.instance_guid if current_report else "",
                     "subdomain": current_report.subdomain if current_report else "",
                     "data": {"is_free_plan": is_free_plan},
                 }
+                print("Default monitoring settings created")
 
             # Update initial data with all contexts
             initial_data.update(
@@ -93,16 +99,16 @@ def app(request):
                         }
                         for report in historical_reports
                     ],
-                    "data": report_data,  # This will contain the latest report data
+                    "data": report_data,
                     **monitoring_context,
                 }
             )
+            print(f"Initial data updated with report data: {report_data is not None}")
 
             # If there's no report_data but we have historical reports, load the latest one
             if not report_data and historical_reports:
-                latest_report = historical_reports[
-                    0
-                ]  # First one is the latest due to ordering
+                latest_report = historical_reports[0]
+                print(f"Loading latest report from historical reports: {latest_report.id}")
                 report_data = format_response_data(
                     latest_report.raw_response,
                     plan=client_plan,
@@ -110,11 +116,13 @@ def app(request):
                     last_check=latest_report.created_at,
                 )
                 initial_data["data"] = report_data
+                print("Latest historical report loaded as current report")
 
         except Exception as e:
             print(f"Error getting reports: {str(e)}")
             initial_data["error"] = str(e)
 
+    print(f"Rendering template with data: {bool(initial_data.get('data'))}")
     return render(request, "healthcheck/app.html", initial_data)
 
 

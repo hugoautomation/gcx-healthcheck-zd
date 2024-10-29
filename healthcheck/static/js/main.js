@@ -47,42 +47,6 @@ function showError(element, error, title = 'Error') {
     `;
 }
 
-async function loadLatestReport() {
-    const resultsDiv = document.getElementById('results');
-    if (!metadata?.installationId) return;
-
-    try {
-        const response = await fetch(`report/latest/?installation_id=${metadata.installationId}`);
-        if (response.ok) {
-            const data = await response.json();
-            // Update only the results part, keeping monitoring settings intact
-            const resultsContainer = document.querySelector('#results .results-container');
-            if (resultsContainer) {
-                resultsContainer.innerHTML = data.results_html;
-                initializeComponents();
-            }
-        }
-    } catch (error) {
-        console.error('Error loading latest report:', error);
-    }
-}
-
-// Update your initializeApp function to include loading the latest report:
-async function initializeApp() {
-    try {
-        // ... existing initialization code ...
-
-        client.invoke('resize', { width: '100%', height: '800px' });
-        
-        initializeComponents();
-        initializeRunCheck();
-        initializeHistoricalReports();
-        await loadLatestReport();  // Add this line
-
-    } catch (error) {
-        console.error('Error initializing:', error);
-    }
-}
 
 // Add these functions after your utility functions
 function addEmailField(button) {
@@ -239,9 +203,6 @@ function initializeHistoricalReports() {
     });
 }
 
-
-// Main Initialization
-// Main Initialization
 async function initializeApp() {
     try {
         client = window.ZAFClient ? window.ZAFClient.init() : null;
