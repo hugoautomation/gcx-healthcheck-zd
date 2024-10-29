@@ -221,14 +221,7 @@ async function initializeApp() {
         }
 
         client.invoke('resize', { width: '100%', height: '800px' });
-// In initializeApp(), replace the monitoring settings navigation with:
-document.getElementById('monitoring-settings-btn').addEventListener('click', function() {
-    const currentUrl = new URL(window.location.href);
-    const installationId = currentUrl.searchParams.get('installation_id');
-    const plan = currentUrl.searchParams.get('plan');
-    
-    window.location.href = `monitoring/?installation_id=${installationId}&plan=${plan}`;
-});
+
         initializeComponents();
         initializeRunCheck();
         initializeHistoricalReports();

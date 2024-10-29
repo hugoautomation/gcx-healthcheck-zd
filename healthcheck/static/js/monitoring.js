@@ -5,9 +5,13 @@ let context = null;
 // Initialize ZAF client
 async function initializeApp() {
     try {
+        // Wait a short moment before initializing ZAF client
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         client = window.ZAFClient ? window.ZAFClient.init() : null;
         if (!client) {
-            console.error('ZAF Client could not be initialized');
+            console.warn('ZAF Client could not be initialized - running in standalone mode');
+            initializeForm();
             return;
         }
 
@@ -20,19 +24,24 @@ async function initializeApp() {
 
         console.log('Metadata:', metadata);
 
+        // Check URL parameters
         const currentUrl = new URL(window.location.href);
         const urlInstallationId = currentUrl.searchParams.get('installation_id');
         const urlPlan = currentUrl.searchParams.get('plan');
 
-        // If we don't have installation_id or plan in URL, add them and reload
         if (!urlInstallationId || !urlPlan) {
-            currentUrl.searchParams.set('installation_id', metadata.installationId);
-            currentUrl.searchParams.set('plan', metadata.plan?.name || 'Free');
-            window.location.href = currentUrl.toString();
-            return;
+            if (metadata) {
+                currentUrl.searchParams.set('installation_id', metadata.installationId);
+                currentUrl.searchParams.set('plan', metadata.plan?.name || 'Free');
+                window.location.href = currentUrl.toString();
+                return;
+            }
         }
 
-        client.invoke('resize', { width: '100%', height: '800px' });
+        // Resize the iframe
+        await client.invoke('resize', { width: '100%', height: '800px' });
+        
+        // Initialize the form
         initializeForm();
 
     } catch (error) {
@@ -67,18 +76,6 @@ function removeEmailField(e) {
 function initializeForm() {
     const form = document.getElementById('monitoring-form');
     if (!form) return;
-        // Handle back button
-        const backButton = document.querySelector('.back-to-dashboard');
-        if (backButton) {
-            backButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                const currentUrl = new URL(window.location.href);
-                const installationId = currentUrl.searchParams.get('installation_id');
-                const plan = currentUrl.searchParams.get('plan');
-                
-                window.location.href = `../?installation_id=${installationId}&plan=${plan}`;
-            });
-        }
 
     // Add email field handler
     document.querySelectorAll('.add-email').forEach(button => {
