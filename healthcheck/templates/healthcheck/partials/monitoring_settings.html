@@ -10,8 +10,9 @@
         <div id="monitoringSettingsBody" class="accordion-collapse collapse" 
              data-bs-parent="#monitoring-settings">
             <div class="accordion-body">
-                <form id="monitoring-form">
+                <form method="POST" action="monitoring-settings/">
                     <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
+                    <input type="hidden" name="redirect_url" value="{{ request.get_full_path }}">
                     
                     <!-- Monitoring Status -->
                     <div class="mb-3">
