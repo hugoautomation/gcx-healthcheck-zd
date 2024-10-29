@@ -214,24 +214,52 @@ function initializeMonitoringForm() {
     const form = document.getElementById('monitoring-form');
     if (!form) return;
 
+    // Handle email input buttons
+    const emailInputs = document.getElementById('email-inputs');
+    if (emailInputs) {
+        emailInputs.addEventListener('click', (e) => {
+            if (e.target.classList.contains('add-email')) {
+                const template = `
+                    <div class="input-group mb-2">
+                        <input type="email" class="form-control" name="notification_emails[]" 
+                               ${form.dataset.isFreePlan === 'true' ? 'disabled' : ''}>
+                        <button type="button" class="btn c-btn c-btn--danger remove-email">-</button>
+                    </div>`;
+                e.target.closest('.input-group').insertAdjacentHTML('beforebegin', template);
+            } else if (e.target.classList.contains('remove-email')) {
+                e.target.closest('.input-group').remove();
+            }
+            adjustContentHeight();
+        });
+    }
+
+    // Handle form submission
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(form);
-
+        
         try {
+            const formData = new FormData(form);
             const response = await fetch('monitoring-settings/', {
                 method: 'POST',
                 body: formData
             });
 
-            if (response.ok) {
-                const html = await response.text();
-                document.getElementById('monitoring-settings').outerHTML = html;
-                initializeMonitoringForm();
-            } else {
-                throw new Error('Failed to save settings');
-            }
+            if (!response.ok) throw new Error('Failed to save settings');
+            
+            const html = await response.text();
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            
+            // Replace the entire monitoring settings section
+            const oldSettings = document.getElementById('monitoring-settings');
+            oldSettings.replaceWith(tempDiv.firstElementChild);
+            
+            // Reinitialize the form
+            initializeMonitoringForm();
+            adjustContentHeight();
+            
         } catch (error) {
+            console.error('Error saving settings:', error);
             alert('Error saving settings: ' + error.message);
         }
     });
