@@ -53,8 +53,33 @@
             {% if is_free_plan %}
             <a href="upgrade/" class="btn c-btn c-btn--primary c-btn--sm">Subscribe to Unlock</a>
             {% else %}
-            <button type="submit" class="btn c-btn c-btn--primary c-btn--sm">Save Settings</button>
-            {% endif %}
+            <button type="submit" class="btn c-btn c-btn--primary c-btn--sm" id="save-settings-btn">
+                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                <span class="btn-text">Save Settings</span>
+            </button>
+                        {% endif %}
         </form>
     </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form[action="monitoring-settings/"]');
+        const saveButton = document.getElementById('save-settings-btn');
+        
+        if (form && saveButton) {
+            form.addEventListener('submit', function(e) {
+                // Show loading state
+                const spinner = saveButton.querySelector('.spinner-border');
+                const btnText = saveButton.querySelector('.btn-text');
+                
+                spinner.classList.remove('d-none');
+                btnText.textContent = 'Saving...';
+                saveButton.disabled = true;
+                
+                // Form will submit normally
+                // Loading state will be cleared on page reload
+            });
+        }
+    });
+    </script>
 </div>
