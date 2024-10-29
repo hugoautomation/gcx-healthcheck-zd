@@ -43,11 +43,75 @@ function showError(element, error, title = 'Error') {
     `;
 }
 
+// Add these functions after the utility functions and before initializeComponents()
+
+function initializeFilters() {
+    const filterButtons = document.querySelectorAll('.filter-button');
+    if (!filterButtons.length) return;
+
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const category = this.dataset.category;
+            const issueRows = document.querySelectorAll('.issue-row');
+            
+            // Update active state of filter buttons
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Show/hide issues based on filter
+            issueRows.forEach(row => {
+                if (category === 'all' || row.dataset.category === category) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            adjustContentHeight();
+        });
+    });
+}
+
+function initializeUnlockButtons() {
+    const unlockButtons = document.querySelectorAll('.unlock-report-button');
+    if (!unlockButtons.length) return;
+
+    unlockButtons.forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const reportId = this.dataset.reportId;
+            
+            try {
+                const response = await fetch(`check-unlock-status/?report_id=${reportId}`);
+                if (!response.ok) throw new Error('Failed to check unlock status');
+                
+                const data = await response.json();
+                if (data.is_unlocked) {
+                    // If report is unlocked, update the content
+                    document.getElementById('results').innerHTML = data.html;
+                    initializeComponents();
+                } else {
+                    // If not unlocked, redirect to payment
+                    window.location.href = `unlock-report/${reportId}/`;
+                }
+            } catch (error) {
+                console.error('Error checking unlock status:', error);
+                alert('Error checking unlock status. Please try again.');
+            }
+        });
+    });
+}
+
+// Update initializeComponents to include error handling
 function initializeComponents() {
-    initializeFilters();
-    initializeUnlockButtons();
-    initializeMonitoringForm();
-    adjustContentHeight();
+    try {
+        initializeFilters();
+        initializeUnlockButtons();
+        initializeMonitoringForm();
+        adjustContentHeight();
+    } catch (error) {
+        console.error('Error initializing components:', error);
+    }
 }
 
 // Plan Change Handler
