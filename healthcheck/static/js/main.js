@@ -8,14 +8,12 @@ function adjustContentHeight() {
     
     setTimeout(() => {
         const resultsDiv = document.getElementById('results');
-        const monitoringSettings = document.getElementById('monitoring-settings');
         const healthCheckContent = document.getElementById('health-check-content');
         
         // Calculate total height including all visible elements
         const totalHeight = Math.min(
             Math.max(
                 (resultsDiv?.scrollHeight || 0) +
-                (monitoringSettings?.scrollHeight || 0),
                 healthCheckContent?.scrollHeight || 0,
                 600  // minimum height
             ),
@@ -197,7 +195,6 @@ async function initializeApp() {
             return;
         }
 
-        client.on('plan.changed', handlePlanChange);
         console.log('ZAF Client initialized successfully');
 
         [context, metadata] = await Promise.all([
