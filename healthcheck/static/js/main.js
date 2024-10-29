@@ -108,92 +108,18 @@ function initializeUnlockButtons() {
     });
 }
 
-// Update the initializeAccordion function
-function initializeAccordion() {
-    const accordion = document.getElementById('monitoring-settings');
-    if (!accordion) return;
-
-    // Add event listener for when accordion is being shown
-    accordion.addEventListener('show.bs.collapse', async (e) => {
-        const monitoringSettingsBody = document.getElementById('monitoringSettingsBody');
-        if (!monitoringSettingsBody) return;
-
-        try {
-            // Get the installation ID from the URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const installationId = urlParams.get('installation_id');
-            
-            // Fetch fresh monitoring settings
-            const response = await fetch(`monitoring-settings/?installation_id=${installationId}`);
-            if (!response.ok) throw new Error('Failed to fetch monitoring settings');
-            
-            const html = await response.text();
-            
-            // Update the accordion body content
-            monitoringSettingsBody.querySelector('.accordion-body').innerHTML = html;
-            
-            // Initialize the form
-            initializeMonitoringForm();
-        } catch (error) {
-            console.error('Error loading monitoring settings:', error);
-        }
-        
-        adjustContentHeight();
-    });
-
-    // Add event listener for when accordion is fully shown
-    accordion.addEventListener('shown.bs.collapse', () => {
-        adjustContentHeight();
-    });
-
-    // Add event listener for when accordion is hidden
-    accordion.addEventListener('hidden.bs.collapse', () => {
-        adjustContentHeight();
-    });
-}
-
 // Update initializeComponents to include error handling
 function initializeComponents() {
     try {
         initializeFilters();
         initializeUnlockButtons();
-        initializeMonitoringForm();
-        initializeAccordion(); // Add this line
+
         adjustContentHeight();
     } catch (error) {
         console.error('Error initializing components:', error);
     }
 }
 
-// Plan Change Handler
-async function handlePlanChange(data) {
-    try {
-        const response = await fetch('/update-installation-plan/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                installation_id: metadata.installationId,
-                plan: data.newPlan
-            })
-        });
-
-        if (response.ok) {
-            const monitoringSettings = document.getElementById('monitoring-settings');
-            if (monitoringSettings) {
-                const settingsResponse = await fetch(`/monitoring-settings/?installation_id=${metadata.installationId}`);
-                if (settingsResponse.ok) {
-                    const html = await settingsResponse.text();
-                    monitoringSettings.outerHTML = html;
-                    initializeMonitoringForm();
-                }
-            }
-        }
-    } catch (error) {
-        console.error('Error updating plan:', error);
-    }
-}
 function initializeRunCheck() {
     const runCheckButton = document.getElementById('run-check');
     if (!runCheckButton) return;
@@ -261,60 +187,6 @@ function initializeHistoricalReports() {
     });
 }
 
-function initializeMonitoringForm() {
-    const form = document.getElementById('monitoring-form');
-    if (!form) return;
-
-    // Handle email input buttons
-    const emailInputs = document.getElementById('email-inputs');
-    if (emailInputs) {
-        emailInputs.addEventListener('click', (e) => {
-            if (e.target.classList.contains('add-email')) {
-                const template = `
-                    <div class="input-group mb-2">
-                        <input type="email" class="form-control" name="notification_emails[]" 
-                               ${form.dataset.isFreePlan === 'true' ? 'disabled' : ''}>
-                        <button type="button" class="btn c-btn c-btn--danger remove-email">-</button>
-                    </div>`;
-                e.target.closest('.input-group').insertAdjacentHTML('beforebegin', template);
-            } else if (e.target.classList.contains('remove-email')) {
-                e.target.closest('.input-group').remove();
-            }
-            adjustContentHeight();
-        });
-    }
-
-    // Handle form submission
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        try {
-            const formData = new FormData(form);
-            const response = await fetch('monitoring-settings/', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!response.ok) throw new Error('Failed to save settings');
-            
-            const html = await response.text();
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
-            
-            // Replace the entire monitoring settings section
-            const oldSettings = document.getElementById('monitoring-settings');
-            oldSettings.replaceWith(tempDiv.firstElementChild);
-            
-            // Reinitialize the form
-            initializeMonitoringForm();
-            adjustContentHeight();
-            
-        } catch (error) {
-            console.error('Error saving settings:', error);
-            alert('Error saving settings: ' + error.message);
-        }
-    });
-}
 
 // Main Initialization
 async function initializeApp() {
