@@ -169,6 +169,7 @@ function initializeRunCheck() {
             };
 
             const response = await client.request(options);
+            console.log('Response:', response); // Add this line
             resultsDiv.innerHTML = response;
             initializeComponents();
 
