@@ -69,14 +69,14 @@
         <div class="mb-3">
             <div class="row">
                 <div class="col-md-6">
-                    <select id="severity-filter" class="form-control">
+                    <select id="severity-filter" class="form-select">
                         <option value="all">All Severities</option>
                         <option value="error">Errors Only</option>
                         <option value="warning">Warnings Only</option>
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <select id="category-filter" class="form-control">
+                    <select id="category-filter" class="form-select">
                         <option value="all">All Categories</option>
                         {% for category in data.categories %}
                             <option value="{{ category }}">{{ category }}</option>
