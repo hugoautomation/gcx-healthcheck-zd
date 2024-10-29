@@ -209,15 +209,8 @@ function initializeMonitoringForm() {
             alert('Error saving settings: ' + error.message);
         }
     });
+}
 
-    function cleanupEventListeners() {
-        // Remove any existing event listeners before reinitializing
-        const oldForm = document.getElementById('monitoring-form');
-        if (oldForm) {
-            const newForm = oldForm.cloneNode(true);
-            oldForm.parentNode.replaceChild(newForm, oldForm);
-        }
-    }
 // Update initializeComponents to include error handling
 function initializeComponents() {
     try {
