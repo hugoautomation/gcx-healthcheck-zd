@@ -45,7 +45,7 @@ def app(request):
                 "historical_reports": [
                     {
                         "id": report.id,
-                        "created_at": report.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                        "created_at": report.created_at.strftime("%d %b %Y"),  # Changed this line
                         "is_unlocked": report.is_unlocked,
                         "total_issues": len(report.raw_response.get("issues", [])),
                     }
