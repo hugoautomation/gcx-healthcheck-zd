@@ -16,12 +16,14 @@
 
                     <h2 class="text-2xl font-semibold mb-4">Zendesk Healthcheck</h2>
                 </div>
-                {% if historical_reports %}
                 <div class="col-auto">
                     <a href="{% url 'monitoring' %}?installation_id={{ request.GET.installation_id }}&plan={{ request.GET.plan }}" 
                     class="btn c-btn c-btn--sm c-btn--basic">Monitoring Settings</a>
+                </div>
+                {% if historical_reports %}
+                <div class="col-auto">
                     <div class="dropdown">
-                        <button class="btn c-btn c-btn--secondary dropdown-toggle" type="button" id="historyDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn c-btn c-btn--sm c-btn--secondary dropdown-toggle" type="button" id="historyDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             Historical Reports
                         </button>
                         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="historyDropdown">
@@ -41,10 +43,11 @@
                 </div>
                 {% endif %}
                 <div class="col-auto">
-                    <button id="run-check" class="btn c-btn c-btn--primary">Run Health Check</button>
+                    <button id="run-check" class="btn c-btn c-btn--sm c-btn--primary">Run Health Check</button>
                 </div>
             </div>
         </div>
+        <hr class="my-4">
         <div class="scrollable-container">
             <div id="results">
                 {% include "healthcheck/results.html" with data=data %}
