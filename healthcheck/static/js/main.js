@@ -191,6 +191,8 @@ function initializeHistoricalReports() {
     });
 }
 
+
+// Initialize ZAF client
 async function initializeApp() {
     try {
         client = window.ZAFClient ? window.ZAFClient.init() : null;
@@ -201,6 +203,7 @@ async function initializeApp() {
 
         console.log('ZAF Client initialized successfully');
 
+        // Get context and metadata
         [context, metadata] = await Promise.all([
             client.context(),
             client.metadata()
@@ -220,11 +223,22 @@ async function initializeApp() {
             return;
         }
 
-        client.invoke('resize', { width: '100%', height: '800px' });
-        
-        initializeComponents();
-        initializeRunCheck();
-        initializeHistoricalReports();
+        client.on('app.registered', async function() {
+            // Resize app container
+            client.invoke('resize', { width: '100%', height: '800px' });
+
+            // Add click handler for monitoring settings
+            document.getElementById('monitoring-settings-btn').addEventListener('click', function() {
+                client.invoke('navigate', {
+                    url: `monitoring/?installation_id=${urlInstallationId}&plan=${urlPlan}`
+                });
+            });
+
+            // Initialize other components
+            initializeComponents();
+            initializeRunCheck();
+            initializeHistoricalReports();
+        });
 
     } catch (error) {
         console.error('Error initializing:', error);

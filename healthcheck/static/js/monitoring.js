@@ -62,9 +62,25 @@ function removeEmailField(e) {
     e.preventDefault();
     e.target.closest('.input-group').remove();
 }
+
+
 function initializeForm() {
     const form = document.getElementById('monitoring-form');
     if (!form) return;
+        // Handle back button
+        const backButton = document.querySelector('.btn-secondary');
+        if (backButton) {
+            backButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (client) {
+                    // Use ZAF client to navigate back
+                    client.invoke('navigate', { url: 'app' });
+                } else {
+                    // Fallback to regular navigation
+                    window.location.href = this.href;
+                }
+            });
+        }
 
     // Add email field handler
     document.querySelectorAll('.add-email').forEach(button => {
