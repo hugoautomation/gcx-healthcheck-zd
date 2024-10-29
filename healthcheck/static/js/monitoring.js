@@ -5,43 +5,15 @@ let context = null;
 // Initialize ZAF client
 async function initializeApp() {
     try {
-        // Wait a short moment before initializing ZAF client
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        client = window.ZAFClient ? window.ZAFClient.init() : null;
-        if (!client) {
-            console.warn('ZAF Client could not be initialized - running in standalone mode');
-            initializeForm();
-            return;
-        }
+        await ZAFClientSingleton.init();
+        client = ZAFClientSingleton.client;
+        metadata = ZAFClientSingleton.metadata;
+        context = ZAFClientSingleton.context;
 
-        console.log('ZAF Client initialized successfully');
+        if (!await ZAFClientSingleton.ensureUrlParams()) return;
 
-        [context, metadata] = await Promise.all([
-            client.context(),
-            client.metadata()
-        ]);
-
-        console.log('Metadata:', metadata);
-
-        // Check URL parameters
-        const currentUrl = new URL(window.location.href);
-        const urlInstallationId = currentUrl.searchParams.get('installation_id');
-        const urlPlan = currentUrl.searchParams.get('plan');
-
-        if (!urlInstallationId || !urlPlan) {
-            if (metadata) {
-                currentUrl.searchParams.set('installation_id', metadata.installationId);
-                currentUrl.searchParams.set('plan', metadata.plan?.name || 'Free');
-                window.location.href = currentUrl.toString();
-                return;
-            }
-        }
-
-        // Resize the iframe
         await client.invoke('resize', { width: '100%', height: '800px' });
         
-        // Initialize the form
         initializeForm();
 
     } catch (error) {
@@ -50,7 +22,6 @@ async function initializeApp() {
         initializeForm();
     }
 }
-
 function addEmailField(e) {
     e.preventDefault();
     const emailInputs = document.getElementById('email-inputs');

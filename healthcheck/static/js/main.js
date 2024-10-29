@@ -190,37 +190,17 @@ function initializeHistoricalReports() {
         });
     });
 }
-
+// Replace the initialization code with:
 async function initializeApp() {
     try {
-        client = window.ZAFClient ? window.ZAFClient.init() : null;
-        if (!client) {
-            console.error('ZAF Client could not be initialized');
-            return;
-        }
+        await ZAFClientSingleton.init();
+        client = ZAFClientSingleton.client;
+        metadata = ZAFClientSingleton.metadata;
+        context = ZAFClientSingleton.context;
 
-        console.log('ZAF Client initialized successfully');
+        if (!await ZAFClientSingleton.ensureUrlParams()) return;
 
-        [context, metadata] = await Promise.all([
-            client.context(),
-            client.metadata()
-        ]);
-
-        console.log('Metadata:', metadata);
-
-        const currentUrl = new URL(window.location.href);
-        const urlInstallationId = currentUrl.searchParams.get('installation_id');
-        const urlPlan = currentUrl.searchParams.get('plan');
-
-        // If we don't have installation_id or plan in URL, add them and reload
-        if (!urlInstallationId || !urlPlan) {
-            currentUrl.searchParams.set('installation_id', metadata.installationId);
-            currentUrl.searchParams.set('plan', metadata.plan?.name || 'Free');
-            window.location.href = currentUrl.toString();
-            return;
-        }
-
-        client.invoke('resize', { width: '100%', height: '800px' });
+        await client.invoke('resize', { width: '100%', height: '800px' });
 
         initializeComponents();
         initializeRunCheck();
