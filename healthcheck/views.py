@@ -276,15 +276,10 @@ def get_historical_report(request, report_id):
             last_check=report.created_at,
         )
 
-    
-
         # Use render_report_components utility
-        results_html = render_report_components(
-            report_data)
+        results_html = render_report_components(report_data)
 
-        return JsonResponse(
-            { "results_html": results_html}
-        )
+        return JsonResponse({"results_html": results_html})
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)

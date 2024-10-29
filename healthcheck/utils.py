@@ -129,7 +129,4 @@ def format_historical_reports(reports):
 
 def render_report_components(formatted_data):
     """Helper function to render report template"""
-    return render_to_string(
-        "healthcheck/results.html", 
-        {"data": formatted_data}
-    )
+    return render_to_string("healthcheck/results.html", {"data": formatted_data})
