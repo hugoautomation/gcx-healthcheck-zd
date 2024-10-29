@@ -28,8 +28,7 @@
                                 <a class="dropdown-item" 
                                    href="report/{{ report.id }}/"
                                    hx-get="report/{{ report.id }}/"
-                                   hx-target="body"
-                                   hx-push-url="true">
+                                   hx-target="body">
                                     {{ report.created_at }}
                                     <span class="badge {% if report.is_unlocked %}badge-success{% else %}badge-secondary{% endif %} ml-2">
                                         {{ report.total_issues }} issues

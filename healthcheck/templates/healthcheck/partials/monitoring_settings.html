@@ -6,8 +6,7 @@
         <form id="monitoring-form" 
               hx-post="{% url 'monitoring_settings' %}"
               hx-trigger="submit"
-              hx-target="#monitoring-settings"
-              hx-swap="outerHTML">
+              hx-target="body">
             <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
             <div class="form-group">
                 <label>Monitoring Status</label>
