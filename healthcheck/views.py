@@ -383,7 +383,6 @@ def get_historical_report(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
-
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
@@ -405,8 +404,7 @@ def monitoring_settings(request):
             context = {
                 "is_active": monitoring.is_active and not is_free_plan,
                 "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails
-                or [],  # Ensure it's never None
+                "notification_emails": monitoring.notification_emails or [],
                 "instance_guid": latest_report.instance_guid if latest_report else "",
                 "subdomain": latest_report.subdomain if latest_report else "",
                 "data": {"is_free_plan": is_free_plan},
@@ -449,32 +447,36 @@ def monitoring_settings(request):
 
         try:
             # Parse form data
-            data = json.loads(request.body) if request.body else request.POST
-            is_active = data.get("is_active") == "true"
-            frequency = data.get("frequency", "weekly")
-            notification_emails = (
-                data.getlist("notification_emails[]")
-                if hasattr(data, "getlist")
-                else data.get("notification_emails", [])
-            )
+            try:
+                data = json.loads(request.body)
+            except (json.JSONDecodeError, TypeError):
+                data = request.POST
 
+            # Handle checkbox value
+            is_active = str(data.get("is_active", "")).lower() in ["true", "on", "1"]
+            frequency = data.get("frequency", "weekly")
+            
+            # Handle email list from both JSON and form data
+            if hasattr(data, 'getlist'):
+                notification_emails = data.getlist("notification_emails[]")
+            else:
+                notification_emails = data.get("notification_emails", [])
+                if isinstance(notification_emails, str):
+                    notification_emails = [notification_emails]
+            
             # Filter out empty email fields
-            notification_emails = [
-                email for email in notification_emails if email and email.strip()
-            ]
+            notification_emails = [email for email in notification_emails if email and email.strip()]
 
             # Update or create monitoring settings
             monitoring, created = HealthCheckMonitoring.objects.update_or_create(
                 installation_id=installation_id,
                 defaults={
-                    "instance_guid": latest_report.instance_guid
-                    if latest_report
-                    else "",
+                    "instance_guid": latest_report.instance_guid if latest_report else "",
                     "subdomain": latest_report.subdomain if latest_report else "",
                     "is_active": is_active,
                     "frequency": frequency,
                     "notification_emails": notification_emails,
-                },
+                }
             )
 
             # Return updated context
@@ -488,22 +490,16 @@ def monitoring_settings(request):
             }
 
             # Return success response with updated HTML
-            return JsonResponse(
-                {
-                    "status": "success",
-                    "html": render_to_string(
-                        "healthcheck/partials/monitoring_settings.html", context
-                    ),
-                }
-            )
+            return JsonResponse({
+                "status": "success",
+                "html": render_to_string("healthcheck/partials/monitoring_settings.html", context)
+            })
 
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
         except Exception as e:
+            print(f"Error in monitoring settings: {str(e)}")  # Add logging
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
-
 
 @csrf_exempt
 def update_installation_plan(request):
