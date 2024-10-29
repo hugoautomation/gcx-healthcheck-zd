@@ -28,7 +28,7 @@
                                    href="#"
                                    data-report-id="{{ report.id }}">
                                     {{ report.created_at }}
-                                    <span class="badge {% if report.is_unlocked %}badge-success{% else %}badge-secondary{% endif %} ml-2">
+                                    <span class="badge {% if report.is_unlocked %}text-bg-success{% else %}text-bg-secondary{% endif %} ml-2">
                                         {{ report.total_issues }} issues
                                         {% if report.is_unlocked %}(Unlocked){% else %}(Locked){% endif %}
                                     </span>

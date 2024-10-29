@@ -35,6 +35,13 @@ def app(request):
                 )
 
             if current_report:
+                # Check if plan is not Free and update unlock status for all reports
+                if current_report.plan and current_report.plan != "Free":
+                    HealthCheckReport.update_all_reports_unlock_status(
+                        installation_id, 
+                        current_report.plan
+                    )
+
                 report_data = format_response_data(
                     current_report.raw_response,
                     plan=current_report.plan,

@@ -49,10 +49,20 @@ class HealthCheckReport(models.Model):
             latest_report.plan = new_plan
             latest_report.save()
 
-            # If downgrading to free plan, also reset unlocked status
-            if new_plan == "Free":
-                latest_report.is_unlocked = False
-                latest_report.save()
+            # Update all reports for this installation based on the new plan
+            cls.update_all_reports_unlock_status(installation_id, new_plan)
+
+
+
+    @classmethod
+    def update_all_reports_unlock_status(cls, installation_id, plan):
+        """Update unlock status for all reports of an installation based on plan"""
+        should_unlock = plan != "Free"
+        cls.objects.filter(installation_id=installation_id).update(
+            is_unlocked=should_unlock,
+            plan=plan  # Optionally update plan for all reports
+        )
+
 
     @property
     def is_latest(self):
@@ -82,6 +92,12 @@ class HealthCheckReport(models.Model):
         # Auto-unlock for non-Free plans
         if self.plan != "Free":
             self.is_unlocked = True
+            # Update all other reports for this installation
+            if not kwargs.pop('skip_others', False):  # Add skip flag to prevent recursion
+                self.__class__.update_all_reports_unlock_status(
+                    self.installation_id, 
+                    self.plan
+                )
         super().save(*args, **kwargs)
 
 
