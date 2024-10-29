@@ -158,7 +158,7 @@ function initializeRunCheck() {
             }
 
             const options = {
-                url: '/check/',
+                url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
