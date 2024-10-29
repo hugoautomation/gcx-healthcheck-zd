@@ -13,32 +13,52 @@ import csv
 
 def app(request):
     initial_data = {}
-
-    # Get the domain from the request parameters
+    
+    # Get the domain and installation_id from the request parameters
     domain = request.GET.get("origin", "")
-    if domain:
+    installation_id = request.GET.get("installation_id")
+    report_id = request.GET.get("report_id")
+    
+    if installation_id:
         try:
-            # Get the last 10 reports for this domain, ordered by creation date
+            # Get historical reports for this installation
             historical_reports = HealthCheckReport.objects.filter(
-                raw_response__instance_url__icontains=domain
+                installation_id=installation_id
             ).order_by("-created_at")[:10]
 
-            initial_data["historical_reports"] = [
-                {
-                    "id": report.id,
-                    "created_at": report.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    "is_unlocked": report.is_unlocked,
-                    "total_issues": len(report.raw_response.get("issues", [])),
-                }
-                for report in historical_reports
-            ]
+            # Get the current report (either specified by ID or latest)
+            if report_id:
+                current_report = HealthCheckReport.objects.get(id=report_id)
+            else:
+                # Use the helper method to get latest report
+                current_report = HealthCheckReport.get_latest_for_installation(installation_id)
+            
+            if current_report:
+                report_data = format_response_data(
+                    current_report.raw_response,
+                    plan=current_report.plan,
+                    report_id=current_report.id,
+                    last_check=current_report.created_at,
+                )
+            
+            initial_data.update({
+                "historical_reports": [
+                    {
+                        "id": report.id,
+                        "created_at": report.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                        "is_unlocked": report.is_unlocked,
+                        "total_issues": len(report.raw_response.get("issues", [])),
+                    }
+                    for report in historical_reports
+                ],
+                "data": report_data if current_report else None,
+            })
 
         except Exception as e:
-            print(f"Error getting historical reports: {str(e)}")
+            print(f"Error getting reports: {str(e)}")
             pass
 
     return render(request, "healthcheck/app.html", initial_data)
-
 
 @csrf_exempt
 def health_check(request):
