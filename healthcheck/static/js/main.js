@@ -141,7 +141,7 @@ function initializeRunCheck() {
     if (!runCheckButton) return;
 
     runCheckButton.addEventListener('click', async () => {
-        console.log('Run Health Check button clicked'); // Add this line
+        console.log('Run Health Check button clicked');
         const resultsDiv = document.getElementById('results');
         showLoadingState(resultsDiv);
 
@@ -169,10 +169,15 @@ function initializeRunCheck() {
                 secure: true
             };
 
-// Alternative approach if you modify your backend response
-const response = await client.request(options);
-const { results_html, monitoring_html } = JSON.parse(response);
-resultsDiv.innerHTML = monitoring_html + results_html;
+            const response = await client.request(options);
+            const data = JSON.parse(response);
+            
+            if (data.error) {
+                resultsDiv.innerHTML = data.results_html;
+            } else {
+                resultsDiv.innerHTML = data.monitoring_html + data.results_html;
+            }
+            
             initializeComponents();
 
         } catch (error) {
