@@ -157,7 +157,7 @@ function initializeRunCheck() {
             if (data.error) {
                 resultsDiv.innerHTML = data.results_html;
             } else {
-                resultsDiv.innerHTML = data.monitoring_html + data.results_html;
+                resultsDiv.innerHTML =  data.results_html;
             }
             
             initializeComponents();
