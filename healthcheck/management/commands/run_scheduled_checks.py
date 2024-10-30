@@ -45,6 +45,8 @@ class Command(BaseCommand):
                 )
 
                 if response.status_code == 200:
+                    response_data = response.json()
+                    
                     # Create new report
                     report = HealthCheckReport.objects.create(
                         installation_id=monitoring.installation_id,
@@ -53,24 +55,34 @@ class Command(BaseCommand):
                         plan=latest_report.plan,
                         app_guid=latest_report.app_guid,
                         version=latest_report.version,
-                        raw_response=response.json(),
+                        raw_response=response_data,
                     )
 
                     # Send email notification
                     if monitoring.notification_emails:
+                        # Prepare email context
+                        issues = response_data.get("issues", [])
+                        context = {
+                            "subdomain": monitoring.subdomain,
+                            "total_issues": len(issues),
+                            "critical_issues": sum(1 for issue in issues 
+                                                if issue.get("type") == "error"),
+                            "warning_issues": sum(1 for issue in issues 
+                                               if issue.get("type") == "warning"),
+                            "report_url": f"{settings.APP_URL}/report/{report.id}/"
+                        }
+
+                        # Render email template
                         html_content = render_to_string(
-                            "healthcheck/email_report.html",
-                            {
-                                "report": report,
-                                "subdomain": monitoring.subdomain,
-                                "url": url,
-                            },
+                            "healthcheck/email/monitoring_report.html",
+                            context
                         )
 
+                        # Send email
                         send_mail(
-                            subject=f"Zendesk Health Check Report - {monitoring.subdomain}",
+                            subject=f"Zendesk Healthcheck Report for {monitoring.subdomain}",
                             message="Please view this email in HTML format",
-                            from_email="noreply@yourdomain.com",
+                            from_email=settings.DEFAULT_FROM_EMAIL,
                             recipient_list=monitoring.notification_emails,
                             html_message=html_content,
                         )
@@ -79,6 +91,12 @@ class Command(BaseCommand):
                     monitoring.last_check = now
                     monitoring.schedule_next_check()
                     monitoring.save()
+
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f"Successfully completed health check for {monitoring.subdomain}"
+                        )
+                    )
 
             except Exception as e:
                 self.stdout.write(

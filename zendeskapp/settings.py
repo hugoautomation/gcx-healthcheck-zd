@@ -18,7 +18,8 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DJANGO_ENV = os.environ.get("RAILWAY_ENVIRONMENT_NAME", "development")
 HEALTHCHECK_TOKEN = os.environ.get("HEALTHCHECK_TOKEN", "")
-
+DEFAULT_FROM_EMAIL="noreply@gravitycx.com.au"
+APP_URL = 'https://gravitycx.com.au'
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 

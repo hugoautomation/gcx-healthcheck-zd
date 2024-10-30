@@ -76,36 +76,56 @@ function initializeFilters() {
     categoryFilter.addEventListener('change', filterIssues);
 }
 
+// Initialize unlock buttons
 function initializeUnlockButtons() {
-    const unlockButtons = document.querySelectorAll('.unlock-report');
-    if (!unlockButtons.length) return;
+    document.querySelectorAll('.unlock-report').forEach(button => {
+        // Remove existing event listeners to prevent duplicates
+        button.replaceWith(button.cloneNode(true));
 
-    unlockButtons.forEach(button => {
-        button.addEventListener('click', async function(e) {
-            e.preventDefault();
-            const reportId = this.dataset.reportId;
-            
-            try {
-                const response = await fetch(`check-unlock-status/?report_id=${reportId}`);
-                if (!response.ok) throw new Error('Failed to check unlock status');
-                
-                const data = await response.json();
-                if (data.is_unlocked) {
-                    // If report is unlocked, update the content
-                    document.getElementById('results').innerHTML = data.html;
-                    initializeComponents();
-                } else {
-                    // If not unlocked, redirect to payment
-                    window.location.href = `unlock-report/${reportId}/`;
-                }
-            } catch (error) {
-                console.error('Error checking unlock status:', error);
-                alert('Error checking unlock status. Please try again.');
-            }
-        });
+        // Get the fresh button reference after replacement
+        const newButton = document.querySelector(`.unlock-report[data-report-id="${button.dataset.reportId}"]`);
+
+        if (newButton) {
+            newButton.addEventListener('click', function () {
+                const reportId = this.dataset.reportId;
+                const stripePaymentLink = `https://buy.stripe.com/dR68zbfDvboy7mweUU?client_reference_id=${reportId}`;
+
+                // Define window features
+                const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
+
+                // Open the payment window
+                const paymentWindow = window.open(stripePaymentLink, 'StripePayment', windowFeatures);
+
+                // Start polling for unlock status
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const response = await fetch(`/check-unlock-status/?report_id=${reportId}`);
+                        const data = await response.json();
+
+                        if (response.ok && data.is_unlocked) {
+                            // Report is unlocked, update the content
+                            document.getElementById('results').innerHTML = data.html;
+                            // Reinitialize filters and unlock buttons after content update
+                            initializeFilters();
+                            initializeUnlockButtons();
+                            clearInterval(pollInterval);
+                        }
+                    } catch (error) {
+                        console.error('Error checking unlock status:', error);
+                    }
+                }, 2000);
+
+                // Stop polling if the payment window is closed
+                const checkWindow = setInterval(() => {
+                    if (paymentWindow.closed) {
+                        clearInterval(pollInterval);
+                        clearInterval(checkWindow);
+                    }
+                }, 1000);
+            });
+        }
     });
 }
-
 // Update initializeComponents to include error handling
 function initializeComponents() {
     try {
