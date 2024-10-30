@@ -117,9 +117,13 @@ def health_check(request):
             )
 
             if response.status_code != 200:
-                error_data = {"error": f"API Error: {response.text}"}
-                results_html = render_report_components(error_data)
+                # Change this part
+                results_html = render_report_components({
+                    "data": None,
+                    "error": f"API Error: {response.text}"
+                })
                 return JsonResponse({"error": True, "results_html": results_html})
+
 
             # Get response data
             response_data = response.json()
@@ -144,14 +148,17 @@ def health_check(request):
                 last_check=report.created_at,
             )
 
-            # Render results using utility function
+               # Render results using utility function
             results_html = render_report_components(formatted_data)
 
             return JsonResponse({"error": False, "results_html": results_html})
 
         except Exception as e:
-            error_data = {"error": f"Error processing request: {str(e)}"}
-            results_html = render_report_components(error_data)
+            # Change this part
+            results_html = render_report_components({
+                "data": None,
+                "error": f"Error processing request: {str(e)}"
+            })
             return JsonResponse({"error": True, "results_html": results_html})
 
     return HttpResponse("Method not allowed", status=405)
