@@ -71,8 +71,6 @@ def validate_jwt_token(f):
 @csrf_exempt
 @validate_jwt_token
 def app(request):
-    if request.method != "POST":
-        return HttpResponse("Method not allowed", status=405)
     initial_data = {}
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
@@ -221,8 +219,6 @@ def health_check(request):
 @csrf_exempt
 @validate_jwt_token
 def monitoring(request):
-    if request.method != "POST":
-        return HttpResponse("Method not allowed", status=405)
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
     app_guid = request.GET.get("app_guid")
@@ -249,9 +245,6 @@ def monitoring(request):
 @csrf_exempt
 @validate_jwt_token
 def stripe_webhook(request):
-    if request.method != "POST":
-        return HttpResponse("Method not allowed", status=405)
-
     try:
         event = json.loads(request.body)
         print("Received webhook event:", event["type"])  # Debug logging
