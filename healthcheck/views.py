@@ -144,8 +144,7 @@ def app(request):
 @csrf_exempt
 @validate_jwt_token
 def health_check(request):
-        if request.method != "POST":
-            return HttpResponse("Method not allowed", status=405)
+    if request.method == "POST":
         try:
             # Extract data from request
             data = json.loads(request.body) if request.body else {}
