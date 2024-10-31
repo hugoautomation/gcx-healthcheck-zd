@@ -71,6 +71,8 @@ def validate_jwt_token(f):
 @csrf_exempt
 @validate_jwt_token
 def app(request):
+    if request.method != "POST":
+        return HttpResponse("Method not allowed", status=405)
     initial_data = {}
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
@@ -142,7 +144,8 @@ def app(request):
 @csrf_exempt
 @validate_jwt_token
 def health_check(request):
-    if request.method == "POST":
+        if request.method != "POST":
+            return HttpResponse("Method not allowed", status=405)
         try:
             # Extract data from request
             data = json.loads(request.body) if request.body else {}
@@ -219,6 +222,8 @@ def health_check(request):
 @csrf_exempt
 @validate_jwt_token
 def monitoring(request):
+    if request.method != "POST":
+        return HttpResponse("Method not allowed", status=405)
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
     app_guid = request.GET.get("app_guid")

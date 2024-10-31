@@ -146,12 +146,14 @@ function initializeRunCheck() {
             if (!client || !context || !metadata) {
                 throw new Error('Client, context, or metadata not initialized');
             }
+            const token = await client.get('token');
 
             const options = {
                 url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
+                    token: token, // Add the token to the request payload
                     url: `${context.account.subdomain}.zendesk.com`,
                     email: '{{setting.admin_email}}',
                     api_token: '{{setting.api_token}}',
