@@ -156,6 +156,7 @@ function initializeRunCheck() {
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
+                    token: token,  // Add the token here
                     url: `${context.account.subdomain}.zendesk.com`,
                     email: '{{setting.admin_email}}',
                     api_token: '{{setting.api_token}}',
