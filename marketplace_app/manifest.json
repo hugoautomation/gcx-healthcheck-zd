@@ -7,6 +7,7 @@
   },
   "version": "1.0.0",
   "frameworkVersion": "2.0",
+  "signedUrls": true,
   "location": {
     "support": {
       "nav_bar": {

@@ -79,33 +79,29 @@ function initializeFilters() {
 // Initialize unlock buttons
 function initializeUnlockButtons() {
     document.querySelectorAll('.unlock-report').forEach(button => {
-        // Remove existing event listeners to prevent duplicates
         button.replaceWith(button.cloneNode(true));
-
-        // Get the fresh button reference after replacement
         const newButton = document.querySelector(`.unlock-report[data-report-id="${button.dataset.reportId}"]`);
 
         if (newButton) {
             newButton.addEventListener('click', function () {
                 const reportId = this.dataset.reportId;
                 const stripePaymentLink = `https://buy.stripe.com/dR68zbfDvboy7mweUU?client_reference_id=${reportId}`;
-
-                // Define window features
                 const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
-
-                // Open the payment window
                 const paymentWindow = window.open(stripePaymentLink, 'StripePayment', windowFeatures);
 
                 // Start polling for unlock status
                 const pollInterval = setInterval(async () => {
                     try {
-                        const response = await fetch(`/check-unlock-status/?report_id=${reportId}`);
-                        const data = await response.json();
+                        const options = {
+                            url: `/check-unlock-status/?report_id=${reportId}`,
+                            type: 'GET',
+                            secure: true
+                        };
+                        
+                        const data = await client.request(options);
 
-                        if (response.ok && data.is_unlocked) {
-                            // Report is unlocked, update the content
+                        if (data.is_unlocked) {
                             document.getElementById('results').innerHTML = data.html;
-                            // Reinitialize filters and unlock buttons after content update
                             initializeFilters();
                             initializeUnlockButtons();
                             clearInterval(pollInterval);
@@ -115,7 +111,7 @@ function initializeUnlockButtons() {
                     }
                 }, 2000);
 
-                // Stop polling if the payment window is closed
+                // Stop polling if payment window is closed
                 const checkWindow = setInterval(() => {
                     if (paymentWindow.closed) {
                         clearInterval(pollInterval);
@@ -150,14 +146,12 @@ function initializeRunCheck() {
             if (!client || !context || !metadata) {
                 throw new Error('Client, context, or metadata not initialized');
             }
-            const token = await client.get('token');
 
             const options = {
                 url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
-                    token: token,  // Add the token here
                     url: `${context.account.subdomain}.zendesk.com`,
                     email: '{{setting.admin_email}}',
                     api_token: '{{setting.api_token}}',
@@ -198,14 +192,15 @@ function initializeHistoricalReports() {
             showLoadingState(resultsDiv);
 
             try {
-                const response = await fetch(`report/${this.dataset.reportId}/?installation_id=${metadata.installationId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    resultsDiv.innerHTML = data.results_html;
-                    initializeComponents();
-                } else {
-                    throw new Error('Failed to load report');
-                }
+                const options = {
+                    url: `report/${this.dataset.reportId}/?installation_id=${metadata.installationId}`,
+                    type: 'GET',
+                    secure: true
+                };
+                
+                const data = await client.request(options);
+                resultsDiv.innerHTML = data.results_html;
+                initializeComponents();
             } catch (error) {
                 showError(resultsDiv, error, 'Error Loading Report');
             }

@@ -25,10 +25,22 @@ def validate_jwt_token(f):
     def decorated_function(request, *args, **kwargs):
         if request.method == "POST":
             try:
-                # Get the token from the POST data
-                token = request.POST.get("token")
+                # Get token based on content type
+                if request.content_type == 'application/json':
+                    try:
+                        data = json.loads(request.body)
+                        token = data.get('token')
+                    except json.JSONDecodeError:
+                        token = None
+                else:
+                    # Handle form data
+                    token = request.POST.get('token')
                 
                 if not token:
+                    print(f"No token found. Content-Type: {request.content_type}")
+                    print(f"POST data: {request.POST}")
+                    if request.content_type == 'application/json':
+                        print(f"JSON body: {request.body}")
                     return JsonResponse({"error": "No token provided"}, status=403)
 
                 # Try to get subdomain from JWT claims first
@@ -39,6 +51,7 @@ def validate_jwt_token(f):
                     # Store subdomain for later use
                     request.subdomain = decoded_token.get("iss", "").replace(".zendesk.com", "")
                 except Exception as e:
+                    print(f"Token decode error: {str(e)}")
                     return JsonResponse({"error": f"Invalid token format: {str(e)}"}, status=403)
 
             except Exception as e:

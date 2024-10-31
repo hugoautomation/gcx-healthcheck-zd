@@ -22,6 +22,7 @@ async function initializeApp() {
         initializeForm();
     }
 }
+
 function addEmailField(e) {
     e.preventDefault();
     const emailInputs = document.getElementById('email-inputs');
@@ -42,7 +43,6 @@ function removeEmailField(e) {
     e.preventDefault();
     e.target.closest('.input-group').remove();
 }
-
 
 function initializeForm() {
     const form = document.getElementById('monitoring-form');
@@ -81,29 +81,30 @@ function initializeForm() {
                     .filter(input => input.value.trim() !== '')
                     .map(input => input.value.trim());
 
-                // Create FormData
+                // Create data object from form
                 const formData = new FormData(form);
-
-                // Remove existing email fields and add valid ones back
-                for (const pair of formData.entries()) {
-                    if (pair[0] === 'notification_emails[]') {
-                        formData.delete(pair[0]);
+                const data = {};
+                
+                // Convert FormData to object, excluding email fields
+                for (const [key, value] of formData.entries()) {
+                    if (key !== 'notification_emails[]') {
+                        data[key] = value;
                     }
                 }
 
-                validEmails.forEach(email => {
-                    formData.append('notification_emails[]', email);
-                });
+                // Add valid emails array
+                data.notification_emails = validEmails;
 
-                // Submit form
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    body: formData
-                });
+                // Submit form using client.request
+                const options = {
+                    url: form.action,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    secure: true
+                };
 
-                if (!response.ok) {
-                    throw new Error('Failed to save settings');
-                }
+                await client.request(options);
 
                 // Show success message
                 const alertHtml = `
@@ -116,18 +117,9 @@ function initializeForm() {
                     messagesDiv.innerHTML = alertHtml;
                 }
 
-                // Reset button state
-                spinner.classList.add('d-none');
-                btnText.textContent = 'Save Settings';
-                saveButton.disabled = false;
-
             } catch (error) {
                 console.error('Error saving settings:', error);
-                // Reset button state
-                spinner.classList.add('d-none');
-                btnText.textContent = 'Save Settings';
-                saveButton.disabled = false;
-
+                
                 // Show error message
                 const alertHtml = `
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -138,6 +130,11 @@ function initializeForm() {
                 if (messagesDiv) {
                     messagesDiv.innerHTML = alertHtml;
                 }
+            } finally {
+                // Reset button state
+                spinner.classList.add('d-none');
+                btnText.textContent = 'Save Settings';
+                saveButton.disabled = false;
             }
         });
     }
