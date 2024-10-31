@@ -14,11 +14,12 @@ from .utils import (
 )
 import csv
 import jwt
-from jwt.exceptions import InvalidTokenError
+from jwt.exceptions import ExpiredSignatureError, InvalidAlgorithmError
 from functools import wraps
 
 
 # Add this new decorator to validate JWT tokens
+
 def validate_jwt_token(f):
     @wraps(f)
     def decorated_function(request, *args, **kwargs):
@@ -30,13 +31,8 @@ def validate_jwt_token(f):
                 if not token:
                     return JsonResponse({"error": "No token provided"}, status=403)
 
-                # Get app_id from settings with fallback
-                app_id = getattr(settings, 'ZENDESK_APP_ID', None)
-                if not app_id:
-                    # Allow request to proceed if app_id not configured (development)
-                    if settings.DEBUG:
-                        return f(request, *args, **kwargs)
-                    return JsonResponse({"error": "App not properly configured"}, status=500)
+                # Get app_id from settings with fallback to app_guid
+                app_id = getattr(settings, 'ZENDESK_APP_ID', '531750af-0da3-4a3b-8dc0-a4d30f956260')
 
                 # Fetch the public key from Zendesk
                 subdomain = request.POST.get("subdomain")
@@ -47,23 +43,28 @@ def validate_jwt_token(f):
                 response = requests.get(public_key_url)
                 
                 if response.status_code != 200:
+                    if settings.DEBUG:
+                        print(f"Error fetching public key: {response.text}")
                     return JsonResponse({"error": "Could not fetch public key"}, status=403)
                 
                 public_key = response.text
 
                 # Decode and verify the JWT token
-                decoded_token = jwt.decode(
-                    token,
-                    public_key,
-                    algorithms=["RS256"],
-                    options={"verify_exp": True},
-                )
+                try:
+                    decoded_token = jwt.decode(
+                        token,
+                        public_key,
+                        algorithms=["RS256"],
+                        options={"verify_exp": True}
+                    )
+                    request.zendesk_jwt = decoded_token
+                except ExpiredSignatureError:
+                    return JsonResponse({"error": "Token has expired"}, status=403)
+                except InvalidAlgorithmError:
+                    return JsonResponse({"error": "Invalid algorithm"}, status=403)
+                except Exception as e:
+                    return JsonResponse({"error": f"Token validation failed: {str(e)}"}, status=403)
 
-                # Add token data to request for use in views
-                request.zendesk_jwt = decoded_token
-
-            except InvalidTokenError:
-                return JsonResponse({"error": "Invalid token"}, status=403)
             except Exception as e:
                 if settings.DEBUG:
                     print(f"JWT validation error: {str(e)}")

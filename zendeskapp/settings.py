@@ -28,7 +28,7 @@ ZENDESK_APP_ID = os.environ.get('ZENDESK_APP_ID', '1080545')  # Your app GUID fr
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET", "")
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# SECURITY WARNING: don't run with debug turned on in production! Will update to false in Product when published
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
