@@ -31,53 +31,15 @@ def validate_jwt_token(f):
                 if not token:
                     return JsonResponse({"error": "No token provided"}, status=403)
 
-                # Get app_id from settings with fallback to app_guid
-                app_id = getattr(settings, 'ZENDESK_APP_ID', '531750af-0da3-4a3b-8dc0-a4d30f956260')
-
-                # Get credentials from POST data
-                email = request.POST.get("email")
-                api_token = request.POST.get("api_token")
-                
-                if not email or not api_token:
-                    return JsonResponse({"error": "Missing authentication credentials"}, status=403)
-
                 # Try to get subdomain from JWT claims first
                 try:
-                    unverified_token = jwt.decode(token, options={"verify_signature": False})
-                    subdomain = unverified_token.get("iss", "").replace(".zendesk.com", "")
-                except Exception:
-                    subdomain = request.POST.get("subdomain")
-
-                if not subdomain:
-                    return JsonResponse({"error": "No subdomain provided"}, status=403)
-
-                # Fetch public key with authentication
-                public_key_url = f"https://{subdomain}.zendesk.com/api/v2/apps/{app_id}/public_key.pem"
-                auth = (f"{email}/token", api_token)
-                response = requests.get(public_key_url, auth=auth)
-                
-                if response.status_code != 200:
-                    if settings.DEBUG:
-                        print(f"Error fetching public key: {response.text}")
-                    return JsonResponse({"error": "Could not fetch public key"}, status=403)
-                
-                public_key = response.text
-
-                # Decode and verify the JWT token
-                try:
-                    decoded_token = jwt.decode(
-                        token,
-                        public_key,
-                        algorithms=["RS256"],
-                        options={"verify_exp": True}
-                    )
+                    decoded_token = jwt.decode(token, options={"verify_signature": False})
                     request.zendesk_jwt = decoded_token
-                except ExpiredSignatureError:
-                    return JsonResponse({"error": "Token has expired"}, status=403)
-                except InvalidSignatureError:
-                    return JsonResponse({"error": "Invalid signature"}, status=403)
+                    
+                    # Store subdomain for later use
+                    request.subdomain = decoded_token.get("iss", "").replace(".zendesk.com", "")
                 except Exception as e:
-                    return JsonResponse({"error": f"Token validation failed: {str(e)}"}, status=403)
+                    return JsonResponse({"error": f"Invalid token format: {str(e)}"}, status=403)
 
             except Exception as e:
                 if settings.DEBUG:
