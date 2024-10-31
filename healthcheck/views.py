@@ -14,6 +14,7 @@ from .utils import (
 )
 import csv
 import jwt
+from jwt.exceptions import InvalidTokenError
 from functools import wraps
 
 
@@ -25,12 +26,29 @@ def validate_jwt_token(f):
             try:
                 # Get the token from the POST data
                 token = request.POST.get("token")
+                
+                if not token:
+                    return JsonResponse({"error": "No token provided"}, status=403)
+
+                # Get app_id from settings with fallback
+                app_id = getattr(settings, 'ZENDESK_APP_ID', None)
+                if not app_id:
+                    # Allow request to proceed if app_id not configured (development)
+                    if settings.DEBUG:
+                        return f(request, *args, **kwargs)
+                    return JsonResponse({"error": "App not properly configured"}, status=500)
 
                 # Fetch the public key from Zendesk
-                app_id = settings.ZENDESK_APP_ID
-                subdomain = request.POST.get("subdomain")  # Get from POST data
+                subdomain = request.POST.get("subdomain")
+                if not subdomain:
+                    return JsonResponse({"error": "No subdomain provided"}, status=403)
+
                 public_key_url = f"https://{subdomain}.zendesk.com/api/v2/apps/{app_id}/public_key.pem"
                 response = requests.get(public_key_url)
+                
+                if response.status_code != 200:
+                    return JsonResponse({"error": "Could not fetch public key"}, status=403)
+                
                 public_key = response.text
 
                 # Decode and verify the JWT token
@@ -44,17 +62,18 @@ def validate_jwt_token(f):
                 # Add token data to request for use in views
                 request.zendesk_jwt = decoded_token
 
-            except jwt.InvalidTokenError:
+            except InvalidTokenError:
                 return JsonResponse({"error": "Invalid token"}, status=403)
             except Exception as e:
+                if settings.DEBUG:
+                    print(f"JWT validation error: {str(e)}")
                 return JsonResponse({"error": str(e)}, status=403)
 
         # Allow requests to proceed in debug mode
         if settings.DEBUG and request.method == "GET":
-            pass
+            return f(request, *args, **kwargs)
 
         return f(request, *args, **kwargs)
-
     return decorated_function
 
 
