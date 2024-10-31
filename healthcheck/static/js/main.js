@@ -150,6 +150,7 @@ function initializeRunCheck() {
             if (!client || !context || !metadata) {
                 throw new Error('Client, context, or metadata not initialized');
             }
+            const token = await client.get('token');
 
             const options = {
                 url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
