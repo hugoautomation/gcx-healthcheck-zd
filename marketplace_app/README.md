@@ -29,6 +29,3 @@ A comprehensive health monitoring solution for Zendesk instances that helps iden
 ### Support
 
 Please submit bug reports to customerdelight@gravitycx.com.au.
-
-### Screenshot(s):
-[Add screenshots showing the main dashboard and results page]

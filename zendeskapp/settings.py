@@ -18,13 +18,13 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DJANGO_ENV = os.environ.get("RAILWAY_ENVIRONMENT_NAME", "development")
 HEALTHCHECK_TOKEN = os.environ.get("HEALTHCHECK_TOKEN", "")
-DEFAULT_FROM_EMAIL="noreply@gravitycx.com.au"
-APP_URL = 'https://gravitycx.com.au'
+DEFAULT_FROM_EMAIL = "noreply@gravitycx.com.au"
+APP_URL = "https://gravitycx.com.au"
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-!a(44bjl0+8re+zr1!_ba(ybvq9(%+#*9i*!t7*a*si7s0&&a-"
+SECRET_KEY = os.environ.get("DJANGO_SECRET", "")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True

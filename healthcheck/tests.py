@@ -18,7 +18,7 @@ class MonitoringTestCase(TestCase):
             is_active=True,
             frequency="daily",
             notification_emails=["test@example.com"],
-            last_check=timezone.now() - timedelta(days=2)
+            last_check=timezone.now() - timedelta(days=2),
         )
 
         # Create test report
@@ -35,10 +35,10 @@ class MonitoringTestCase(TestCase):
                         "item_type": "ticket_forms",
                         "type": "error",
                         "message": "Test issue",
-                        "zendesk_url": "https://test.zendesk.com"
+                        "zendesk_url": "https://test.zendesk.com",
                     }
                 ]
-            }
+            },
         )
 
     def test_monitoring_creation(self):
@@ -51,47 +51,60 @@ class MonitoringTestCase(TestCase):
     def test_next_check_scheduling(self):
         """Test that next_check is scheduled correctly"""
         self.monitoring.schedule_next_check()
-        
+
         # For daily frequency
         if self.monitoring.frequency == "daily":
             expected_next = self.monitoring.last_check + timedelta(days=1)
         elif self.monitoring.frequency == "weekly":
             expected_next = self.monitoring.last_check + timedelta(weeks=1)
         else:  # monthly
-            expected_next = self.monitoring.last_check + timedelta(days=30)  # approximate
+            expected_next = self.monitoring.last_check + timedelta(
+                days=30
+            )  # approximate
 
         self.assertIsNotNone(self.monitoring.next_check)
         # Allow for small time differences in test
-        time_difference = abs((self.monitoring.next_check - expected_next).total_seconds())
+        time_difference = abs(
+            (self.monitoring.next_check - expected_next).total_seconds()
+        )
         self.assertTrue(time_difference < 60)  # Within 60 seconds
 
     def test_monitoring_email(self):
         """Test monitoring email sending"""
+        issues = self.report.raw_response.get("issues", [])
         context = {
             "subdomain": self.monitoring.subdomain,
-            "total_issues": len(self.report.raw_response.get("issues", [])),
-            "report_url": f"https://your-app-url.com/report/{self.report.id}/"
+            "total_issues": len(issues),
+            "critical_issues": sum(
+                1 for issue in issues if issue.get("type") == "error"
+            ),
+            "warning_issues": sum(
+                1 for issue in issues if issue.get("type") == "warning"
+            ),
+            "report_url": f"https://your-app-url.com/report/{self.report.id}/",
         }
-        
-        html_content = render_to_string("healthcheck/email/monitoring_report.html", context)
-        
+
+        html_content = render_to_string(
+            "healthcheck/email/monitoring_report.html", context
+        )
+
         send_mail(
             subject=f"Zendesk Healthcheck Report for {self.monitoring.subdomain}",
             message="Please view this email in HTML format",
             from_email="test@example.com",
             recipient_list=self.monitoring.notification_emails,
-            html_message=html_content
+            html_message=html_content,
         )
 
         # Test that one message has been sent
         self.assertEqual(len(mail.outbox), 1)
-        
+
         # Test the subject
         self.assertEqual(
             mail.outbox[0].subject,
-            f"Zendesk Healthcheck Report for {self.monitoring.subdomain}"
+            f"Zendesk Healthcheck Report for {self.monitoring.subdomain}",
         )
-        
+
         # Test that the recipient is correct
         self.assertEqual(mail.outbox[0].to, self.monitoring.notification_emails)
 
@@ -106,13 +119,12 @@ class MonitoringTestCase(TestCase):
             frequency="daily",
             notification_emails=["test2@example.com"],
             last_check=timezone.now(),  # Current time, so not due
-            next_check=timezone.now() + timedelta(days=1)
+            next_check=timezone.now() + timedelta(days=1),
         )
 
         # Query for monitoring settings due for check
         due_for_check = HealthCheckMonitoring.objects.filter(
-            is_active=True,
-            next_check__lte=timezone.now()
+            is_active=True, next_check__lte=timezone.now()
         )
 
         # Should only find our original monitoring setting

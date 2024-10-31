@@ -13,9 +13,54 @@ from .utils import (
     render_report_components,
 )
 import csv
+import jwt
+from functools import wraps
+
+
+# Add this new decorator to validate JWT tokens
+def validate_jwt_token(f):
+    @wraps(f)
+    def decorated_function(request, *args, **kwargs):
+        if request.method == "POST":
+            try:
+                # Get the token from the POST data
+                token = request.POST.get("token")
+
+                # Fetch the public key from Zendesk
+                app_id = settings.ZENDESK_APP_ID
+                subdomain = request.POST.get("subdomain")  # Get from POST data
+                public_key_url = f"https://{subdomain}.zendesk.com/api/v2/apps/{app_id}/public_key.pem"
+                response = requests.get(public_key_url)
+                public_key = response.text
+
+                # Decode and verify the JWT token
+                decoded_token = jwt.decode(
+                    token,
+                    public_key,
+                    algorithms=["RS256"],
+                    options={"verify_exp": True},
+                )
+
+                # Add token data to request for use in views
+                request.zendesk_jwt = decoded_token
+
+            except jwt.InvalidTokenError:
+                return JsonResponse({"error": "Invalid token"}, status=403)
+            except Exception as e:
+                return JsonResponse({"error": str(e)}, status=403)
+
+        # Allow requests to proceed in debug mode
+        if settings.DEBUG and request.method == "GET":
+            pass
+
+        return f(request, *args, **kwargs)
+
+    return decorated_function
 
 
 # Update the app view to remove monitoring context
+@csrf_exempt
+@validate_jwt_token
 def app(request):
     initial_data = {}
     installation_id = request.GET.get("installation_id")
@@ -27,7 +72,7 @@ def app(request):
         "installation_id": installation_id,
         "plan": client_plan,
         "app_guid": app_guid,
-        "origin": origin
+        "origin": origin,
     }
 
     if installation_id:
@@ -86,6 +131,7 @@ def app(request):
 
 
 @csrf_exempt
+@validate_jwt_token
 def health_check(request):
     if request.method == "POST":
         try:
@@ -118,12 +164,10 @@ def health_check(request):
 
             if response.status_code != 200:
                 # Change this part
-                results_html = render_report_components({
-                    "data": None,
-                    "error": f"API Error: {response.text}"
-                })
+                results_html = render_report_components(
+                    {"data": None, "error": f"API Error: {response.text}"}
+                )
                 return JsonResponse({"error": True, "results_html": results_html})
-
 
             # Get response data
             response_data = response.json()
@@ -148,22 +192,23 @@ def health_check(request):
                 last_check=report.created_at,
             )
 
-               # Render results using utility function
+            # Render results using utility function
             results_html = render_report_components(formatted_data)
 
             return JsonResponse({"error": False, "results_html": results_html})
 
         except Exception as e:
             # Change this part
-            results_html = render_report_components({
-                "data": None,
-                "error": f"Error processing request: {str(e)}"
-            })
+            results_html = render_report_components(
+                {"data": None, "error": f"Error processing request: {str(e)}"}
+            )
             return JsonResponse({"error": True, "results_html": results_html})
 
     return HttpResponse("Method not allowed", status=405)
 
 
+@csrf_exempt
+@validate_jwt_token
 def monitoring(request):
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
@@ -176,19 +221,20 @@ def monitoring(request):
 
     # Get monitoring context
     context = get_monitoring_context(installation_id, client_plan, None)
-    
+
     # Add URL parameters to context
     context["url_params"] = {
         "installation_id": installation_id,
         "plan": client_plan,
         "app_guid": app_guid,
-        "origin": origin
+        "origin": origin,
     }
 
     return render(request, "healthcheck/monitoring.html", context)
 
 
 @csrf_exempt
+@validate_jwt_token
 def stripe_webhook(request):
     if request.method != "POST":
         return HttpResponse("Method not allowed", status=405)
@@ -226,6 +272,8 @@ def stripe_webhook(request):
         return HttpResponse(str(e), status=400)
 
 
+@csrf_exempt
+@validate_jwt_token
 def download_report_csv(request, report_id):
     """Download health check report as CSV"""
     try:
@@ -263,6 +311,8 @@ def download_report_csv(request, report_id):
         return JsonResponse({"error": "Report not found"}, status=404)
 
 
+@csrf_exempt
+@validate_jwt_token
 def check_unlock_status(request):
     report_id = request.GET.get("report_id")
     if not report_id:
@@ -291,6 +341,8 @@ def check_unlock_status(request):
         return JsonResponse({"error": "Report not found"}, status=404)
 
 
+@csrf_exempt
+@validate_jwt_token
 def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
@@ -314,6 +366,7 @@ def get_historical_report(request, report_id):
 
 
 @csrf_exempt
+@validate_jwt_token
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
     installation_id = request.POST.get("installation_id")
@@ -365,6 +418,7 @@ def monitoring_settings(request):
 
 
 @csrf_exempt
+@validate_jwt_token
 def update_installation_plan(request):
     """Handle plan updates from Zendesk"""
     if request.method != "POST":

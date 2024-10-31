@@ -46,7 +46,7 @@ class Command(BaseCommand):
 
                 if response.status_code == 200:
                     response_data = response.json()
-                    
+
                     # Create new report
                     report = HealthCheckReport.objects.create(
                         installation_id=monitoring.installation_id,
@@ -65,17 +65,18 @@ class Command(BaseCommand):
                         context = {
                             "subdomain": monitoring.subdomain,
                             "total_issues": len(issues),
-                            "critical_issues": sum(1 for issue in issues 
-                                                if issue.get("type") == "error"),
-                            "warning_issues": sum(1 for issue in issues 
-                                               if issue.get("type") == "warning"),
-                            "report_url": f"{settings.APP_URL}/report/{report.id}/"
+                            "critical_issues": sum(
+                                1 for issue in issues if issue.get("type") == "error"
+                            ),
+                            "warning_issues": sum(
+                                1 for issue in issues if issue.get("type") == "warning"
+                            ),
+                            "report_url": f"{settings.APP_URL}/report/{report.id}/",
                         }
 
                         # Render email template
                         html_content = render_to_string(
-                            "healthcheck/email/monitoring_report.html",
-                            context
+                            "healthcheck/email/monitoring_report.html", context
                         )
 
                         # Send email
