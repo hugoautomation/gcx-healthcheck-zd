@@ -14,7 +14,7 @@ from .utils import (
 )
 import csv
 import jwt
-from jwt.exceptions import ExpiredSignatureError, InvalidAlgorithmError
+from jwt.exceptions import ExpiredSignatureError, InvalidSignatureError
 from functools import wraps
 
 
@@ -34,8 +34,14 @@ def validate_jwt_token(f):
                 # Get app_id from settings with fallback to app_guid
                 app_id = getattr(settings, 'ZENDESK_APP_ID', '531750af-0da3-4a3b-8dc0-a4d30f956260')
 
-                # Fetch the public key from Zendesk
-                subdomain = request.POST.get("subdomain")
+                # Try to get subdomain from JWT claims first
+                try:
+                    unverified_token = jwt.decode(token, options={"verify_signature": False})
+                    subdomain = unverified_token.get("iss", "").replace(".zendesk.com", "")
+                except Exception:
+                    # Fallback to POST data if JWT decode fails
+                    subdomain = request.POST.get("subdomain")
+
                 if not subdomain:
                     return JsonResponse({"error": "No subdomain provided"}, status=403)
 
@@ -60,8 +66,8 @@ def validate_jwt_token(f):
                     request.zendesk_jwt = decoded_token
                 except ExpiredSignatureError:
                     return JsonResponse({"error": "Token has expired"}, status=403)
-                except InvalidAlgorithmError:
-                    return JsonResponse({"error": "Invalid algorithm"}, status=403)
+                except InvalidSignatureError:
+                    return JsonResponse({"error": "Invalid signature"}, status=403)
                 except Exception as e:
                     return JsonResponse({"error": f"Token validation failed: {str(e)}"}, status=403)
 
