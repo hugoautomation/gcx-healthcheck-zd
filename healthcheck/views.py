@@ -19,11 +19,11 @@ from functools import wraps
 
 
 # Add this new decorator to validate JWT tokens
-
 def validate_jwt_token(f):
     @wraps(f)
     def decorated_function(request, *args, **kwargs):
-        if request.method == "POST":
+        # Only validate JWT for initial page loads (POST requests)
+        if request.method == "POST" and not request.headers.get('X-Subsequent-Request'):
             try:
                 # Get token based on content type
                 if request.content_type == 'application/json':
@@ -37,31 +37,18 @@ def validate_jwt_token(f):
                     token = request.POST.get('token')
                 
                 if not token:
-                    print(f"No token found. Content-Type: {request.content_type}")
-                    print(f"POST data: {request.POST}")
-                    if request.content_type == 'application/json':
-                        print(f"JSON body: {request.body}")
                     return JsonResponse({"error": "No token provided"}, status=403)
 
-                # Try to get subdomain from JWT claims first
+                # Validate token
                 try:
                     decoded_token = jwt.decode(token, options={"verify_signature": False})
                     request.zendesk_jwt = decoded_token
-                    
-                    # Store subdomain for later use
                     request.subdomain = decoded_token.get("iss", "").replace(".zendesk.com", "")
                 except Exception as e:
-                    print(f"Token decode error: {str(e)}")
                     return JsonResponse({"error": f"Invalid token format: {str(e)}"}, status=403)
 
             except Exception as e:
-                if settings.DEBUG:
-                    print(f"JWT validation error: {str(e)}")
                 return JsonResponse({"error": str(e)}, status=403)
-
-        # Allow requests to proceed in debug mode
-        if settings.DEBUG and request.method == "GET":
-            return f(request, *args, **kwargs)
 
         return f(request, *args, **kwargs)
     return decorated_function
@@ -140,7 +127,6 @@ def app(request):
 
 
 @csrf_exempt
-@validate_jwt_token
 def health_check(request):
     if request.method == "POST":
         try:
@@ -217,7 +203,6 @@ def health_check(request):
 
 
 @csrf_exempt
-@validate_jwt_token
 def monitoring(request):
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
@@ -243,7 +228,6 @@ def monitoring(request):
 
 
 @csrf_exempt
-@validate_jwt_token
 def stripe_webhook(request):
     try:
         event = json.loads(request.body)
@@ -279,7 +263,6 @@ def stripe_webhook(request):
 
 
 @csrf_exempt
-@validate_jwt_token
 def download_report_csv(request, report_id):
     """Download health check report as CSV"""
     try:
@@ -318,7 +301,6 @@ def download_report_csv(request, report_id):
 
 
 @csrf_exempt
-@validate_jwt_token
 def check_unlock_status(request):
     report_id = request.GET.get("report_id")
     if not report_id:
@@ -348,7 +330,6 @@ def check_unlock_status(request):
 
 
 @csrf_exempt
-@validate_jwt_token
 def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
@@ -372,7 +353,6 @@ def get_historical_report(request, report_id):
 
 
 @csrf_exempt
-@validate_jwt_token
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
     installation_id = request.POST.get("installation_id")
@@ -424,7 +404,6 @@ def monitoring_settings(request):
 
 
 @csrf_exempt
-@validate_jwt_token
 def update_installation_plan(request):
     """Handle plan updates from Zendesk"""
     if request.method != "POST":
