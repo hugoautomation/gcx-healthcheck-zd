@@ -104,6 +104,7 @@ function initializeUnlockButtons() {
                             document.getElementById('results').innerHTML = data.html;
                             initializeFilters();
                             initializeUnlockButtons();
+                            adjustContentHeight(); // Add this line to adjust the iframe height
                             clearInterval(pollInterval);
                         }
                     } catch (error) {
