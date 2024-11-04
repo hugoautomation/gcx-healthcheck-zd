@@ -13,7 +13,12 @@
         <div class="sticky-header">
             <div class="row align-items-center my-3 justify-content-between">
                 <div class="col-auto">
-                    <h2 class="text-2xl font-semibold">Zendesk Healthcheck</h2>
+                    {% if url_params.plan == "free" %}
+                    <h2 class="rounded bg-body-secondary font-semibold d-inline-block me-2">Free Plan</h2>
+                    <a class="c-btn c-btn--pill c-btn--sm d-inline-block" target="_blank" href="https://www.zendesk.com/marketplace/apps/support/1080781/automated-healthcheck/">Upgrade</a>
+                    {% else %}
+                    <h2 class="rounded bg-primary-subtle text-primary font-semibold">{{ url_params.plan }} Plan</h2>
+                    {% endif %}
                 </div>
                 <div class="col-auto">
                    <!-- Update the monitoring settings link -->
