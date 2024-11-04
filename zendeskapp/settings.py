@@ -24,7 +24,9 @@ APP_URL = "https://gravitycx.com.au"
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # Zendesk App Settings
-ZENDESK_APP_ID = os.environ.get('ZENDESK_APP_ID', '1080545')  # Your app GUID from manifest
+ZENDESK_APP_ID = os.environ.get(
+    "ZENDESK_APP_ID", "1080545"
+)  # Your app GUID from manifest
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET", "")
 

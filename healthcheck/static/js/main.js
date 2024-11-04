@@ -76,7 +76,6 @@ function initializeFilters() {
     categoryFilter.addEventListener('change', filterIssues);
 }
 
-// Initialize unlock buttons
 function initializeUnlockButtons() {
     document.querySelectorAll('.unlock-report').forEach(button => {
         button.replaceWith(button.cloneNode(true));

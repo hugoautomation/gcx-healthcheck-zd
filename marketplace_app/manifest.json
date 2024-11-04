@@ -2,8 +2,8 @@
   "name": "Automated Healthcheck",
   "author": {
     "name": "Gravity CX",
-    "email": "customerdelight@gravitycx.com.au",
-    "url": "https://gravitycx.com.au"
+    "email": "customerdelight@gravity.cx",
+    "url": "https://gravity.cx"
   },
   "version": "1.0.0",
   "frameworkVersion": "2.0",
@@ -35,8 +35,8 @@
   "defaultLocale": "en",
   "private": false,
   "domainWhitelist": ["gcx-healthcheck-zd-production.up.railway.app", "app.configly.io"],
-  "termsOfService": "https://gravitycx.com.au/terms-and-conditions-professional-services",
-  "privacyPolicy": "https://gravitycx.com.au/privacy",
-  "marketingUrl": "https://gravitycx.com.au/",
-  "supportUrl": "https://help.gravitycx.com.au/hc/en-au"
+  "termsOfService": "https://gravity.cx/terms-and-conditions-professional-services",
+  "privacyPolicy": "https://gravity.cx/privacy",
+  "marketingUrl": "https://gravity.cx/",
+  "supportUrl": "https://help.gravity.cx/hc/en-au"
 }

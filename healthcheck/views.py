@@ -14,7 +14,6 @@ from .utils import (
 )
 import csv
 import jwt
-from jwt.exceptions import ExpiredSignatureError, InvalidSignatureError
 from functools import wraps
 
 
@@ -23,34 +22,41 @@ def validate_jwt_token(f):
     @wraps(f)
     def decorated_function(request, *args, **kwargs):
         # Only validate JWT for initial page loads (POST requests)
-        if request.method == "POST" and not request.headers.get('X-Subsequent-Request'):
+        if request.method == "POST" and not request.headers.get("X-Subsequent-Request"):
             try:
                 # Get token based on content type
-                if request.content_type == 'application/json':
+                if request.content_type == "application/json":
                     try:
                         data = json.loads(request.body)
-                        token = data.get('token')
+                        token = data.get("token")
                     except json.JSONDecodeError:
                         token = None
                 else:
                     # Handle form data
-                    token = request.POST.get('token')
-                
+                    token = request.POST.get("token")
+
                 if not token:
                     return JsonResponse({"error": "No token provided"}, status=403)
 
                 # Validate token
                 try:
-                    decoded_token = jwt.decode(token, options={"verify_signature": False})
+                    decoded_token = jwt.decode(
+                        token, options={"verify_signature": False}
+                    )
                     request.zendesk_jwt = decoded_token
-                    request.subdomain = decoded_token.get("iss", "").replace(".zendesk.com", "")
+                    request.subdomain = decoded_token.get("iss", "").replace(
+                        ".zendesk.com", ""
+                    )
                 except Exception as e:
-                    return JsonResponse({"error": f"Invalid token format: {str(e)}"}, status=403)
+                    return JsonResponse(
+                        {"error": f"Invalid token format: {str(e)}"}, status=403
+                    )
 
             except Exception as e:
                 return JsonResponse({"error": str(e)}, status=403)
 
         return f(request, *args, **kwargs)
+
     return decorated_function
 
 
