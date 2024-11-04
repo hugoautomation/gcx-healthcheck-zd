@@ -76,6 +76,7 @@ function initializeFilters() {
     categoryFilter.addEventListener('change', filterIssues);
 }
 
+// Initialize unlock buttons
 function initializeUnlockButtons() {
     document.querySelectorAll('.unlock-report').forEach(button => {
         button.replaceWith(button.cloneNode(true));
@@ -92,7 +93,7 @@ function initializeUnlockButtons() {
                 const pollInterval = setInterval(async () => {
                     try {
                         const options = {
-                            url: `/check-unlock-status/?report_id=${reportId}`,
+                            url: `https://gcx-healthcheck-zd-production.up.railway.app/check-unlock-status/?report_id=${reportId}`,
                             type: 'GET',
                             secure: true
                         };
@@ -195,7 +196,7 @@ function initializeHistoricalReports() {
 
             try {
                 const options = {
-                    url: `report/${this.dataset.reportId}/?installation_id=${metadata.installationId}`,
+                    url: `https://gcx-healthcheck-zd-production.up.railway.app/report/${this.dataset.reportId}/?installation_id=${metadata.installationId}`,
                     type: 'GET',
                     secure: true
                 };
