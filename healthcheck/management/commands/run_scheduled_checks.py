@@ -47,7 +47,7 @@ class Command(BaseCommand):
                 if response.status_code == 200:
                     response_data = response.json()
 
-                    # Create new report
+                    # 1. Create new report first
                     report = HealthCheckReport.objects.create(
                         installation_id=monitoring.installation_id,
                         instance_guid=monitoring.instance_guid,
@@ -58,9 +58,8 @@ class Command(BaseCommand):
                         raw_response=response_data,
                     )
 
-                    # Send email notification
+                    # 2. Send email notification if emails are configured
                     if monitoring.notification_emails:
-                        # Prepare email context
                         issues = response_data.get("issues", [])
                         context = {
                             "subdomain": monitoring.subdomain,
@@ -74,12 +73,11 @@ class Command(BaseCommand):
                             "report_url": f"{settings.APP_URL}/report/{report.id}/",
                         }
 
-                        # Render email template
+                        # Render and send email
                         html_content = render_to_string(
                             "healthcheck/email/monitoring_report.html", context
                         )
 
-                        # Send email
                         send_mail(
                             subject=f"Zendesk Healthcheck Report for {monitoring.subdomain}",
                             message="Please view this email in HTML format",
@@ -87,8 +85,9 @@ class Command(BaseCommand):
                             recipient_list=monitoring.notification_emails,
                             html_message=html_content,
                         )
+                        print(f"Email sent to {monitoring.notification_emails}")
 
-                    # Update next check date
+                    # 3. Update monitoring schedule
                     monitoring.last_check = now
                     monitoring.schedule_next_check()
                     monitoring.save()

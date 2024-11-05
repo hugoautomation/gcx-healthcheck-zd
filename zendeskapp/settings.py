@@ -19,7 +19,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DJANGO_ENV = os.environ.get("RAILWAY_ENVIRONMENT_NAME", "development")
 HEALTHCHECK_TOKEN = os.environ.get("HEALTHCHECK_TOKEN", "")
 SEGMENT_WRITE_KEY = os.environ.get("SEGMENT_WRITE_KEY", "")
-DEFAULT_FROM_EMAIL = "hugo@gravity.cx"
 APP_URL = "https://gravity.cx"
 BASE_URL = os.environ.get("gcx-healthcheck-zd-production.up.railway.app", "")
 SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
@@ -29,6 +28,8 @@ EMAIL_HOST_USER = 'apikey' # this is exactly the value 'apikey'
 EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = "hugo@gravity.cx"
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
