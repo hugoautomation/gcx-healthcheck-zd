@@ -28,7 +28,8 @@ EMAIL_HOST_USER = "apikey"  # this is exactly the value 'apikey'
 EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = "hugo@gravity.cx"
+DEFAULT_FROM_EMAIL = "Hugo Richard <hugo@gravity.cx>"
+SERVER_EMAIL = "Hugo Richard <hugo@gravity.cx>"  # Used for error emails
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
