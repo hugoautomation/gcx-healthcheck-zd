@@ -69,14 +69,17 @@
             color: #ffc107;
             font-weight: 600;
         }
+        .text-white {
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1 style="margin: 0;">Zendesk Healthcheck Report</h1>
-            <p style="margin: 10px 0 0 0;">{{ subdomain }}.zendesk.com<br>
-                Powered by <a style="color:orange;" href="https://gravity.cx" target="_blank">Gravity CX</a></p>
+            <a href="https://{{ subdomain }}.zendesk.com" class="text-white" style="margin: 10px 0 0 0;">{{ subdomain }}.zendesk.com</a><br>
+                Powered by <a style="color:orange;" href="https://gravity.cx" target="_blank">Gravity CX</a></>
         
         </div>
         
@@ -117,7 +120,7 @@
             {% endif %}
             
             <center>
-                <a href="{{ subdomain }}.zendesk.com/agent/apps/automated-healthcheck" class="button">View Full Report</a>
+                <a href="{{ subdomain }}.zendesk.com/agent/apps/automated-healthcheck" class="button text-white">View Full Report</a>
             </center>
         </div>
         

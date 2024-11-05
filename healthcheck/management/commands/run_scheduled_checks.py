@@ -5,6 +5,8 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 import requests
 from zendeskapp import settings
+from datetime import timedelta
+from dateutil.relativedelta import relativedelta
 
 
 class Command(BaseCommand):
@@ -90,13 +92,22 @@ class Command(BaseCommand):
                         print(f"Email sent to {monitoring.notification_emails}")
 
                     # 3. Update monitoring schedule
-                    monitoring.last_check = now
-                    monitoring.schedule_next_check()
+                        monitoring.last_check = now
+                    monitoring.save()  # Save to ensure last_check is persisted
+                    
+                    # Calculate next check based on frequency
+                    if monitoring.frequency == "daily":
+                        monitoring.next_check = now + timedelta(second=15)
+                    elif monitoring.frequency == "weekly":
+                        monitoring.next_check = now + timedelta(weeks=1)
+                    else:  # monthly
+                        monitoring.next_check = now + relativedelta(months=1)
+                    
                     monitoring.save()
 
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f"Successfully completed health check for {monitoring.subdomain}"
+                            f"Successfully completed health check for {monitoring.subdomain}. Next check scheduled for {monitoring.next_check}"
                         )
                     )
 
