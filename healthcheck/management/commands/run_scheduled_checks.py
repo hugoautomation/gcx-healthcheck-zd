@@ -97,7 +97,7 @@ class Command(BaseCommand):
                     
                     # Calculate next check based on frequency
                     if monitoring.frequency == "daily":
-                        monitoring.next_check = now + timedelta(seconds=15)
+                        monitoring.next_check = now + timedelta(days=1)
                     elif monitoring.frequency == "weekly":
                         monitoring.next_check = now + timedelta(weeks=1)
                     else:  # monthly
