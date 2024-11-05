@@ -16,15 +16,10 @@ class HealthCheckReport(models.Model):
     app_guid = models.CharField(max_length=320)
     subdomain = models.CharField(max_length=255)
     admin_email = models.EmailField(
-        null=True, 
-        blank=True,
-        help_text="Admin email for API authentication"
+        null=True, blank=True, help_text="Admin email for API authentication"
     )
     api_token = models.CharField(
-        max_length=550,
-        null=True,
-        blank=True,
-        help_text="API token for authentication"
+        max_length=550, null=True, blank=True, help_text="API token for authentication"
     )
 
     # App metadata

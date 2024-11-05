@@ -459,7 +459,6 @@ def monitoring_settings(request):
             return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
         try:
-
             # Get data based on content type
             if request.content_type == "application/json":
                 is_active = data.get("is_active", False)
@@ -470,8 +469,6 @@ def monitoring_settings(request):
                 is_active = request.POST.get("is_active") == "on"
                 frequency = request.POST.get("frequency", "weekly")
                 notification_emails = request.POST.getlist("notification_emails[]")
-
-
 
             # Filter out empty email fields
             notification_emails = [
@@ -486,7 +483,9 @@ def monitoring_settings(request):
             monitoring, created = HealthCheckMonitoring.objects.update_or_create(
                 installation_id=installation_id,
                 defaults={
-                    "instance_guid": latest_report.instance_guid if latest_report else "",
+                    "instance_guid": latest_report.instance_guid
+                    if latest_report
+                    else "",
                     "subdomain": latest_report.subdomain if latest_report else "",
                     "is_active": is_active,
                     "frequency": frequency,
