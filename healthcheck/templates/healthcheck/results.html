@@ -32,7 +32,6 @@
 </div>
     {% if data.is_free_plan and not data.is_unlocked %}
         <div class="alert alert-info mb-4">
-            <h6 class="alert-heading">Free Plan</h6>
             <p>You're viewing the free version of the report which only shows Ticket Forms and Ticket Fields issues, without the ability to download the full report.</p>
             
             {% if data.hidden_issues_count > 0 %}
@@ -47,10 +46,10 @@
             {% endif %}
             
             <button class="btn c-btn  unlock-report" data-report-id="{{ data.report_id }}">
-                One off: Unlock Full Report
+                $249 One off: Unlock Full Report
             </button>
             <button class="btn c-btn c-btn--primary" href="https://www.zendesk.com/marketplace/apps/support/1080781/automated-healthcheck/" target="_blank">
-               Subscribe to Premium
+               Subscribe
             </button>
         </div>
     {% endif %}
