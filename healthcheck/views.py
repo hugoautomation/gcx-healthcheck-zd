@@ -16,7 +16,8 @@ import csv
 import jwt
 from functools import wraps
 import segment.analytics as analytics  # Add this import
-
+from django.core.management import call_command
+from django.utils import timezone
 
 # Add this new decorator to validate JWT tokens
 def validate_jwt_token(f):
@@ -423,8 +424,6 @@ def get_historical_report(request, report_id):
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
-    print("Received request method:", request.method)  # Debug log
-    print("Content type:", request.content_type)  # Debug log
 
     # Handle both JSON and form data for installation_id
     if request.content_type == "application/json":
@@ -481,15 +480,24 @@ def monitoring_settings(request):
             monitoring, created = HealthCheckMonitoring.objects.update_or_create(
                 installation_id=installation_id,
                 defaults={
-                    "instance_guid": latest_report.instance_guid
-                    if latest_report
-                    else "",
+                    "instance_guid": latest_report.instance_guid if latest_report else "",
                     "subdomain": latest_report.subdomain if latest_report else "",
                     "is_active": is_active,
                     "frequency": frequency,
                     "notification_emails": notification_emails,
                 },
             )
+            if is_active and notification_emails:
+                monitoring.next_check = timezone.now()
+                monitoring.save()
+                
+                # Run the scheduled checks command
+                try:
+                    call_command('run_scheduled_checks')
+                    print(f"Scheduled check triggered for {monitoring.subdomain}")
+                except Exception as e:
+                    print(f"Error running scheduled check: {str(e)}")
+
 
             # Track the event
             analytics.track(
