@@ -71,7 +71,7 @@ def app(request):
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
     email = request.GET.get("email")
-    print(request.GET)
+    
 
     initial_data["url_params"] = {
         "installation_id": installation_id,
@@ -82,7 +82,7 @@ def app(request):
     if installation_id:
         # Identify user when they load the app
         analytics.identify(
-            origin,
+            installation_id,
             {
                 "plan": client_plan,
                 "subdomain": origin,
@@ -171,6 +171,13 @@ def health_check(request):
                     "plan": data.get("plan", "Free"),
                 },
             )
+            analytics.identify(
+                installation_id,
+                {
+                "email": data.get("email"),
+                },
+            )
+
 
             # Prepare URL
             url = data.get("url")
