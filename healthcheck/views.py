@@ -202,7 +202,6 @@ def health_check(request):
             )
 
             if response.status_code != 200:
-                # Change this part
                 results_html = render_report_components(
                     {"data": None, "error": f"API Error: {response.text}"}
                 )
@@ -257,7 +256,6 @@ def health_check(request):
             return JsonResponse({"error": False, "results_html": results_html})
 
         except Exception as e:
-            # Change this part
             results_html = render_report_components(
                 {"data": None, "error": f"Error processing request: {str(e)}"}
             )

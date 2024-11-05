@@ -97,7 +97,7 @@ function initializeForm() {
 
                 // Submit form using client.request
                 const options = {
-                    url: form.action,
+                    url: 'https://gcx-healthcheck-zd-production.up.railway.app/monitoring-settings/',
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(data),
