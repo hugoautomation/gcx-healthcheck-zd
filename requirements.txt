@@ -4,7 +4,7 @@ requests==2.31.0
 python-dotenv==1.0.0
 psycopg2-binary
 python-dateutil
-segment
+segment-analytics-python
 
 # Testing dependencies
 pytest==7.4.3
