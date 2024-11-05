@@ -35,9 +35,9 @@
 
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="{% url 'monitoring_settings' %}" id="monitoring-form" data-is-free-plan="{{ is_free_plan|lower }}">                    
+                <form method="POST" action="{{ settings.BASE_URL }}{% url 'monitoring_settings' %}" id="monitoring-form" data-is-free-plan="{{ is_free_plan|lower }}">                    
                     <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
-
+                    <input type="hidden" name="redirect_url" value="{{ settings.BASE_URL }}{{ request.path }}?{{ request.GET.urlencode }}">
                 
                     <!-- Your existing form fields here -->
                     <div class="row">

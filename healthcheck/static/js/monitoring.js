@@ -65,12 +65,12 @@ function initializeForm() {
     if (saveButton) {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
+            console.log('Form submission started'); // Debug log
             
             const spinner = saveButton.querySelector('.spinner-border');
             const btnText = saveButton.querySelector('.btn-text');
             
             try {
-                // Show loading state
                 spinner.classList.remove('d-none');
                 btnText.textContent = 'Saving...';
                 saveButton.disabled = true;
@@ -83,17 +83,15 @@ function initializeForm() {
 
                 // Create data object from form
                 const formData = new FormData(form);
-                const data = {};
-                
-                // Convert FormData to object, excluding email fields
-                for (const [key, value] of formData.entries()) {
-                    if (key !== 'notification_emails[]') {
-                        data[key] = value;
-                    }
-                }
+                const data = {
+                    installation_id: formData.get('installation_id'),
+                    is_active: formData.get('is_active') === 'on',
+                    frequency: formData.get('frequency'),
+                    notification_emails: validEmails,
+                    redirect_url: window.location.href
+                };
 
-                // Add valid emails array
-                data.notification_emails = validEmails;
+                console.log('Sending data:', data); // Debug log
 
                 // Submit form using client.request
                 const options = {
@@ -104,7 +102,8 @@ function initializeForm() {
                     secure: true
                 };
 
-                await client.request(options);
+                const response = await client.request(options);
+                console.log('Response:', response); // Debug log
 
                 // Show success message
                 const alertHtml = `
@@ -118,12 +117,13 @@ function initializeForm() {
                 }
 
             } catch (error) {
-                console.error('Error saving settings:', error);
+                console.error('Error saving settings:', error); // Debug log
                 
-                // Show error message
+                // Show detailed error message
+                const errorMessage = error.responseJSON?.error || error.message || 'Failed to save settings';
                 const alertHtml = `
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        Failed to save settings. Please try again.
+                        ${errorMessage}. Please try again.
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>`;
                 const messagesDiv = document.querySelector('.messages');
@@ -131,7 +131,6 @@ function initializeForm() {
                     messagesDiv.innerHTML = alertHtml;
                 }
             } finally {
-                // Reset button state
                 spinner.classList.add('d-none');
                 btnText.textContent = 'Save Settings';
                 saveButton.disabled = false;

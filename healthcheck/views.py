@@ -422,13 +422,29 @@ def get_historical_report(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
-
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
-    installation_id = request.POST.get("installation_id")
+    print("Received request method:", request.method)  # Debug log
+    print("Content type:", request.content_type)  # Debug log
+
+    # Handle both JSON and form data for installation_id
+    if request.content_type == 'application/json':
+        try:
+            data = json.loads(request.body)
+            installation_id = data.get('installation_id')
+            print("JSON data:", data)  # Debug log
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON data"}, status=400)
+    else:
+        installation_id = request.POST.get("installation_id")
+        print("Form data:", request.POST)  # Debug log
+
     if not installation_id:
-        messages.error(request, "Installation ID required")
+        error_msg = "Installation ID required"
+        if request.content_type == 'application/json':
+            return JsonResponse({"error": error_msg}, status=400)
+        messages.error(request, error_msg)
         return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
     # Get the latest report to check plan status
@@ -437,32 +453,43 @@ def monitoring_settings(request):
 
     if request.method == "POST":
         if is_free_plan:
-            messages.error(request, "Monitoring not available for free plan")
+            error_msg = "Monitoring not available for free plan"
+            if request.content_type == 'application/json':
+                return JsonResponse({"error": error_msg}, status=400)
+            messages.error(request, error_msg)
             return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
         try:
-            is_active = request.POST.get("is_active") == "on"
-            frequency = request.POST.get("frequency", "weekly")
-            notification_emails = request.POST.getlist("notification_emails[]")
+            # Get data based on content type
+            if request.content_type == 'application/json':
+                is_active = data.get('is_active', False)
+                frequency = data.get('frequency', 'weekly')
+                notification_emails = data.get('notification_emails', [])
+            else:
+                is_active = request.POST.get("is_active") == "on"
+                frequency = request.POST.get("frequency", "weekly")
+                notification_emails = request.POST.getlist("notification_emails[]")
 
             # Filter out empty email fields
             notification_emails = [
                 email for email in notification_emails if email and email.strip()
             ]
 
+            print(f"Processing settings: active={is_active}, frequency={frequency}, emails={notification_emails}")  # Debug log
+
             # Update or create monitoring settings
-            monitoring, _ = HealthCheckMonitoring.objects.update_or_create(
+            monitoring, created = HealthCheckMonitoring.objects.update_or_create(
                 installation_id=installation_id,
                 defaults={
-                    "instance_guid": latest_report.instance_guid
-                    if latest_report
-                    else "",
+                    "instance_guid": latest_report.instance_guid if latest_report else "",
                     "subdomain": latest_report.subdomain if latest_report else "",
                     "is_active": is_active,
                     "frequency": frequency,
                     "notification_emails": notification_emails,
                 },
             )
+
+            # Track the event
             analytics.track(
                 installation_id,
                 "Monitoring Settings Updated",
@@ -471,17 +498,42 @@ def monitoring_settings(request):
                     "frequency": frequency,
                     "notification_emails_count": len(notification_emails),
                     "subdomain": latest_report.subdomain if latest_report else None,
+                    "created": created,
                 },
             )
 
-            messages.success(request, "Settings saved successfully")
+            success_msg = "Settings saved successfully"
+            if request.content_type == 'application/json':
+                return JsonResponse({
+                    "status": "success",
+                    "message": success_msg,
+                    "data": {
+                        "is_active": is_active,
+                        "frequency": frequency,
+                        "notification_emails": notification_emails,
+                    }
+                })
+            
+            messages.success(request, success_msg)
 
         except Exception as e:
-            messages.error(request, f"Error saving settings: {str(e)}")
+            error_msg = f"Error saving settings: {str(e)}"
+            print(f"Error: {error_msg}")  # Debug log
+            if request.content_type == 'application/json':
+                return JsonResponse({"error": error_msg}, status=500)
+            messages.error(request, error_msg)
 
-        return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
+        if request.content_type != 'application/json':
+            return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
-    return HttpResponseRedirect(request.GET.get("redirect_url", "/"))
+    # GET request - render the monitoring page
+    context = get_monitoring_context(installation_id, latest_report.plan if latest_report else "Free", None)
+    context["url_params"] = {
+        "installation_id": installation_id,
+        "plan": latest_report.plan if latest_report else "Free",
+    }
+    
+    return render(request, "healthcheck/monitoring.html", context)
 
 
 @csrf_exempt

@@ -21,6 +21,7 @@ HEALTHCHECK_TOKEN = os.environ.get("HEALTHCHECK_TOKEN", "")
 SEGMENT_WRITE_KEY = os.environ.get("SEGMENT_WRITE_KEY", "")
 DEFAULT_FROM_EMAIL = "noreply@gravitycx.com.au"
 APP_URL = "https://gravitycx.com.au"
+BASE_URL = os.environ.get("gcx-healthcheck-zd-production.up.railway.app", "")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
