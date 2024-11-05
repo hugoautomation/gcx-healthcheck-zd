@@ -71,7 +71,6 @@ def app(request):
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
     email = request.GET.get("email")
-    
 
     initial_data["url_params"] = {
         "installation_id": installation_id,
@@ -86,7 +85,6 @@ def app(request):
             {
                 "plan": client_plan,
                 "subdomain": origin,
-                "email": email,
                 "installation_id": installation_id,
             },
         )
@@ -174,10 +172,9 @@ def health_check(request):
             analytics.identify(
                 installation_id,
                 {
-                "email": data.get("email"),
+                    "email": data.get("email"),
                 },
             )
-
 
             # Prepare URL
             url = data.get("url")
@@ -422,6 +419,7 @@ def get_historical_report(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
+
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
@@ -429,10 +427,10 @@ def monitoring_settings(request):
     print("Content type:", request.content_type)  # Debug log
 
     # Handle both JSON and form data for installation_id
-    if request.content_type == 'application/json':
+    if request.content_type == "application/json":
         try:
             data = json.loads(request.body)
-            installation_id = data.get('installation_id')
+            installation_id = data.get("installation_id")
             print("JSON data:", data)  # Debug log
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
@@ -442,7 +440,7 @@ def monitoring_settings(request):
 
     if not installation_id:
         error_msg = "Installation ID required"
-        if request.content_type == 'application/json':
+        if request.content_type == "application/json":
             return JsonResponse({"error": error_msg}, status=400)
         messages.error(request, error_msg)
         return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
@@ -454,17 +452,17 @@ def monitoring_settings(request):
     if request.method == "POST":
         if is_free_plan:
             error_msg = "Monitoring not available for free plan"
-            if request.content_type == 'application/json':
+            if request.content_type == "application/json":
                 return JsonResponse({"error": error_msg}, status=400)
             messages.error(request, error_msg)
             return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
         try:
             # Get data based on content type
-            if request.content_type == 'application/json':
-                is_active = data.get('is_active', False)
-                frequency = data.get('frequency', 'weekly')
-                notification_emails = data.get('notification_emails', [])
+            if request.content_type == "application/json":
+                is_active = data.get("is_active", False)
+                frequency = data.get("frequency", "weekly")
+                notification_emails = data.get("notification_emails", [])
             else:
                 is_active = request.POST.get("is_active") == "on"
                 frequency = request.POST.get("frequency", "weekly")
@@ -475,13 +473,17 @@ def monitoring_settings(request):
                 email for email in notification_emails if email and email.strip()
             ]
 
-            print(f"Processing settings: active={is_active}, frequency={frequency}, emails={notification_emails}")  # Debug log
+            print(
+                f"Processing settings: active={is_active}, frequency={frequency}, emails={notification_emails}"
+            )  # Debug log
 
             # Update or create monitoring settings
             monitoring, created = HealthCheckMonitoring.objects.update_or_create(
                 installation_id=installation_id,
                 defaults={
-                    "instance_guid": latest_report.instance_guid if latest_report else "",
+                    "instance_guid": latest_report.instance_guid
+                    if latest_report
+                    else "",
                     "subdomain": latest_report.subdomain if latest_report else "",
                     "is_active": is_active,
                     "frequency": frequency,
@@ -503,36 +505,40 @@ def monitoring_settings(request):
             )
 
             success_msg = "Settings saved successfully"
-            if request.content_type == 'application/json':
-                return JsonResponse({
-                    "status": "success",
-                    "message": success_msg,
-                    "data": {
-                        "is_active": is_active,
-                        "frequency": frequency,
-                        "notification_emails": notification_emails,
+            if request.content_type == "application/json":
+                return JsonResponse(
+                    {
+                        "status": "success",
+                        "message": success_msg,
+                        "data": {
+                            "is_active": is_active,
+                            "frequency": frequency,
+                            "notification_emails": notification_emails,
+                        },
                     }
-                })
-            
+                )
+
             messages.success(request, success_msg)
 
         except Exception as e:
             error_msg = f"Error saving settings: {str(e)}"
             print(f"Error: {error_msg}")  # Debug log
-            if request.content_type == 'application/json':
+            if request.content_type == "application/json":
                 return JsonResponse({"error": error_msg}, status=500)
             messages.error(request, error_msg)
 
-        if request.content_type != 'application/json':
+        if request.content_type != "application/json":
             return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
     # GET request - render the monitoring page
-    context = get_monitoring_context(installation_id, latest_report.plan if latest_report else "Free", None)
+    context = get_monitoring_context(
+        installation_id, latest_report.plan if latest_report else "Free", None
+    )
     context["url_params"] = {
         "installation_id": installation_id,
         "plan": latest_report.plan if latest_report else "Free",
     }
-    
+
     return render(request, "healthcheck/monitoring.html", context)
 
 
