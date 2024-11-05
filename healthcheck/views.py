@@ -14,9 +14,8 @@ from .utils import (
 )
 import csv
 import jwt
-from jwt.exceptions import ExpiredSignatureError, InvalidSignatureError
 from functools import wraps
-
+import segment.analytics as analytics  # Add this import
 
 # Add this new decorator to validate JWT tokens
 def validate_jwt_token(f):
@@ -70,6 +69,19 @@ def app(request):
         "app_guid": app_guid,
         "origin": origin,
     }
+    if installation_id:
+        # Identify user when they load the app
+        analytics.identify(installation_id, {
+            'plan': client_plan,
+            'subdomain': getattr(request, 'subdomain', None),
+            'installation_id': installation_id
+        })
+        
+        # Track app load
+        analytics.track(installation_id, 'App Loaded', {
+            'plan': client_plan,
+            'subdomain': getattr(request, 'subdomain', None)
+        })
 
     if installation_id:
         try:
@@ -134,6 +146,12 @@ def health_check(request):
             data = json.loads(request.body) if request.body else {}
             installation_id = data.get("installation_id")
             client_plan = data.get("plan", "Free")
+            
+            analytics.track(installation_id, 'Health Check Started', {
+                'subdomain': data.get('subdomain'),
+                'email': data.get('email'),
+                'plan': data.get('plan', 'Free')
+            })
 
             # Prepare URL
             url = data.get("url")
@@ -162,6 +180,7 @@ def health_check(request):
                 results_html = render_report_components(
                     {"data": None, "error": f"API Error: {response.text}"}
                 )
+            
                 return JsonResponse({"error": True, "results_html": results_html})
 
             # Get response data
@@ -189,6 +208,15 @@ def health_check(request):
 
             # Render results using utility function
             results_html = render_report_components(formatted_data)
+            
+            analytics.track(installation_id, 'Health Check Completed', {
+                'total_issues': len(response_data.get('issues', [])),
+                'report_id': report.id,
+                'critical_issues': sum(1 for issue in response_data.get('issues', []) 
+                                    if issue.get('type') == 'error'),
+                'warning_issues': sum(1 for issue in response_data.get('issues', []) 
+                                   if issue.get('type') == 'warning')
+            })
 
             return JsonResponse({"error": False, "results_html": results_html})
 
@@ -248,6 +276,11 @@ def stripe_webhook(request):
                 report.save()
 
                 print(f"Successfully unlocked report {report_id}")
+                analytics.track(str(report.installation_id), 'Report Unlocked', {
+                    'report_id': report_id,
+                    'payment_amount': 249,
+                    'payment_type': 'one_off'
+                })
                 return HttpResponse("Success", status=200)
 
             except HealthCheckReport.DoesNotExist:
@@ -392,6 +425,12 @@ def monitoring_settings(request):
                     "notification_emails": notification_emails,
                 },
             )
+            analytics.track(installation_id, 'Monitoring Settings Updated', {
+                'is_active': is_active,
+                'frequency': frequency,
+                'notification_emails_count': len(notification_emails),
+                'subdomain': latest_report.subdomain if latest_report else None
+            })
 
             messages.success(request, "Settings saved successfully")
 
@@ -430,7 +469,10 @@ def update_installation_plan(request):
                 monitoring.save()
             except HealthCheckMonitoring.DoesNotExist:
                 pass
-
+        analytics.track(installation_id, 'Plan Updated', {
+            'new_plan': new_plan,
+            'previous_plan': HealthCheckReport.get_latest_for_installation(installation_id).plan
+        })
         return JsonResponse({"status": "success"})
 
     except json.JSONDecodeError:

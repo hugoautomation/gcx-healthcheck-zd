@@ -18,6 +18,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 DJANGO_ENV = os.environ.get("RAILWAY_ENVIRONMENT_NAME", "development")
 HEALTHCHECK_TOKEN = os.environ.get("HEALTHCHECK_TOKEN", "")
+SEGMENT_WRITE_KEY = os.environ.get("SEGMENT_WRITE_KEY", "")
 DEFAULT_FROM_EMAIL = "noreply@gravitycx.com.au"
 APP_URL = "https://gravitycx.com.au"
 # Quick-start development settings - unsuitable for production
