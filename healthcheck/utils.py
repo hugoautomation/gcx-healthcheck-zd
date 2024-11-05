@@ -24,13 +24,13 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
             # Count issues by category before filtering
             for issue in issues:
                 item_type = issue.get("item_type")
-                if item_type in ["TicketForms", "TicketFields"]:
+                if item_type not in ["TicketForms", "TicketFields"]:  # Changed condition
                     hidden_categories[item_type] = hidden_categories.get(item_type, 0) + 1
                     hidden_issues_count += 1
 
-            # Filter out Ticket Forms and Fields issues for free plan
+            # Show only Ticket Forms and Fields issues for free plan
             issues = [issue for issue in issues 
-                     if issue.get("item_type") not in ["TicketForms", "TicketFields"]]
+                     if issue.get("item_type") in ["TicketForms", "TicketFields"]]  # Changed condition
 
 
     return {
