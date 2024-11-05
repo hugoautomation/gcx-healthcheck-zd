@@ -19,6 +19,7 @@ import segment.analytics as analytics  # Add this import
 from django.core.management import call_command
 from django.utils import timezone
 
+
 # Add this new decorator to validate JWT tokens
 def validate_jwt_token(f):
     @wraps(f)
@@ -71,7 +72,6 @@ def app(request):
     client_plan = request.GET.get("plan", "Free")
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
-    email = request.GET.get("email")
 
     initial_data["url_params"] = {
         "installation_id": installation_id,
@@ -137,7 +137,7 @@ def app(request):
             else:
                 initial_data.update(
                     {
-                        "error": "No health check reports found. Please run your first health check.",
+                        "warning": "No health check reports found. Please run your first health check.",
                         "historical_reports": [],
                         "data": None,
                     }
@@ -480,7 +480,9 @@ def monitoring_settings(request):
             monitoring, created = HealthCheckMonitoring.objects.update_or_create(
                 installation_id=installation_id,
                 defaults={
-                    "instance_guid": latest_report.instance_guid if latest_report else "",
+                    "instance_guid": latest_report.instance_guid
+                    if latest_report
+                    else "",
                     "subdomain": latest_report.subdomain if latest_report else "",
                     "is_active": is_active,
                     "frequency": frequency,
@@ -490,14 +492,13 @@ def monitoring_settings(request):
             if is_active and notification_emails:
                 monitoring.next_check = timezone.now()
                 monitoring.save()
-                
+
                 # Run the scheduled checks command
                 try:
-                    call_command('run_scheduled_checks')
+                    call_command("run_scheduled_checks")
                     print(f"Scheduled check triggered for {monitoring.subdomain}")
                 except Exception as e:
                     print(f"Error running scheduled check: {str(e)}")
-
 
             # Track the event
             analytics.track(

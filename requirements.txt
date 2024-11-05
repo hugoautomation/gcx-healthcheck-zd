@@ -17,6 +17,7 @@ django-debug-toolbar==4.2.0
 black==23.10.1
 flake8==6.1.0
 ruff
+django-extensions
 
 # Production dependencies
 gunicorn==21.2.0

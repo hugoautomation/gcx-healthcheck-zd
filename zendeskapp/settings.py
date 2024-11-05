@@ -21,10 +21,10 @@ HEALTHCHECK_TOKEN = os.environ.get("HEALTHCHECK_TOKEN", "")
 SEGMENT_WRITE_KEY = os.environ.get("SEGMENT_WRITE_KEY", "")
 APP_URL = "https://gravity.cx"
 BASE_URL = os.environ.get("gcx-healthcheck-zd-production.up.railway.app", "")
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
+SENDGRID_API_KEY = os.environ.get("SENDGRID_API_KEY", "")
 
-EMAIL_HOST = 'smtp.sendgrid.net'
-EMAIL_HOST_USER = 'apikey' # this is exactly the value 'apikey'
+EMAIL_HOST = "smtp.sendgrid.net"
+EMAIL_HOST_USER = "apikey"  # this is exactly the value 'apikey'
 EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",  # Add this
     "healthcheck",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [
