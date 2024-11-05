@@ -136,7 +136,7 @@ class HealthCheckMonitoring(models.Model):
             self.last_check = timezone.now()
 
         if self.frequency == "daily":
-            self.next_check = self.last_check + timedelta(days=1)
+            self.next_check = self.last_check + timedelta(seconds=15)
         elif self.frequency == "weekly":
             self.next_check = self.last_check + timedelta(weeks=1)
         else:  # monthly
