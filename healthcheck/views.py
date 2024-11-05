@@ -70,6 +70,7 @@ def app(request):
     client_plan = request.GET.get("plan", "Free")
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
+    email = request.GET.get("email")
 
     initial_data["url_params"] = {
         "installation_id": installation_id,
@@ -83,7 +84,8 @@ def app(request):
             installation_id,
             {
                 "plan": client_plan,
-                "subdomain": getattr(request, "subdomain", None),
+                "subdomain": origin,
+                "email": email,
                 "installation_id": installation_id,
             },
         )
@@ -92,7 +94,7 @@ def app(request):
         analytics.track(
             installation_id,
             "App Loaded",
-            {"plan": client_plan, "subdomain": getattr(request, "subdomain", None)},
+            {"plan": client_plan, "subdomain": origin},
         )
 
     if installation_id:
