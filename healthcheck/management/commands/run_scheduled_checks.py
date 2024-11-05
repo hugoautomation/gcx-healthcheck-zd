@@ -28,10 +28,10 @@ class Command(BaseCommand):
                 # Prepare API request
                 url = f"https://{monitoring.subdomain}.zendesk.com"
                 api_payload = {
-                    "url": url,
-                    "email": latest_report.raw_response.get("admin_email"),
-                    "api_token": latest_report.raw_response.get("api_token"),
-                    "status": "active",
+                "url": url,
+                "email": latest_report.admin_email,  # Use credentials from latest report
+                "api_token": latest_report.api_token,
+                "status": "active",
                 }
 
                 # Make API request
@@ -52,6 +52,8 @@ class Command(BaseCommand):
                         installation_id=monitoring.installation_id,
                         instance_guid=monitoring.instance_guid,
                         subdomain=monitoring.subdomain,
+                        admin_email=latest_report.admin_email,  # Copy credentials
+                        api_token=latest_report.api_token,      # from latest report
                         plan=latest_report.plan,
                         app_guid=latest_report.app_guid,
                         version=latest_report.version,
