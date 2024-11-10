@@ -35,6 +35,10 @@ class Command(BaseCommand):
                     "api_token": latest_report.api_token,
                     "status": "active",
                 }
+                # Skip configuration settings for Free plan
+                if latest_report.plan != "Free":
+                    api_payload["check_configuration"] = True
+
 
                 # Make API request
                 response = requests.post(
@@ -83,7 +87,7 @@ class Command(BaseCommand):
                         )
 
                         send_mail(
-                            subject=f"Zendesk Healthcheck Report for {monitoring.subdomain}",
+                            subject=f"Zendesk Healthcheck Report: {monitoring.subdomain}",
                             message="Please view this email in HTML format",
                             from_email=settings.DEFAULT_FROM_EMAIL,
                             recipient_list=monitoring.notification_emails,
