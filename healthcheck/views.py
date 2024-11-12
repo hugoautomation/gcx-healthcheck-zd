@@ -250,6 +250,8 @@ def health_check(request):
                         for issue in response_data.get("issues", [])
                         if issue.get("type") == "warning"
                     ),
+                    "is_unlocked": report.is_unlocked,  # Add unlock status
+                    "plan": client_plan,
                 },
             )
 
