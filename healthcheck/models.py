@@ -171,6 +171,8 @@ class ZendeskUser(models.Model):
     time_zone = models.CharField(max_length=100, null=True, blank=True)
     avatar_url = models.URLField(max_length=500, null=True, blank=True)
     subdomain = models.CharField(max_length=255)
+    plan = models.CharField(max_length=320, null=True, blank=True)
+
 
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
