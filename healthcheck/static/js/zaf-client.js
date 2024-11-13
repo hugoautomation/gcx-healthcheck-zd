@@ -81,7 +81,7 @@ const ZAFClientSingleton = {
                 role: this.userInfo.role,
                 locale: this.userInfo.locale,
                 time_zone: this.userInfo.timeZone?.ianaName,
-                avatar_url: this.userInfo.avatarUrl,
+                avatar: this.userInfo.avatarUrl,
                 plan: this.metadata.plan?.name || 'Free',
             });
 
