@@ -275,32 +275,51 @@ def health_check(request):
 
     return HttpResponse("Method not allowed", status=405)
 
-
 @csrf_exempt
 def monitoring(request):
     installation_id = request.GET.get("installation_id")
     client_plan = request.GET.get("plan", "Free")
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
-    user_id = request.GET.get("user_id")  # Add user_id
+    user_id = request.GET.get("user_id")
 
-    if not installation_id:
-        messages.error(request, "Installation ID required")
+    # Validate installation_id
+    try:
+        if not installation_id or installation_id.lower() == 'none':
+            messages.error(request, "Installation ID required")
+            return HttpResponseRedirect("/")
+        
+        # Convert to integer
+        installation_id = int(installation_id)
+    except (ValueError, TypeError):
+        messages.error(request, "Invalid Installation ID")
         return HttpResponseRedirect("/")
 
     # Get monitoring context
-    context = get_monitoring_context(installation_id, client_plan, None)
+    try:
+        context = get_monitoring_context(installation_id, client_plan, None)
+    except HealthCheckMonitoring.DoesNotExist:
+        # Handle case where monitoring settings don't exist yet
+        context = {
+            "is_free_plan": client_plan == "Free",
+            "monitoring_settings": {
+                "is_active": False,
+                "frequency": "weekly",
+                "notification_emails": []
+            }
+        }
 
-    # Add URL parameters to context
-    context["url_params"] = {
-        "installation_id": installation_id,
-        "plan": client_plan,
-        "app_guid": app_guid,
-        "origin": origin,
-        "user_id": user_id,  # Add user_id to context
-        "environment": settings.ENVIRONMENT,  # Add environment to context
-
-    }
+    # Add URL parameters and environment to context
+    context.update({
+        "url_params": {
+            "installation_id": installation_id,
+            "plan": client_plan,
+            "app_guid": app_guid,
+            "origin": origin,
+            "user_id": user_id,
+        },
+        "environment": settings.ENVIRONMENT,
+    })
 
     return render(request, "healthcheck/monitoring.html", context)
 
