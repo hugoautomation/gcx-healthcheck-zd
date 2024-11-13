@@ -60,73 +60,84 @@ const ZAFClientSingleton = {
     },
 
     async trackAnalytics() {
-        await new Promise(resolve => {
-            if (window.analytics && window.analytics.initialized) {
-                resolve();
-            } else {
-                analytics.ready(resolve);
-            }
-        });
-    
-        if (this.userInfo && this.metadata) {
-            // Prepare user data
-                       // Prepare user data
-                       const userData = {
-                        user_id: this.userInfo.id,
-                        name: this.userInfo.name || '',
-                        email: this.userInfo.email || '',
-                        role: this.userInfo.role || '',
-                        locale: this.userInfo.locale || '',
-                        time_zone: this.userInfo.timeZone?.ianaName || null,
-                        avatar_url: this.userInfo.avatarUrl || null,
-                        subdomain: this.context?.account?.subdomain || '',
-                        plan: this.metadata.plan?.name || null
-                    };
-            console.log('Sending user data:', { ...userData });
-
-    
-            // Use client.request instead of fetch
-        const baseUrl = window.ENVIRONMENT === 'production'
-        ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-        : 'https://gcx-healthcheck-zd-development.up.railway.app';
-
-    try {
-        const response = await this.client.request({
-            url: `${baseUrl}/api/users/create-or-update/`,
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-Subsequent-Request': 'true'
-            },
-            data: userData,
-            secure: true
-        });
-
-        console.log('User created/updated:', response);
-    
-            // Then track analytics with user ID
-            analytics.identify(this.userInfo.id, {
-                name: this.userInfo.name,
-                email: this.userInfo.email,
-                subdomain: this.context.account.subdomain,
-                role: this.userInfo.role,
-                locale: this.userInfo.locale,
-                time_zone: this.userInfo.timeZone?.ianaName,
-                avatar: this.userInfo.avatarUrl,
-                plan: this.metadata.plan?.name || 'Free',
+        try {
+            await new Promise(resolve => {
+                if (window.analytics && window.analytics.initialized) {
+                    resolve();
+                } else {
+                    analytics.ready(resolve);
+                }
             });
     
-            // Track group
-            if (this.context?.account?.subdomain) {
-                analytics.group(this.context.account.subdomain, {
-                    name: this.context.account.subdomain,
-                    organization: this.context.account.subdomain,
+            if (!this.userInfo || !this.metadata) {
+                console.warn('Missing user info or metadata for analytics tracking');
+                return;
+            }
+    
+            // Prepare user data matching the Django model fields
+            const userData = {
+                user_id: this.userInfo.id,
+                name: this.userInfo.name || '',
+                email: this.userInfo.email || '',
+                role: this.userInfo.role || '',
+                locale: this.userInfo.locale || '',
+                time_zone: this.userInfo.timeZone?.ianaName || null,
+                avatar_url: this.userInfo.avatarUrl || null,
+                subdomain: this.context?.account?.subdomain || '',
+                plan: this.metadata.plan?.name || null
+            };
+    
+            console.log('Sending user data:', { ...userData, user_id: '[REDACTED]' });
+    
+            // Use client.request instead of fetch
+            const baseUrl = window.ENVIRONMENT === 'production'
+                ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+                : 'https://gcx-healthcheck-zd-development.up.railway.app';
+    
+            try {
+                const response = await this.client.request({
+                    url: `${baseUrl}/api/users/create-or-update/`,
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Subsequent-Request': 'true'
+                    },
+                    data: userData,
+                    secure: true
+                });
+    
+                console.log('User created/updated:', response);
+    
+                // Track analytics with user ID
+                analytics.identify(this.userInfo.id, {
+                    name: this.userInfo.name,
+                    email: this.userInfo.email,
+                    subdomain: this.context.account.subdomain,
+                    role: this.userInfo.role,
+                    locale: this.userInfo.locale,
+                    time_zone: this.userInfo.timeZone?.ianaName,
+                    avatar: this.userInfo.avatarUrl,
                     plan: this.metadata.plan?.name || 'Free',
                 });
+    
+                // Track group
+                if (this.context?.account?.subdomain) {
+                    analytics.group(this.context.account.subdomain, {
+                        name: this.context.account.subdomain,
+                        organization: this.context.account.subdomain,
+                        plan: this.metadata.plan?.name || 'Free',
+                    });
+                }
+    
+            } catch (error) {
+                console.error('Failed to create/update user:', error);
+                // Don't throw the error to prevent app initialization from failing
             }
-        } else {
-            console.warn('Missing user info or metadata for analytics tracking');
+    
+        } catch (error) {
+            console.error('Analytics tracking error:', error);
+            // Don't throw the error to prevent app initialization from failing
         }
     },
 
