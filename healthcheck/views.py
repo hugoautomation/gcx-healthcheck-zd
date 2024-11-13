@@ -347,12 +347,10 @@ def download_report_csv(request, report_id):
             f'attachment; filename="healthcheck_report_{report_id}.csv"'
         )
         analytics.track(
-                    str(report.installation_id),
-                    "Report CSV Downloaded",
-                    {
-                        "report_id": report_id
-                    },
-                )
+            str(report.installation_id),
+            "Report CSV Downloaded",
+            {"report_id": report_id},
+        )
 
         # Create CSV writer
         writer = csv.writer(response)

@@ -39,7 +39,6 @@ class Command(BaseCommand):
                 if latest_report.plan != "Free":
                     api_payload["check_configuration"] = True
 
-
                 # Make API request
                 response = requests.post(
                     "https://app.configly.io/api/health-check/",

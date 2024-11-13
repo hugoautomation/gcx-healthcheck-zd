@@ -3,6 +3,8 @@ const ZAFClientSingleton = {
     client: null,
     metadata: null,
     context: null,
+    userInfo: null,
+    orgInfo: null, 
 
     async init(retryCount = 3, delay = 100) {
         if (this.client) return this.client;
@@ -15,22 +17,59 @@ const ZAFClientSingleton = {
         for (let i = 0; i < retryCount; i++) {
             try {
                 await new Promise(resolve => setTimeout(resolve, delay));
-                
+
                 // Initialize with origin and app_guid if available
-                this.client = window.ZAFClient ? 
-                    (origin && appGuid ? 
-                        window.ZAFClient.init({origin, appGuid}) : 
-                        window.ZAFClient.init()) 
+                this.client = window.ZAFClient ?
+                    (origin && appGuid ?
+                        window.ZAFClient.init({ origin, appGuid }) :
+                        window.ZAFClient.init())
                     : null;
 
                 if (!this.client) {
                     throw new Error('ZAF Client could not be initialized');
                 }
 
-                [this.context, this.metadata] = await Promise.all([
+                // Get all necessary data
+                [this.context, this.metadata, this.userInfo, this.orgInfo] = await Promise.all([
                     this.client.context(),
-                    this.client.metadata()
+                    this.client.metadata(),
+                    this.client.get('currentUser'),
+                    this.client.get('organization')
                 ]);
+
+                if (this.userInfo && this.metadata) {
+                    // Get primary identity for unique ID
+                    const primaryIdentity = this.userInfo.identities?.find(identity => identity.primary)?.value ||
+                        this.userInfo.email;
+
+                    // Identify the user
+                    analytics.identify(primaryIdentity, {
+                        name: this.userInfo.name,
+                        email: this.userInfo.email,
+                        role: this.userInfo.role,
+                        external_id: this.userInfo.externalId,
+                        locale: this.userInfo.locale,
+                        time_zone: this.userInfo.timeZone?.name,
+                        organization_id: this.orgInfo?.id,
+                    });
+
+                    // Track group (company) information with enhanced org details
+                    analytics.group(this.metadata.installationId, {
+                        name: this.context?.account?.subdomain,
+                        organization: this.context?.account?.subdomain,
+                        plan: this.metadata.plan?.name || 'Free',
+                        website: `https://${this.context?.account?.subdomain}.zendesk.com`,
+                        org_name: this.orgInfo?.name,
+                        org_external_id: this.orgInfo?.externalId,
+                        org_details: this.orgInfo?.details,
+                        org_notes: this.orgInfo?.notes,
+                        org_domains: this.orgInfo?.domains,
+                        shared_tickets: this.orgInfo?.sharedTickets,
+                        shared_comments: this.orgInfo?.sharedComments,
+                        tags: this.orgInfo?.tags
+                    });
+
+                }
 
                 console.log('ZAF Client initialized successfully');
                 return this.client;
@@ -40,58 +79,62 @@ const ZAFClientSingleton = {
                 if (i === retryCount - 1) throw error;
             }
         }
-    },
-
-    async ensureUrlParams() {
-        if (!this.metadata) return false;
-
-        const currentUrl = new URL(window.location.href);
-        const urlInstallationId = currentUrl.searchParams.get('installation_id');
-        const urlPlan = currentUrl.searchParams.get('plan');
-        const origin = currentUrl.searchParams.get('origin');
-        const appGuid = currentUrl.searchParams.get('app_guid');
-
-        let needsRedirect = false;
-
-        if (!urlInstallationId || !urlPlan) {
-            currentUrl.searchParams.set('installation_id', this.metadata.installationId);
-            currentUrl.searchParams.set('plan', this.metadata.plan?.name || 'Free');
-            needsRedirect = true;
-        }
-
-        // Preserve origin and app_guid when navigating
-        if (!origin && this.context?.account?.subdomain) {
-            currentUrl.searchParams.set('origin', `https://${this.context.account.subdomain}.zendesk.com`);
-            needsRedirect = true;
-        }
-
-        if (!appGuid && this.metadata?.appGuid) {
-            currentUrl.searchParams.set('app_guid', this.metadata.appGuid);
-            needsRedirect = true;
-        }
-
-        if (needsRedirect) {
-            window.location.href = currentUrl.toString();
-            return false;
-        }
-        return true;
-    },
-
-    getUrlWithParams(baseUrl) {
-        const url = new URL(baseUrl, window.location.origin);
-        const currentParams = new URLSearchParams(window.location.search);
-        
-        // Preserve all necessary parameters
-        ['installation_id', 'plan', 'origin', 'app_guid'].forEach(param => {
-            const value = currentParams.get(param);
-            if (value) url.searchParams.set(param, value);
-        });
-        
-        return url.toString();
     }
 };
 
-!function(){var i="analytics",analytics=window[i]=window[i]||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","screen","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware","register"];analytics.factory=function(e){return function(){if(window[i].initialized)return window[i][e].apply(window[i],arguments);var n=Array.prototype.slice.call(arguments);if(["track","screen","alias","group","page","identify"].indexOf(e)>-1){var c=document.querySelector("link[rel='canonical']");n.push({__t:"bpc",c:c&&c.getAttribute("href")||void 0,p:location.pathname,u:location.href,s:location.search,t:document.title,r:document.referrer})}n.unshift(e);analytics.push(n);return analytics}};for(var n=0;n<analytics.methods.length;n++){var key=analytics.methods[n];analytics[key]=analytics.factory(key)}analytics.load=function(key,n){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.setAttribute("data-global-segment-analytics-key",i);t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(t,r);analytics._loadOptions=n};analytics._writeKey="p06X1rcdcdqjGSvSUE0H1BCtcnDga52G";;analytics.SNIPPET_VERSION="5.2.0";
-analytics.load("p06X1rcdcdqjGSvSUE0H1BCtcnDga52G");
-analytics.page();
-}}();
+    async ensureUrlParams() {
+    if (!this.metadata) return false;
+
+    const currentUrl = new URL(window.location.href);
+    const urlInstallationId = currentUrl.searchParams.get('installation_id');
+    const urlPlan = currentUrl.searchParams.get('plan');
+    const origin = currentUrl.searchParams.get('origin');
+    const appGuid = currentUrl.searchParams.get('app_guid');
+
+    let needsRedirect = false;
+
+    if (!urlInstallationId || !urlPlan) {
+        currentUrl.searchParams.set('installation_id', this.metadata.installationId);
+        currentUrl.searchParams.set('plan', this.metadata.plan?.name || 'Free');
+        needsRedirect = true;
+    }
+
+    // Preserve origin and app_guid when navigating
+    if (!origin && this.context?.account?.subdomain) {
+        currentUrl.searchParams.set('origin', `https://${this.context.account.subdomain}.zendesk.com`);
+        needsRedirect = true;
+    }
+
+    if (!appGuid && this.metadata?.appGuid) {
+        currentUrl.searchParams.set('app_guid', this.metadata.appGuid);
+        needsRedirect = true;
+    }
+
+    if (needsRedirect) {
+        window.location.href = currentUrl.toString();
+        return false;
+    }
+    return true;
+},
+
+getUrlWithParams(baseUrl) {
+    const url = new URL(baseUrl, window.location.origin);
+    const currentParams = new URLSearchParams(window.location.search);
+
+    // Preserve all necessary parameters
+    ['installation_id', 'plan', 'origin', 'app_guid'].forEach(param => {
+        const value = currentParams.get(param);
+        if (value) url.searchParams.set(param, value);
+    });
+
+    return url.toString();
+}
+};
+
+!function () {
+    var i = "analytics", analytics = window[i] = window[i] || []; if (!analytics.initialize) if (analytics.invoked) window.console && console.error && console.error("Segment snippet included twice."); else {
+        analytics.invoked = !0; analytics.methods = ["trackSubmit", "trackClick", "trackLink", "trackForm", "pageview", "identify", "reset", "group", "track", "ready", "alias", "debug", "page", "screen", "once", "off", "on", "addSourceMiddleware", "addIntegrationMiddleware", "setAnonymousId", "addDestinationMiddleware", "register"]; analytics.factory = function (e) { return function () { if (window[i].initialized) return window[i][e].apply(window[i], arguments); var n = Array.prototype.slice.call(arguments); if (["track", "screen", "alias", "group", "page", "identify"].indexOf(e) > -1) { var c = document.querySelector("link[rel='canonical']"); n.push({ __t: "bpc", c: c && c.getAttribute("href") || void 0, p: location.pathname, u: location.href, s: location.search, t: document.title, r: document.referrer }) } n.unshift(e); analytics.push(n); return analytics } }; for (var n = 0; n < analytics.methods.length; n++) { var key = analytics.methods[n]; analytics[key] = analytics.factory(key) } analytics.load = function (key, n) { var t = document.createElement("script"); t.type = "text/javascript"; t.async = !0; t.setAttribute("data-global-segment-analytics-key", i); t.src = "https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js"; var r = document.getElementsByTagName("script")[0]; r.parentNode.insertBefore(t, r); analytics._loadOptions = n }; analytics._writeKey = "p06X1rcdcdqjGSvSUE0H1BCtcnDga52G";; analytics.SNIPPET_VERSION = "5.2.0";
+        analytics.load("p06X1rcdcdqjGSvSUE0H1BCtcnDga52G");
+        analytics.page();
+    }
+}();
