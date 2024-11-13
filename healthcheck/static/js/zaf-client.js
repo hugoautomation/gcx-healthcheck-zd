@@ -95,7 +95,7 @@ const ZAFClientSingleton = {
                         time_zone: this.userInfo.timeZone?.ianaName || null,
                         avatar_url: this.userInfo.avatarUrl || null,
                         subdomain: this.context?.account?.subdomain || '',
-                        plan: this.metadata.plan?.name || null
+                        plan: this.metadata.plan?.name || 'Free'
                     }),
                     secure: true
                 };
