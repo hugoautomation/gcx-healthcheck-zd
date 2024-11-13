@@ -16,8 +16,8 @@
                     <h2 class="text-2xl font-semibold">Monitoring Settings</h2>
                 </div>
                 <div class="col-auto">
-                    <a href="{% url 'app' %}?installation_id={{ url_params.installation_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}" 
-                    class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
+                    <a href="{% url 'app' %}?installation_id={{ url_params.installation_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}&user_id={{ url_params.user_id }}" 
+class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                 </div>
             </div>
         </div>
@@ -37,6 +37,7 @@
             <div class="card-body">
                 <form method="POST" action="{{ settings.BASE_URL }}{% url 'monitoring_settings' %}" id="monitoring-form" data-is-free-plan="{{ is_free_plan|lower }}">                    
                     <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
+                    <input type="hidden" name="user_id" value="{{ request.GET.user_id }}">  <!-- Add user_id -->
                     <input type="hidden" name="redirect_url" value="{{ settings.BASE_URL }}{{ request.path }}?{{ request.GET.urlencode }}">
                 
                     <!-- Your existing form fields here -->

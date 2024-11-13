@@ -73,17 +73,20 @@ def app(request):
     client_plan = request.GET.get("plan", "Free")
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
+    user_id = request.GET.get("user_id")  # Get user_id from URL params
 
     initial_data["url_params"] = {
         "installation_id": installation_id,
         "plan": client_plan,
         "app_guid": app_guid,
         "origin": origin,
+        "user_id": user_id,  # Include user_id in url_params
+
     }
     if installation_id:
         # Track app load
         analytics.track(
-            installation_id,
+            user_id,
             "App Loaded",
             {"plan": client_plan, "subdomain": origin},
         )
@@ -272,6 +275,8 @@ def monitoring(request):
     client_plan = request.GET.get("plan", "Free")
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
+    user_id = request.GET.get("user_id")  # Add user_id
+
 
     if not installation_id:
         messages.error(request, "Installation ID required")
@@ -286,6 +291,8 @@ def monitoring(request):
         "plan": client_plan,
         "app_guid": app_guid,
         "origin": origin,
+        "user_id": user_id,  # Add user_id to context
+
     }
 
     return render(request, "healthcheck/monitoring.html", context)
@@ -311,9 +318,12 @@ def stripe_webhook(request):
                 report.stripe_payment_id = session["payment_intent"]
                 report.save()
 
+                user_id = session.get("userInfo", {}).get("id")
+
+
                 print(f"Successfully unlocked report {report_id}")
                 analytics.track(
-                    str(report.installation_id),
+                    str(user_id),
                     "Report Unlocked",
                     {
                         "report_id": report_id,
@@ -439,12 +449,13 @@ def monitoring_settings(request):
         try:
             data = json.loads(request.body)
             installation_id = data.get("installation_id")
-            print("JSON data:", data)  # Debug log
+            user_id = data.get("user_id")  # Get user_id from JSON
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
     else:
         installation_id = request.POST.get("installation_id")
-        print("Form data:", request.POST)  # Debug log
+        user_id = request.POST.get("user_id")  # Get user_id from POST
+
 
     if not installation_id:
         error_msg = "Installation ID required"
@@ -512,7 +523,7 @@ def monitoring_settings(request):
 
             # Track the event
             analytics.track(
-                installation_id,
+                user_id,
                 "Monitoring Settings Updated",
                 {
                     "is_active": is_active,
@@ -571,6 +582,8 @@ def update_installation_plan(request):
         data = json.loads(request.body)
         installation_id = data.get("installation_id")
         new_plan = data.get("plan")
+        user_id = data.get("user_id")  # Get user_id from request
+
 
         if not installation_id or not new_plan:
             return JsonResponse({"error": "Missing required fields"}, status=400)
@@ -589,7 +602,7 @@ def update_installation_plan(request):
             except HealthCheckMonitoring.DoesNotExist:
                 pass
         analytics.track(
-            installation_id,
+            user_id,
             "Plan Updated",
             {
                 "new_plan": new_plan,

@@ -124,6 +124,8 @@ const ZAFClientSingleton = {
         const urlPlan = currentUrl.searchParams.get('plan');
         const origin = currentUrl.searchParams.get('origin');
         const appGuid = currentUrl.searchParams.get('app_guid');
+        const userId = currentUrl.searchParams.get('user_id');
+
 
         let needsRedirect = false;
 
@@ -132,6 +134,11 @@ const ZAFClientSingleton = {
             currentUrl.searchParams.set('plan', this.metadata.plan?.name || 'Free');
             needsRedirect = true;
         }
+            // Add user_id to URL params
+        if (!userId && this.userInfo?.id) {
+        currentUrl.searchParams.set('user_id', this.userInfo.id);
+        needsRedirect = true;
+    }
 
         // Preserve origin and app_guid when navigating
         if (!origin && this.context?.account?.subdomain) {
@@ -156,7 +163,7 @@ const ZAFClientSingleton = {
         const currentParams = new URLSearchParams(window.location.search);
 
         // Preserve all necessary parameters
-        ['installation_id', 'plan', 'origin', 'app_guid'].forEach(param => {
+        ['installation_id', 'plan', 'origin', 'app_guid', 'user_id'].forEach(param => {
             const value = currentParams.get(param);
             if (value) url.searchParams.set(param, value);
         });
