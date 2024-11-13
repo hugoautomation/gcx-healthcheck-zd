@@ -17,7 +17,7 @@
     <div class="col text-right">
         {% if data.is_free_plan and not data.is_unlocked %}
             {% if data.report_id %}  {# Only show download button if we have a report ID #}
-                <a href="{% url 'download_report_csv' report_id=data.report_id %}?user_id={{ user_id }}" class="btn c-btn c-btn--sm d-inline-block disabled">
+                <a href="#" class="btn c-btn c-btn--sm d-inline-block disabled">
             Download CSV Report
         </a>
     {% endif %}
