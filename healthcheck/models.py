@@ -158,3 +158,43 @@ class HealthCheckMonitoring(models.Model):
             models.Index(fields=["installation_id"]),
             models.Index(fields=["next_check"]),
         ]
+
+
+class ZendeskUser(models.Model):
+    """Stores Zendesk user information"""
+    
+    user_id = models.BigIntegerField(unique=True)  # Zendesk user ID
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    role = models.CharField(max_length=100)
+    locale = models.CharField(max_length=50)
+    time_zone = models.CharField(max_length=100, null=True, blank=True)
+    avatar_url = models.URLField(max_length=500, null=True, blank=True)
+    subdomain = models.CharField(max_length=255)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    @classmethod
+    def create_or_update(cls, user_data):
+        """Create or update user from Zendesk data"""
+        user, _ = cls.objects.update_or_create(
+            user_id=user_data['id'],
+            defaults={
+                'name': user_data['name'],
+                'email': user_data['email'],
+                'role': user_data['role'],
+                'locale': user_data['locale'],
+                'time_zone': user_data.get('timeZone', {}).get('ianaName'),
+                'avatar_url': user_data.get('avatarUrl'),
+                'subdomain': user_data['subdomain'],
+            }
+        )
+        return user
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user_id']),
+            models.Index(fields=['email']),
+        ]

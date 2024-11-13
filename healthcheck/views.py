@@ -1,11 +1,12 @@
 from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 import json
 import requests
 from zendeskapp import settings
-from .models import HealthCheckReport, HealthCheckMonitoring
+from .models import HealthCheckReport, HealthCheckMonitoring, ZendeskUser
 from .utils import (
     format_response_data,
     get_monitoring_context,
@@ -18,6 +19,7 @@ from functools import wraps
 import segment.analytics as analytics  # Add this import
 from django.core.management import call_command
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_protect
 
 
 # Add this new decorator to validate JWT tokens
@@ -142,6 +144,16 @@ def app(request):
     return render(request, "healthcheck/app.html", initial_data)
 
 
+@csrf_protect
+@require_http_methods(["POST"])
+def create_or_update_user(request):
+    try:
+        data = json.loads(request.body)
+        user = ZendeskUser.create_or_update(data)
+        return JsonResponse({'status': 'success', 'user_id': user.user_id})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    
 @csrf_exempt
 def health_check(request):
     if request.method == "POST":

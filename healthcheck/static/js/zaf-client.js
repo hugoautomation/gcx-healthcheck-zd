@@ -60,7 +60,6 @@ const ZAFClientSingleton = {
     },
 
     async trackAnalytics() {
-        // Wait for analytics to be ready
         await new Promise(resolve => {
             if (window.analytics && window.analytics.initialized) {
                 resolve();
@@ -68,13 +67,33 @@ const ZAFClientSingleton = {
                 analytics.ready(resolve);
             }
         });
-
+    
         if (this.userInfo && this.metadata) {
-            console.log('Tracking analytics with user:', this.userInfo);
-            
-            // Identify the user
+            // Prepare user data
+            const userData = {
+                ...this.userInfo,
+                subdomain: this.context.account.subdomain
+            };
+    
+            const baseUrl = window.location.origin;
+            const apiUrl = `${baseUrl}/api/users/create-or-update/`;
+    
+            // First, create/update user in database
+            try {
+                await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: JSON.stringify(userData)
+                });
+            } catch (error) {
+                console.error('Failed to create/update user:', error);
+            }
+    
+            // Then track analytics with user ID
             analytics.identify(this.userInfo.id, {
-                test: 'test',
                 name: this.userInfo.name,
                 email: this.userInfo.email,
                 subdomain: this.context.account.subdomain,
@@ -84,7 +103,7 @@ const ZAFClientSingleton = {
                 avatar: this.userInfo.avatarUrl,
                 plan: this.metadata.plan?.name || 'Free',
             });
-
+    
             // Track group
             if (this.context?.account?.subdomain) {
                 analytics.group(this.context.account.subdomain, {
