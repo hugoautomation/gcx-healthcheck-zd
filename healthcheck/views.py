@@ -172,8 +172,18 @@ def create_or_update_user(request):
                 "message": "Invalid JSON data"
             }, status=400)
 
-        # Validate required fields
-        required_fields = ['id', 'name', 'email', 'subdomain']
+        # Convert user_id to integer since model expects BigIntegerField
+        try:
+            user_id = int(data.get('user_id'))
+        except (TypeError, ValueError) as e:
+            print("Error converting user_id:", str(e))
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid user_id format"
+            }, status=400)
+
+        # Required fields based on model definition
+        required_fields = ['user_id', 'name', 'email', 'role', 'locale', 'subdomain']
         missing_fields = [field for field in required_fields if not data.get(field)]
         
         if missing_fields:
@@ -184,20 +194,41 @@ def create_or_update_user(request):
                 "message": error_msg
             }, status=400)
 
-        # Create or update user
-        user = ZendeskUser.create_or_update(data)
-        
-        return JsonResponse({
-            "status": "success",
-            "user_id": user.user_id
-        })
+        # Create or update user with exact model field mapping
+        try:
+            user, created = ZendeskUser.objects.update_or_create(
+                user_id=user_id,
+                defaults={
+                    'name': data['name'],
+                    'email': data['email'],
+                    'role': data['role'],
+                    'locale': data['locale'],
+                    'subdomain': data['subdomain'],
+                    'time_zone': data.get('time_zone'),
+                    'avatar_url': data.get('avatar_url'),
+                    'plan': data.get('plan')
+                }
+            )
+            
+            return JsonResponse({
+                "status": "success",
+                "user_id": user.user_id,
+                "created": created
+            })
+
+        except Exception as e:
+            print("Database Error:", str(e))
+            return JsonResponse({
+                "status": "error",
+                "message": f"Database error: {str(e)}"
+            }, status=400)
 
     except Exception as e:
-        print("Error in create_or_update_user:", str(e))
+        print("Unexpected Error:", str(e))
         return JsonResponse({
             "status": "error",
             "message": str(e)
-        }, status=400)
+        }, status=500)
 
 
 @csrf_exempt

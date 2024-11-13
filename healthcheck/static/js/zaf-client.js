@@ -71,37 +71,39 @@ const ZAFClientSingleton = {
         if (this.userInfo && this.metadata) {
             // Prepare user data
                        // Prepare user data
-        const userData = {
-            user_id: this.userInfo.id,
-            name: this.userInfo.name,
-            email: this.userInfo.email,
-            subdomain: this.context?.account?.subdomain,
-            role: this.userInfo.role,
-            locale: this.userInfo.locale,
-            time_zone: this.userInfo.timeZone?.ianaName,
-            avatar_url: this.userInfo.avatarUrl,
-            plan: this.metadata.plan?.name || 'Free'
-            };
-            console.log('Sending user data:', { ...userData, id: '[REDACTED]' });
+                       const userData = {
+                        user_id: this.userInfo.id,
+                        name: this.userInfo.name || '',
+                        email: this.userInfo.email || '',
+                        role: this.userInfo.role || '',
+                        locale: this.userInfo.locale || '',
+                        time_zone: this.userInfo.timeZone?.ianaName || null,
+                        avatar_url: this.userInfo.avatarUrl || null,
+                        subdomain: this.context?.account?.subdomain || '',
+                        plan: this.metadata.plan?.name || null
+                    };
+            console.log('Sending user data:', { ...userData });
 
     
-            const baseUrl = window.location.origin;
-            const apiUrl = `${baseUrl}/api/users/create-or-update/`;
-    
-            // First, create/update user in database
-            try {
-                await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                            'Accept': 'application/json',
+            // Use client.request instead of fetch
+        const baseUrl = window.ENVIRONMENT === 'production'
+        ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+        : 'https://gcx-healthcheck-zd-development.up.railway.app';
+
+    try {
+        const response = await this.client.request({
+            url: `${baseUrl}/api/users/create-or-update/`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'X-Subsequent-Request': 'true'
-                    },
-                    body: JSON.stringify(userData)
-                });
-            } catch (error) {
-                console.error('Failed to create/update user:', error);
-            }
+            },
+            data: userData,
+            secure: true
+        });
+
+        console.log('User created/updated:', response);
     
             // Then track analytics with user ID
             analytics.identify(this.userInfo.id, {
