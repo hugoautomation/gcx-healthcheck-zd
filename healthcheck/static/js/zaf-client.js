@@ -77,6 +77,7 @@ const ZAFClientSingleton = {
                 test: 'test',
                 name: this.userInfo.name,
                 email: this.userInfo.email,
+                subdomain: this.context.account.subdomain,
                 role: this.userInfo.role,
                 locale: this.userInfo.locale,
                 time_zone: this.userInfo.timeZone?.ianaName,
