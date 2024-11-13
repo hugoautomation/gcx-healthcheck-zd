@@ -134,6 +134,7 @@ function initializeComponents() {
         console.error('Error initializing components:', error);
     }
 }
+
 function initializeRunCheck() {
     const runCheckButton = document.getElementById('run-check');
     if (!runCheckButton) return;
@@ -148,8 +149,13 @@ function initializeRunCheck() {
                 throw new Error('Client, context, or metadata not initialized');
             }
 
+            // Get base URL based on environment
+            const baseUrl = window.ENVIRONMENT === 'production' 
+                ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+                : 'https://gcx-healthcheck-zd-development.up.railway.app';
+
             const options = {
-                url: 'https://gcx-healthcheck-zd-production.up.railway.app/check/',
+                url: `${baseUrl}/check/`,
                 type: 'POST',
                 contentType: 'application/json',
                 headers: {
@@ -162,6 +168,7 @@ function initializeRunCheck() {
                     instance_guid: context.instanceGuid,
                     app_guid: metadata.appId,
                     installation_id: metadata.installationId,
+                    user_id: ZAFClientSingleton.userInfo?.id,  // Add user_id
                     subdomain: context.account.subdomain,
                     plan: metadata.plan?.name,
                     stripe_subscription_id: metadata.stripe_subscription_id,
@@ -170,14 +177,13 @@ function initializeRunCheck() {
                 secure: true
             };
 
-            // The response is already parsed
             const data = await client.request(options);
-            console.log('Response data:', data); // Add this for debugging
+            console.log('Response data:', data);
             
             if (data.error) {
                 resultsDiv.innerHTML = data.results_html;
             } else {
-                resultsDiv.innerHTML =  data.results_html;
+                resultsDiv.innerHTML = data.results_html;
             }
             
             initializeComponents();
@@ -188,6 +194,7 @@ function initializeRunCheck() {
     });
 }
 
+// Also update the historical reports function to use environment-aware URL
 function initializeHistoricalReports() {
     document.querySelectorAll('.historical-report').forEach(link => {
         link.addEventListener('click', async function(e) {
@@ -196,8 +203,12 @@ function initializeHistoricalReports() {
             showLoadingState(resultsDiv);
 
             try {
+                const baseUrl = window.ENVIRONMENT === 'production' 
+                    ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+                    : 'https://gcx-healthcheck-zd-development.up.railway.app';
+
                 const options = {
-                    url: `https://gcx-healthcheck-zd-production.up.railway.app/report/${this.dataset.reportId}/?installation_id=${metadata.installationId}`,
+                    url: `${baseUrl}/report/${this.dataset.reportId}/?installation_id=${metadata.installationId}&user_id=${ZAFClientSingleton.userInfo?.id}`,
                     type: 'GET',
                     secure: true
                 };
@@ -210,26 +221,6 @@ function initializeHistoricalReports() {
             }
         });
     });
-}
-// Replace the initialization code with:
-async function initializeApp() {
-    try {
-        await ZAFClientSingleton.init();
-        client = ZAFClientSingleton.client;
-        metadata = ZAFClientSingleton.metadata;
-        context = ZAFClientSingleton.context;
-
-        if (!await ZAFClientSingleton.ensureUrlParams()) return;
-
-        await client.invoke('resize', { width: '100%', height: '800px' });
-
-        initializeComponents();
-        initializeRunCheck();
-        initializeHistoricalReports();
-
-    } catch (error) {
-        console.error('Error initializing:', error);
-    }
 }
 
 // Event Listeners

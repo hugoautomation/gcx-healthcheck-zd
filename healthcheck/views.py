@@ -193,7 +193,7 @@ def health_check(request):
             }
             api_url = (
                 "https://app.configly.io/api/health-check/"
-                if settings.ENVIRONMENT != "production"
+                if settings.ENVIRONMENT == "production"
                 else "https://django-server-development-1b87.up.railway.app/api/health-check/"
             )
 
