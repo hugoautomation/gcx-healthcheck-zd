@@ -55,22 +55,14 @@ const ZAFClientSingleton = {
 
                     // Track group (company) information with enhanced org details
                     analytics.group(this.metadata.installationId, {
-                        name: this.context?.account?.subdomain,
+                        name: this.orgInfo?.name,
                         organization: this.context?.account?.subdomain,
                         plan: this.metadata.plan?.name || 'Free',
-                        website: `https://${this.context?.account?.subdomain}.zendesk.com`,
-                        org_name: this.orgInfo?.name,
-                        org_external_id: this.orgInfo?.externalId,
-                        org_details: this.orgInfo?.details,
-                        org_notes: this.orgInfo?.notes,
-                        org_domains: this.orgInfo?.domains,
-                        shared_tickets: this.orgInfo?.sharedTickets,
-                        shared_comments: this.orgInfo?.sharedComments,
-                        tags: this.orgInfo?.tags
                     });
 
                 }
-
+                console.log(this.userInfo);
+                console.log(this.orgInfo);
                 console.log('ZAF Client initialized successfully');
                 return this.client;
 
