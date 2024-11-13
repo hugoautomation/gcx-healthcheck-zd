@@ -4,59 +4,60 @@ const ZAFClientSingleton = {
     metadata: null,
     context: null,
     userInfo: null,
-    orgInfo: null,
+    orgInfo: null, 
 
     async init(retryCount = 3, delay = 100) {
         if (this.client) return this.client;
-    
+
         // Get origin and app_guid from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const origin = urlParams.get('origin');
         const appGuid = urlParams.get('app_guid');
-    
+
         for (let i = 0; i < retryCount; i++) {
             try {
                 await new Promise(resolve => setTimeout(resolve, delay));
-    
+
                 // Initialize with origin and app_guid if available
                 this.client = window.ZAFClient ?
                     (origin && appGuid ?
                         window.ZAFClient.init({ origin, appGuid }) :
                         window.ZAFClient.init())
                     : null;
-    
+
                 if (!this.client) {
                     throw new Error('ZAF Client could not be initialized');
                 }
-    
+
                 // Get all necessary data
-                const [context, metadata, userResponse] = await Promise.all([
+                [this.context, this.metadata, this.userInfo, this.orgInfo] = await Promise.all([
                     this.client.context(),
                     this.client.metadata(),
-                    this.client.get('currentUser')
+                    this.client.get('currentUser'),
                 ]);
-    
-                this.context = context;
-                this.metadata = metadata;
-                this.userInfo = userResponse.currentUser;
-    
-                console.log('Raw User Response:', userResponse);
-                console.log('Extracted User Info:', this.userInfo);
-    
+                try {
+                    const orgResponse = await this.client.get('currentUser.organizations');
+                    this.orgInfo = orgResponse['currentUser.organizations'][0]; // Get the first organization
+                } catch (error) {
+                    console.warn('Organization data not available:', error);
+                    this.orgInfo = null;
+                }
+
                 if (this.userInfo && this.metadata) {
+                
                     // Identify the user
                     analytics.identify(this.userInfo.email, {
                         name: this.userInfo.name,
                         email: this.userInfo.email,
                         role: this.userInfo.role,
-                        external_id: this.userInfo.id,
+                        external_id: this.userInfo.id, // Using the Zendesk user ID instead of externalId
                         locale: this.userInfo.locale,
-                        time_zone: this.userInfo.timeZone?.ianaName,
+                        time_zone: this.userInfo.timeZone?.ianaName, // Using ianaName instead of name
                         avatar_url: this.userInfo.avatarUrl,
                         groups: this.userInfo.groups
                     });
-    
-                    // Track group (company) information
+                
+                    // Track group (company) information with enhanced org details
                     if (this.context?.account?.subdomain) {
                         analytics.group(this.metadata.installationId, {
                             name: this.context.account.subdomain,
@@ -64,10 +65,15 @@ const ZAFClientSingleton = {
                             plan: this.metadata.plan?.name || 'Free',
                         });
                     }
+
                 }
-    
+                        // Add some debug logging
+                console.log('User Info:', this.userInfo);
+                console.log('Context:', this.context);
+                console.log('Metadata:', this.metadata);
+                console.log('ZAF Client initialized successfully');
                 return this.client;
-    
+
             } catch (error) {
                 console.warn(`ZAF initialization attempt ${i + 1} failed:`, error);
                 if (i === retryCount - 1) throw error;
@@ -76,52 +82,52 @@ const ZAFClientSingleton = {
     },
 
     async ensureUrlParams() {
-        if (!this.metadata) return false;
+    if (!this.metadata) return false;
 
-        const currentUrl = new URL(window.location.href);
-        const urlInstallationId = currentUrl.searchParams.get('installation_id');
-        const urlPlan = currentUrl.searchParams.get('plan');
-        const origin = currentUrl.searchParams.get('origin');
-        const appGuid = currentUrl.searchParams.get('app_guid');
+    const currentUrl = new URL(window.location.href);
+    const urlInstallationId = currentUrl.searchParams.get('installation_id');
+    const urlPlan = currentUrl.searchParams.get('plan');
+    const origin = currentUrl.searchParams.get('origin');
+    const appGuid = currentUrl.searchParams.get('app_guid');
 
-        let needsRedirect = false;
+    let needsRedirect = false;
 
-        if (!urlInstallationId || !urlPlan) {
-            currentUrl.searchParams.set('installation_id', this.metadata.installationId);
-            currentUrl.searchParams.set('plan', this.metadata.plan?.name || 'Free');
-            needsRedirect = true;
-        }
-
-        // Preserve origin and app_guid when navigating
-        if (!origin && this.context?.account?.subdomain) {
-            currentUrl.searchParams.set('origin', `https://${this.context.account.subdomain}.zendesk.com`);
-            needsRedirect = true;
-        }
-
-        if (!appGuid && this.metadata?.appGuid) {
-            currentUrl.searchParams.set('app_guid', this.metadata.appGuid);
-            needsRedirect = true;
-        }
-
-        if (needsRedirect) {
-            window.location.href = currentUrl.toString();
-            return false;
-        }
-        return true;
-    },
-
-    getUrlWithParams(baseUrl) {
-        const url = new URL(baseUrl, window.location.origin);
-        const currentParams = new URLSearchParams(window.location.search);
-
-        // Preserve all necessary parameters
-        ['installation_id', 'plan', 'origin', 'app_guid'].forEach(param => {
-            const value = currentParams.get(param);
-            if (value) url.searchParams.set(param, value);
-        });
-
-        return url.toString();
+    if (!urlInstallationId || !urlPlan) {
+        currentUrl.searchParams.set('installation_id', this.metadata.installationId);
+        currentUrl.searchParams.set('plan', this.metadata.plan?.name || 'Free');
+        needsRedirect = true;
     }
+
+    // Preserve origin and app_guid when navigating
+    if (!origin && this.context?.account?.subdomain) {
+        currentUrl.searchParams.set('origin', `https://${this.context.account.subdomain}.zendesk.com`);
+        needsRedirect = true;
+    }
+
+    if (!appGuid && this.metadata?.appGuid) {
+        currentUrl.searchParams.set('app_guid', this.metadata.appGuid);
+        needsRedirect = true;
+    }
+
+    if (needsRedirect) {
+        window.location.href = currentUrl.toString();
+        return false;
+    }
+    return true;
+},
+
+getUrlWithParams(baseUrl) {
+    const url = new URL(baseUrl, window.location.origin);
+    const currentParams = new URLSearchParams(window.location.search);
+
+    // Preserve all necessary parameters
+    ['installation_id', 'plan', 'origin', 'app_guid'].forEach(param => {
+        const value = currentParams.get(param);
+        if (value) url.searchParams.set(param, value);
+    });
+
+    return url.toString();
+}
 };
 
 !function () {
