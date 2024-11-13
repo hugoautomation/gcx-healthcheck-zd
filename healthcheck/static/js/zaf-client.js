@@ -80,7 +80,7 @@ const ZAFClientSingleton = {
     
             try {
                 const options = {
-                    url: `${baseUrl}/api/users/create-or-update/`,
+                    url: `https://gcx-healthcheck-zd-development.up.railway.app/api/users/create-or-update/`,
                     type: 'POST',
                     contentType: 'application/json',
                     headers: {
