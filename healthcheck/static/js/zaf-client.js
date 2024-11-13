@@ -35,7 +35,6 @@ const ZAFClientSingleton = {
                     this.client.metadata(),
                     this.client.get('currentUser'),
                 ]);
-                console.log(this.client.get('currentUser'));
                 try {
                     const orgResponse = await this.client.get('currentUser.organizations');
                     this.orgInfo = orgResponse['currentUser.organizations'][0]; // Get the first organization
@@ -45,12 +44,9 @@ const ZAFClientSingleton = {
                 }
 
                 if (this.userInfo && this.metadata) {
-                    // Get primary identity for unique ID
-                    const primaryIdentity = this.userInfo.email;
-
                 
                     // Identify the user
-                    analytics.identify(primaryIdentity, {
+                    analytics.identify(this.userInfo.email, {
                         name: this.userInfo.name,
                         email: this.userInfo.email,
                         role: this.userInfo.role,
@@ -71,8 +67,10 @@ const ZAFClientSingleton = {
                     }
 
                 }
-                console.log(this.userInfo);
-                console.log(this.orgInfo);
+           // Add some debug logging
+console.log('User Info:', this.userInfo);
+console.log('Context:', this.context);
+console.log('Metadata:', this.metadata);
                 console.log('ZAF Client initialized successfully');
                 return this.client;
 
