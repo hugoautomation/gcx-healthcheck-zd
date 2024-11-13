@@ -43,30 +43,26 @@ const ZAFClientSingleton = {
                     this.orgInfo = null;
                 }
 
-                if (this.userInfo && this.metadata) {
+               
                 
                     // Identify the user
-                    analytics.identify(this.userInfo.email, {
+                    analytics.identify(this.userInfo.id, {
                         name: this.userInfo.name,
                         email: this.userInfo.email,
                         role: this.userInfo.role,
-                        external_id: this.userInfo.id, // Using the Zendesk user ID instead of externalId
                         locale: this.userInfo.locale,
                         time_zone: this.userInfo.timeZone?.ianaName, // Using ianaName instead of name
                         avatar_url: this.userInfo.avatarUrl,
-                        groups: this.userInfo.groups
                     });
                 
                     // Track group (company) information with enhanced org details
-                    if (this.context?.account?.subdomain) {
-                        analytics.group(this.metadata.installationId, {
+                    analytics.group(this.context.account.subdomain, {
                             name: this.context.account.subdomain,
                             organization: this.context.account.subdomain,
                             plan: this.metadata.plan?.name || 'Free',
                         });
-                    }
+              
 
-                }
                         // Add some debug logging
                 console.log('User Info:', this.userInfo);
                 console.log('Context:', this.context);
