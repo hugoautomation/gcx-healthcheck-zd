@@ -74,38 +74,38 @@ const ZAFClientSingleton = {
                 return;
             }
     
-            // Prepare user data matching the Django model fields
-            const userData = {
-                user_id: this.userInfo.id,
-                name: this.userInfo.name || '',
-                email: this.userInfo.email || '',
-                role: this.userInfo.role || '',
-                locale: this.userInfo.locale || '',
-                time_zone: this.userInfo.timeZone?.ianaName || null,
-                avatar_url: this.userInfo.avatarUrl || null,
-                subdomain: this.context?.account?.subdomain || '',
-                plan: this.metadata.plan?.name || null
-            };
-    
-            console.log('Sending user data:', { ...userData, user_id: '[REDACTED]' });
-    
-            // Use client.request instead of fetch
             const baseUrl = window.ENVIRONMENT === 'production'
                 ? 'https://gcx-healthcheck-zd-production.up.railway.app'
                 : 'https://gcx-healthcheck-zd-development.up.railway.app';
     
             try {
-                const response = await this.client.request({
+                const options = {
                     url: `${baseUrl}/api/users/create-or-update/`,
-                    method: 'POST',
+                    type: 'POST',
                     contentType: 'application/json',
-                headers: {
-                    'X-Subsequent-Request': 'true'
-                },
-                    data: userData,
+                    headers: {
+                        'X-Subsequent-Request': 'true'
+                    },
+                    data: JSON.stringify({
+                        user_id: this.userInfo.id,
+                        name: this.userInfo.name || '',
+                        email: this.userInfo.email || '',
+                        role: this.userInfo.role || '',
+                        locale: this.userInfo.locale || '',
+                        time_zone: this.userInfo.timeZone?.ianaName || null,
+                        avatar_url: this.userInfo.avatarUrl || null,
+                        subdomain: this.context?.account?.subdomain || '',
+                        plan: this.metadata.plan?.name || null
+                    }),
                     secure: true
+                };
+    
+                console.log('Making request with options:', {
+                    ...options,
+                    data: '[REDACTED]'
                 });
     
+                const response = await this.client.request(options);
                 console.log('User created/updated:', response);
     
                 // Track analytics with user ID
