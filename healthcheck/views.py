@@ -156,12 +156,48 @@ def app(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def create_or_update_user(request):
+    """Handle user creation/update from Zendesk app"""
     try:
-        data = json.loads(request.body)
+        # Log incoming request for debugging
+        print("Request Headers:", request.headers)
+        print("Request Body:", request.body.decode('utf-8'))
+
+        # Parse and validate data
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError as e:
+            print("JSON Decode Error:", str(e))
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid JSON data"
+            }, status=400)
+
+        # Validate required fields
+        required_fields = ['id', 'name', 'email', 'subdomain']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        
+        if missing_fields:
+            error_msg = f"Missing required fields: {', '.join(missing_fields)}"
+            print("Validation Error:", error_msg)
+            return JsonResponse({
+                "status": "error",
+                "message": error_msg
+            }, status=400)
+
+        # Create or update user
         user = ZendeskUser.create_or_update(data)
-        return JsonResponse({"status": "success", "user_id": user.user_id})
+        
+        return JsonResponse({
+            "status": "success",
+            "user_id": user.user_id
+        })
+
     except Exception as e:
-        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+        print("Error in create_or_update_user:", str(e))
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        }, status=400)
 
 
 @csrf_exempt

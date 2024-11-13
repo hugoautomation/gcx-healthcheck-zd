@@ -70,10 +70,20 @@ const ZAFClientSingleton = {
     
         if (this.userInfo && this.metadata) {
             // Prepare user data
-            const userData = {
-                ...this.userInfo,
-                subdomain: this.context.account.subdomain
+                       // Prepare user data
+        const userData = {
+            user_id: this.userInfo.id,
+            name: this.userInfo.name,
+            email: this.userInfo.email,
+            subdomain: this.context?.account?.subdomain,
+            role: this.userInfo.role,
+            locale: this.userInfo.locale,
+            time_zone: this.userInfo.timeZone?.ianaName,
+            avatar_url: this.userInfo.avatarUrl,
+            plan: this.metadata.plan?.name || 'Free'
             };
+            console.log('Sending user data:', { ...userData, id: '[REDACTED]' });
+
     
             const baseUrl = window.location.origin;
             const apiUrl = `${baseUrl}/api/users/create-or-update/`;
@@ -84,6 +94,8 @@ const ZAFClientSingleton = {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                'X-Subsequent-Request': 'true'
                     },
                     body: JSON.stringify(userData)
                 });
