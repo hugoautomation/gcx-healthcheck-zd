@@ -80,16 +80,6 @@ def app(request):
         "origin": origin,
     }
     if installation_id:
-        # Identify user when they load the app
-        analytics.identify(
-            installation_id,
-            {
-                "plan": client_plan,
-                "subdomain": origin,
-                "installation_id": installation_id,
-            },
-        )
-
         # Track app load
         analytics.track(
             installation_id,
@@ -168,12 +158,6 @@ def health_check(request):
                     "subdomain": data.get("subdomain"),
                     "email": data.get("email"),
                     "plan": data.get("plan", "Free"),
-                },
-            )
-            analytics.identify(
-                installation_id,
-                {
-                    "email": data.get("email"),
                 },
             )
 
