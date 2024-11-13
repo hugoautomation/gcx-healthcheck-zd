@@ -79,8 +79,7 @@ const ZAFClientSingleton = {
                 if (i === retryCount - 1) throw error;
             }
         }
-    }
-};
+    },
 
     async ensureUrlParams() {
     if (!this.metadata) return false;
