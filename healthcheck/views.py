@@ -164,9 +164,11 @@ def health_check(request):
             data = json.loads(request.body) if request.body else {}
             installation_id = data.get("installation_id")
             client_plan = data.get("plan", "Free")
+            user_id = data.get("user_id")  # Get user_id from request data
+
 
             analytics.track(
-                installation_id,
+                user_id,
                 "Health Check Started",
                 {
                     "subdomain": data.get("subdomain"),
@@ -238,7 +240,7 @@ def health_check(request):
             results_html = render_report_components(formatted_data)
 
             analytics.track(
-                installation_id,
+                user_id,
                 "Health Check Completed",
                 {
                     "total_issues": len(response_data.get("issues", [])),
