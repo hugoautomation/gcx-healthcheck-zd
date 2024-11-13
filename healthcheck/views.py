@@ -75,16 +75,18 @@ def app(request):
     origin = request.GET.get("origin")
     user_id = request.GET.get("user_id")
 
-    initial_data.update({
-        "url_params": {
-            "installation_id": installation_id,
-            "plan": client_plan,
-            "app_guid": app_guid,
-            "origin": origin,
-            "user_id": user_id,
-        },
-        "environment": settings.ENVIRONMENT,  # Add environment to context
-    })
+    initial_data.update(
+        {
+            "url_params": {
+                "installation_id": installation_id,
+                "plan": client_plan,
+                "app_guid": app_guid,
+                "origin": origin,
+                "user_id": user_id,
+            },
+            "environment": settings.ENVIRONMENT,  # Add environment to context
+        }
+    )
 
     if installation_id:
         # Track app load
@@ -275,6 +277,7 @@ def health_check(request):
 
     return HttpResponse("Method not allowed", status=405)
 
+
 @csrf_exempt
 def monitoring(request):
     installation_id = request.GET.get("installation_id")
@@ -285,10 +288,10 @@ def monitoring(request):
 
     # Validate installation_id
     try:
-        if not installation_id or installation_id.lower() == 'none':
+        if not installation_id or installation_id.lower() == "none":
             messages.error(request, "Installation ID required")
             return HttpResponseRedirect("/")
-        
+
         # Convert to integer
         installation_id = int(installation_id)
     except (ValueError, TypeError):
@@ -305,21 +308,23 @@ def monitoring(request):
             "monitoring_settings": {
                 "is_active": False,
                 "frequency": "weekly",
-                "notification_emails": []
-            }
+                "notification_emails": [],
+            },
         }
 
     # Add URL parameters and environment to context
-    context.update({
-        "url_params": {
-            "installation_id": installation_id,
-            "plan": client_plan,
-            "app_guid": app_guid,
-            "origin": origin,
-            "user_id": user_id,
-        },
-        "environment": settings.ENVIRONMENT,
-    })
+    context.update(
+        {
+            "url_params": {
+                "installation_id": installation_id,
+                "plan": client_plan,
+                "app_guid": app_guid,
+                "origin": origin,
+                "user_id": user_id,
+            },
+            "environment": settings.ENVIRONMENT,
+        }
+    )
 
     return render(request, "healthcheck/monitoring.html", context)
 

@@ -173,7 +173,6 @@ class ZendeskUser(models.Model):
     subdomain = models.CharField(max_length=255)
     plan = models.CharField(max_length=320, null=True, blank=True)
 
-
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
