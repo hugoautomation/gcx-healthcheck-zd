@@ -90,8 +90,6 @@ def app(request):
             "App Loaded",
             {"plan": client_plan, "subdomain": origin},
         )
-
-    if installation_id:
         try:
             # Get historical reports
             historical_reports = HealthCheckReport.objects.filter(
