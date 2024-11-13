@@ -65,7 +65,7 @@ function initializeForm() {
     if (saveButton) {
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
-            console.log('Form submission started'); // Debug log
+            console.log('Form submission started');
             
             const spinner = saveButton.querySelector('.spinner-border');
             const btnText = saveButton.querySelector('.btn-text');
@@ -81,21 +81,27 @@ function initializeForm() {
                     .filter(input => input.value.trim() !== '')
                     .map(input => input.value.trim());
 
+                // Get base URL based on environment
+                const baseUrl = window.ENVIRONMENT === 'production' 
+                    ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+                    : 'https://gcx-healthcheck-zd-development.up.railway.app';
+
                 // Create data object from form
                 const formData = new FormData(form);
                 const data = {
                     installation_id: formData.get('installation_id'),
+                    user_id: ZAFClientSingleton.userInfo?.id,  // Add user_id
                     is_active: formData.get('is_active') === 'on',
                     frequency: formData.get('frequency'),
                     notification_emails: validEmails,
                     redirect_url: window.location.href
                 };
 
-                console.log('Sending data:', data); // Debug log
+                console.log('Sending data:', data);
 
-                // Submit form using client.request
+                // Submit form using client.request with environment-aware URL
                 const options = {
-                    url: 'https://gcx-healthcheck-zd-production.up.railway.app/monitoring-settings/',
+                    url: `${baseUrl}/monitoring-settings/`,
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify(data),
@@ -103,7 +109,7 @@ function initializeForm() {
                 };
 
                 const response = await client.request(options);
-                console.log('Response:', response); // Debug log
+                console.log('Response:', response);
 
                 // Show success message
                 const alertHtml = `
@@ -117,7 +123,7 @@ function initializeForm() {
                 }
 
             } catch (error) {
-                console.error('Error saving settings:', error); // Debug log
+                console.error('Error saving settings:', error);
                 
                 // Show detailed error message
                 const errorMessage = error.responseJSON?.error || error.message || 'Failed to save settings';

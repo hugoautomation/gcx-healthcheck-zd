@@ -75,13 +75,16 @@ def app(request):
     origin = request.GET.get("origin")
     user_id = request.GET.get("user_id")
 
-    initial_data["url_params"] = {
-        "installation_id": installation_id,
-        "plan": client_plan,
-        "app_guid": app_guid,
-        "origin": origin,
-        "user_id": user_id,
-    }
+    initial_data.update({
+        "url_params": {
+            "installation_id": installation_id,
+            "plan": client_plan,
+            "app_guid": app_guid,
+            "origin": origin,
+            "user_id": user_id,
+        },
+        "environment": settings.ENVIRONMENT,  # Add environment to context
+    })
 
     if installation_id:
         # Track app load
@@ -295,6 +298,8 @@ def monitoring(request):
         "app_guid": app_guid,
         "origin": origin,
         "user_id": user_id,  # Add user_id to context
+        "environment": settings.ENVIRONMENT,  # Add environment to context
+
     }
 
     return render(request, "healthcheck/monitoring.html", context)
