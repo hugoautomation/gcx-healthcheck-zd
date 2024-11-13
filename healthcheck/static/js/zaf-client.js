@@ -34,14 +34,20 @@ const ZAFClientSingleton = {
                     this.client.context(),
                     this.client.metadata(),
                     this.client.get('currentUser'),
-                    this.client.get('organization')
                 ]);
+                try {
+                    const orgResponse = await this.client.get('currentUser.organizations');
+                    this.orgInfo = orgResponse['currentUser.organizations'][0]; // Get the first organization
+                } catch (error) {
+                    console.warn('Organization data not available:', error);
+                    this.orgInfo = null;
+                }
 
                 if (this.userInfo && this.metadata) {
                     // Get primary identity for unique ID
                     const primaryIdentity = this.userInfo.identities?.find(identity => identity.primary)?.value ||
                         this.userInfo.email;
-
+                
                     // Identify the user
                     analytics.identify(primaryIdentity, {
                         name: this.userInfo.name,
@@ -52,13 +58,15 @@ const ZAFClientSingleton = {
                         time_zone: this.userInfo.timeZone?.name,
                         organization_id: this.orgInfo?.id,
                     });
-
+                
                     // Track group (company) information with enhanced org details
-                    analytics.group(this.metadata.installationId, {
-                        name: this.orgInfo?.name,
-                        organization: this.context?.account?.subdomain,
-                        plan: this.metadata.plan?.name || 'Free',
-                    });
+                    if (this.orgInfo) {
+                        analytics.group(this.metadata.installationId, {
+                            name: this.orgInfo.name,
+                            organization: this.context?.account?.subdomain,
+                            plan: this.metadata.plan?.name || 'Free',
+                        });
+                    }
 
                 }
                 console.log(this.userInfo);

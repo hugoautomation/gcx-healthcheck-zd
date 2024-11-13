@@ -11,7 +11,8 @@
     "support": {
       "nav_bar": {
         "signed": true,
-        "url": "https://gcx-healthcheck-zd-production.up.railway.app/"
+        // "url": "https://gcx-healthcheck-zd-production.up.railway.app/"
+        "url": "https://gcx-healthcheck-zd-development.up.railway.app/"
       }
     }
   },
