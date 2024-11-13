@@ -43,6 +43,10 @@ const ZAFClientSingleton = {
                     this.orgInfo = null;
                 }
 
+                this.userInfo = userResponse.currentUser;
+
+console.log('Raw User Response:', userResponse);
+console.log('Extracted User Info:', this.userInfo);
                 if (this.userInfo && this.metadata) {
                 
                     // Identify the user
