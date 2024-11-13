@@ -54,7 +54,7 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring Settings</a>
 
         <div class="scrollable-container">
             <div id="results">
-                {% include "healthcheck/results.html" with data=data %}
+                {% include "healthcheck/results.html" with data=data user_id=url_params.user_id %}
             </div>
         </div>
 

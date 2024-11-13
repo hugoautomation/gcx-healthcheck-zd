@@ -447,6 +447,8 @@ def download_report_csv(request, report_id):
     """Download health check report as CSV"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
+        user_id = request.GET.get('user_id')  # Get user_id from request parameters
+
 
         # Create the HttpResponse object with CSV header
         response = HttpResponse(content_type="text/csv")
@@ -454,7 +456,7 @@ def download_report_csv(request, report_id):
             f'attachment; filename="healthcheck_report_{report_id}.csv"'
         )
         analytics.track(
-            str(report.installation_id),
+            user_id,
             "Report CSV Downloaded",
             {"report_id": report_id},
         )
