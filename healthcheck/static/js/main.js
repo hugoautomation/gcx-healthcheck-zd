@@ -181,41 +181,48 @@ function initializeRunCheck() {
                 ? 'https://gcx-healthcheck-zd-production.up.railway.app'
                 : 'https://gcx-healthcheck-zd-development.up.railway.app';
 
+            // Prepare the request data
+            const requestData = {
+                url: context.account.subdomain + '.zendesk.com',
+                email: '{{setting.admin_email}}',
+                api_token: '{{setting.api_token}}',
+                instance_guid: context.instanceGuid,
+                app_guid: metadata.appId,
+                installation_id: metadata.installationId,
+                user_id: ZAFClientSingleton.userInfo?.id,
+                subdomain: context.account.subdomain,
+                plan: metadata.plan?.name,
+                stripe_subscription_id: metadata.stripe_subscription_id,
+                version: metadata.version
+            };
+
+            // Make the request through ZAF client
             const options = {
                 url: `${baseUrl}/check/`,
                 type: 'POST',
                 contentType: 'application/json',
+                data: JSON.stringify(requestData),
+                secure: true,
                 headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
                     'X-Subsequent-Request': 'true'
-                },
-                data: JSON.stringify({
-                    url: `${context.account.subdomain}.zendesk.com`,
-                    email: '{{setting.admin_email}}',
-                    api_token: '{{setting.api_token}}',
-                    instance_guid: context.instanceGuid,
-                    app_guid: metadata.appId,
-                    installation_id: metadata.installationId,
-                    user_id: ZAFClientSingleton.userInfo?.id,
-                    subdomain: context.account.subdomain,
-                    plan: metadata.plan?.name,
-                    stripe_subscription_id: metadata.stripe_subscription_id,
-                    version: metadata.version
-                }),
-                secure: true
+                }
             };
 
-            const data = await client.request(options);
-            console.log('Response data:', data);
-            
-            if (data.error) {
-                resultsDiv.innerHTML = data.results_html;
-            } else {
-                resultsDiv.innerHTML = data.results_html;
+            console.log('Sending request with options:', options);
+            const response = await client.request(options);
+            console.log('Response received:', response);
+
+            if (response.error) {
+                throw new Error(response.error);
             }
-            
+
+            resultsDiv.innerHTML = response.results_html || response.html;
             initializeComponents();
 
         } catch (error) {
+            console.error('Full error details:', error);
             showError(resultsDiv, error, 'Error Running Health Check');
         }
     });
