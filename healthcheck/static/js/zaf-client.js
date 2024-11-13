@@ -35,6 +35,7 @@ const ZAFClientSingleton = {
                     this.client.metadata(),
                     this.client.get('currentUser'),
                 ]);
+                console.log(this.client.get('currentUser'));
                 try {
                     const orgResponse = await this.client.get('currentUser.organizations');
                     this.orgInfo = orgResponse['currentUser.organizations'][0]; // Get the first organization
@@ -45,25 +46,26 @@ const ZAFClientSingleton = {
 
                 if (this.userInfo && this.metadata) {
                     // Get primary identity for unique ID
-                    const primaryIdentity = this.userInfo.identities?.find(identity => identity.primary)?.value ||
-                        this.userInfo.email;
+                    const primaryIdentity = this.userInfo.email;
+
                 
                     // Identify the user
                     analytics.identify(primaryIdentity, {
                         name: this.userInfo.name,
                         email: this.userInfo.email,
                         role: this.userInfo.role,
-                        external_id: this.userInfo.externalId,
+                        external_id: this.userInfo.id, // Using the Zendesk user ID instead of externalId
                         locale: this.userInfo.locale,
-                        time_zone: this.userInfo.timeZone?.name,
-                        organization_id: this.orgInfo?.id,
+                        time_zone: this.userInfo.timeZone?.ianaName, // Using ianaName instead of name
+                        avatar_url: this.userInfo.avatarUrl,
+                        groups: this.userInfo.groups
                     });
                 
                     // Track group (company) information with enhanced org details
-                    if (this.orgInfo) {
+                    if (this.context?.account?.subdomain) {
                         analytics.group(this.metadata.installationId, {
-                            name: this.orgInfo.name,
-                            organization: this.context?.account?.subdomain,
+                            name: this.context.account.subdomain,
+                            organization: this.context.account.subdomain,
                             plan: this.metadata.plan?.name || 'Free',
                         });
                     }
