@@ -1,15 +1,24 @@
-
 const ZAFClientSingleton = {
     client: null,
     metadata: null,
     context: null,
     userInfo: null,
-    orgInfo: null, 
 
     async init(retryCount = 3, delay = 100) {
         if (this.client) return this.client;
 
-        // Get origin and app_guid from URL parameters
+        try {
+            await this.initializeClient(retryCount, delay);
+            await this.loadData();
+            await this.trackAnalytics(); // New separate method for analytics
+            return this.client;
+        } catch (error) {
+            console.error('Failed to initialize:', error);
+            throw error;
+        }
+    },
+
+    async initializeClient(retryCount, delay) {
         const urlParams = new URLSearchParams(window.location.search);
         const origin = urlParams.get('origin');
         const appGuid = urlParams.get('app_guid');
@@ -17,61 +26,14 @@ const ZAFClientSingleton = {
         for (let i = 0; i < retryCount; i++) {
             try {
                 await new Promise(resolve => setTimeout(resolve, delay));
-
-                // Initialize with origin and app_guid if available
                 this.client = window.ZAFClient ?
                     (origin && appGuid ?
                         window.ZAFClient.init({ origin, appGuid }) :
                         window.ZAFClient.init())
                     : null;
 
-                if (!this.client) {
-                    throw new Error('ZAF Client could not be initialized');
-                }
-
-                // Get all necessary data
-                [this.context, this.metadata, this.userInfo, this.orgInfo] = await Promise.all([
-                    this.client.context(),
-                    this.client.metadata(),
-                    this.client.get('currentUser'),
-                ]);
-                try {
-                    const orgResponse = await this.client.get('currentUser.organizations');
-                    this.orgInfo = orgResponse['currentUser.organizations'][0]; // Get the first organization
-                } catch (error) {
-                    console.warn('Organization data not available:', error);
-                    this.orgInfo = null;
-                }
-
-               
-                
-
-                
-                    // Track group (company) information with enhanced org details
-                    analytics.group(this.context.account.subdomain, {
-                            name: this.context.account.subdomain,
-                            organization: this.context.account.subdomain,
-                            plan: this.metadata.plan?.name || 'Free',
-                        });
-              
-                                         // Identify the user
-                    analytics.identify(this.userInfo.id, {
-                        test: 'test',
-                        name: this.userInfo.name,
-                        email: this.userInfo.email,
-                        role: this.userInfo.role,
-                        locale: this.userInfo.locale,
-                        time_zone: this.userInfo.timeZone?.ianaName, // Using ianaName instead of name
-                        avatar_url: this.userInfo.avatarUrl,
-                    });
-
-                        // Add some debug logging
-                console.log('User Info:', this.userInfo);
-                console.log('Context:', this.context);
-                console.log('Metadata:', this.metadata);
-                console.log('ZAF Client initialized successfully');
-                return this.client;
-
+                if (!this.client) throw new Error('ZAF Client could not be initialized');
+                return;
             } catch (error) {
                 console.warn(`ZAF initialization attempt ${i + 1} failed:`, error);
                 if (i === retryCount - 1) throw error;
@@ -79,53 +41,108 @@ const ZAFClientSingleton = {
         }
     },
 
+    async loadData() {
+        // Load all necessary data
+        [this.context, this.metadata] = await Promise.all([
+            this.client.context(),
+            this.client.metadata(),
+        ]);
+
+        // Get user data separately to ensure it's fully loaded
+        const userResponse = await this.client.get('currentUser');
+        this.userInfo = userResponse.currentUser;
+        
+        console.log('Data loaded:', {
+            context: this.context,
+            metadata: this.metadata,
+            userInfo: this.userInfo
+        });
+    },
+
+    async trackAnalytics() {
+        // Wait for analytics to be ready
+        await new Promise(resolve => {
+            if (window.analytics && window.analytics.initialized) {
+                resolve();
+            } else {
+                analytics.ready(resolve);
+            }
+        });
+
+        if (this.userInfo && this.metadata) {
+            console.log('Tracking analytics with user:', this.userInfo);
+            
+            // Identify the user
+            analytics.identify(this.userInfo.id, {
+                test: 'test',
+                name: this.userInfo.name,
+                email: this.userInfo.email,
+                role: this.userInfo.role,
+                locale: this.userInfo.locale,
+                time_zone: this.userInfo.timeZone?.ianaName,
+                avatar_url: this.userInfo.avatarUrl,
+            });
+
+            // Track group
+            if (this.context?.account?.subdomain) {
+                analytics.group(this.context.account.subdomain, {
+                    name: this.context.account.subdomain,
+                    organization: this.context.account.subdomain,
+                    plan: this.metadata.plan?.name || 'Free',
+                });
+            }
+        } else {
+            console.warn('Missing user info or metadata for analytics tracking');
+        }
+    },
+
     async ensureUrlParams() {
-    if (!this.metadata) return false;
+        if (!this.metadata) return false;
 
-    const currentUrl = new URL(window.location.href);
-    const urlInstallationId = currentUrl.searchParams.get('installation_id');
-    const urlPlan = currentUrl.searchParams.get('plan');
-    const origin = currentUrl.searchParams.get('origin');
-    const appGuid = currentUrl.searchParams.get('app_guid');
+        const currentUrl = new URL(window.location.href);
+        const urlInstallationId = currentUrl.searchParams.get('installation_id');
+        const urlPlan = currentUrl.searchParams.get('plan');
+        const origin = currentUrl.searchParams.get('origin');
+        const appGuid = currentUrl.searchParams.get('app_guid');
 
-    let needsRedirect = false;
+        let needsRedirect = false;
 
-    if (!urlInstallationId || !urlPlan) {
-        currentUrl.searchParams.set('installation_id', this.metadata.installationId);
-        currentUrl.searchParams.set('plan', this.metadata.plan?.name || 'Free');
-        needsRedirect = true;
+        if (!urlInstallationId || !urlPlan) {
+            currentUrl.searchParams.set('installation_id', this.metadata.installationId);
+            currentUrl.searchParams.set('plan', this.metadata.plan?.name || 'Free');
+            needsRedirect = true;
+        }
+
+        // Preserve origin and app_guid when navigating
+        if (!origin && this.context?.account?.subdomain) {
+            currentUrl.searchParams.set('origin', `https://${this.context.account.subdomain}.zendesk.com`);
+            needsRedirect = true;
+        }
+
+        if (!appGuid && this.metadata?.appGuid) {
+            currentUrl.searchParams.set('app_guid', this.metadata.appGuid);
+            needsRedirect = true;
+        }
+
+        if (needsRedirect) {
+            window.location.href = currentUrl.toString();
+            return false;
+        }
+        return true;
+    },
+
+    getUrlWithParams(baseUrl) {
+        const url = new URL(baseUrl, window.location.origin);
+        const currentParams = new URLSearchParams(window.location.search);
+
+        // Preserve all necessary parameters
+        ['installation_id', 'plan', 'origin', 'app_guid'].forEach(param => {
+            const value = currentParams.get(param);
+            if (value) url.searchParams.set(param, value);
+        });
+
+        return url.toString();
     }
-
-    // Preserve origin and app_guid when navigating
-    if (!origin && this.context?.account?.subdomain) {
-        currentUrl.searchParams.set('origin', `https://${this.context.account.subdomain}.zendesk.com`);
-        needsRedirect = true;
-    }
-
-    if (!appGuid && this.metadata?.appGuid) {
-        currentUrl.searchParams.set('app_guid', this.metadata.appGuid);
-        needsRedirect = true;
-    }
-
-    if (needsRedirect) {
-        window.location.href = currentUrl.toString();
-        return false;
-    }
-    return true;
-},
-
-getUrlWithParams(baseUrl) {
-    const url = new URL(baseUrl, window.location.origin);
-    const currentParams = new URLSearchParams(window.location.search);
-
-    // Preserve all necessary parameters
-    ['installation_id', 'plan', 'origin', 'app_guid'].forEach(param => {
-        const value = currentParams.get(param);
-        if (value) url.searchParams.set(param, value);
-    });
-
-    return url.toString();
-}
 };
 
 !function () {
