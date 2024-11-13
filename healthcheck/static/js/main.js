@@ -2,34 +2,6 @@ let client = null;
 let metadata = null;
 let context = null;
 
-// Initialize the app
-async function initializeApp() {
-    try {
-        // Initialize ZAF client
-        await ZAFClientSingleton.init();
-        client = ZAFClientSingleton.client;
-        metadata = ZAFClientSingleton.metadata;
-        context = ZAFClientSingleton.context;
-
-        if (!await ZAFClientSingleton.ensureUrlParams()) return;
-
-        // Initialize all components
-        initializeRunCheck();
-        initializeHistoricalReports();
-        initializeComponents();
-
-        // Adjust initial height
-        await client.invoke('resize', { width: '100%', height: '600px' });
-
-    } catch (error) {
-        console.error('Error initializing app:', error);
-        const resultsDiv = document.getElementById('results');
-        if (resultsDiv) {
-            showError(resultsDiv, error, 'Error Initializing App');
-        }
-    }
-}
-
 // Utility Functions
 function adjustContentHeight() {
     if (!client) return;
@@ -75,6 +47,8 @@ function showError(element, error, title = 'Error') {
     `;
 }
 
+// Add these functions after the utility functions and before initializeComponents()
+
 function initializeFilters() {
     const severityFilter = document.getElementById('severity-filter');
     const categoryFilter = document.getElementById('category-filter');
@@ -102,6 +76,7 @@ function initializeFilters() {
     categoryFilter.addEventListener('change', filterIssues);
 }
 
+// Initialize unlock buttons
 function initializeUnlockButtons() {
     document.querySelectorAll('.unlock-report').forEach(button => {
         button.replaceWith(button.cloneNode(true));
@@ -117,12 +92,8 @@ function initializeUnlockButtons() {
                 // Start polling for unlock status
                 const pollInterval = setInterval(async () => {
                     try {
-                        const baseUrl = window.ENVIRONMENT === 'production' 
-                            ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                            : 'https://gcx-healthcheck-zd-development.up.railway.app';
-
                         const options = {
-                            url: `${baseUrl}/check-unlock-status/?report_id=${reportId}`,
+                            url: `https://gcx-healthcheck-zd-development.up.railway.app/check-unlock-status/?report_id=${reportId}`,
                             type: 'GET',
                             secure: true
                         };
@@ -133,7 +104,7 @@ function initializeUnlockButtons() {
                             document.getElementById('results').innerHTML = data.html;
                             initializeFilters();
                             initializeUnlockButtons();
-                            adjustContentHeight();
+                            adjustContentHeight(); // Add this line to adjust the iframe height
                             clearInterval(pollInterval);
                         }
                     } catch (error) {
@@ -152,17 +123,17 @@ function initializeUnlockButtons() {
         }
     });
 }
-
+// Update initializeComponents to include error handling
 function initializeComponents() {
     try {
         initializeFilters();
         initializeUnlockButtons();
+
         adjustContentHeight();
     } catch (error) {
         console.error('Error initializing components:', error);
     }
 }
-
 function initializeRunCheck() {
     const runCheckButton = document.getElementById('run-check');
     if (!runCheckButton) return;
@@ -177,52 +148,41 @@ function initializeRunCheck() {
                 throw new Error('Client, context, or metadata not initialized');
             }
 
-            const baseUrl = window.ENVIRONMENT === 'production' 
-                ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                : 'https://gcx-healthcheck-zd-development.up.railway.app';
-
-            // Prepare the request data
-            const requestData = {
-                url: context.account.subdomain + '.zendesk.com',
-                email: '{{setting.admin_email}}',
-                api_token: '{{setting.api_token}}',
-                instance_guid: context.instanceGuid,
-                app_guid: metadata.appId,
-                installation_id: metadata.installationId,
-                user_id: ZAFClientSingleton.userInfo?.id,
-                subdomain: context.account.subdomain,
-                plan: metadata.plan?.name,
-                stripe_subscription_id: metadata.stripe_subscription_id,
-                version: metadata.version
-            };
-
-            // Make the request through ZAF client
             const options = {
-                url: `${baseUrl}/check/`,
+                url: 'https://gcx-healthcheck-zd-development.up.railway.app/check/',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify(requestData),
-                secure: true,
                 headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
                     'X-Subsequent-Request': 'true'
-                }
+                },
+                data: JSON.stringify({
+                    url: `${context.account.subdomain}.zendesk.com`,
+                    email: '{{setting.admin_email}}',
+                    api_token: '{{setting.api_token}}',
+                    instance_guid: context.instanceGuid,
+                    app_guid: metadata.appId,
+                    installation_id: metadata.installationId,
+                    subdomain: context.account.subdomain,
+                    plan: metadata.plan?.name,
+                    stripe_subscription_id: metadata.stripe_subscription_id,
+                    version: metadata.version
+                }),
+                secure: true
             };
 
-            console.log('Sending request with options:', options);
-            const response = await client.request(options);
-            console.log('Response received:', response);
-
-            if (response.error) {
-                throw new Error(response.error);
+            // The response is already parsed
+            const data = await client.request(options);
+            console.log('Response data:', data); // Add this for debugging
+            
+            if (data.error) {
+                resultsDiv.innerHTML = data.results_html;
+            } else {
+                resultsDiv.innerHTML =  data.results_html;
             }
-
-            resultsDiv.innerHTML = response.results_html || response.html;
+            
             initializeComponents();
 
         } catch (error) {
-            console.error('Full error details:', error);
             showError(resultsDiv, error, 'Error Running Health Check');
         }
     });
@@ -236,12 +196,8 @@ function initializeHistoricalReports() {
             showLoadingState(resultsDiv);
 
             try {
-                const baseUrl = window.ENVIRONMENT === 'production' 
-                    ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                    : 'https://gcx-healthcheck-zd-development.up.railway.app';
-
                 const options = {
-                    url: `${baseUrl}/report/${this.dataset.reportId}/?installation_id=${metadata.installationId}&user_id=${ZAFClientSingleton.userInfo?.id}`,
+                    url: `https://gcx-healthcheck-zd-development.up.railway.app/report/${this.dataset.reportId}/?installation_id=${metadata.installationId}`,
                     type: 'GET',
                     secure: true
                 };
@@ -254,6 +210,26 @@ function initializeHistoricalReports() {
             }
         });
     });
+}
+// Replace the initialization code with:
+async function initializeApp() {
+    try {
+        await ZAFClientSingleton.init();
+        client = ZAFClientSingleton.client;
+        metadata = ZAFClientSingleton.metadata;
+        context = ZAFClientSingleton.context;
+
+        if (!await ZAFClientSingleton.ensureUrlParams()) return;
+
+        await client.invoke('resize', { width: '100%', height: '800px' });
+
+        initializeComponents();
+        initializeRunCheck();
+        initializeHistoricalReports();
+
+    } catch (error) {
+        console.error('Error initializing:', error);
+    }
 }
 
 // Event Listeners
