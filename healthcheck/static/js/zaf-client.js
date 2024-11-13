@@ -98,12 +98,12 @@ const ZAFClientSingleton = {
                 const response = await this.client.request({
                     url: `${baseUrl}/api/users/create-or-update/`,
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Subsequent-Request': 'true'
-                    },
+                    contentType: 'application/json',
+                headers: {
+                    'X-Subsequent-Request': 'true'
+                },
                     data: userData,
+                    secure: true
                 });
     
                 console.log('User created/updated:', response);
