@@ -23,6 +23,9 @@ urlpatterns = [
         name="update_installation_plan",
     ),
     path("monitoring/", views.monitoring, name="monitoring"),
-    path('api/users/create-or-update/', views.create_or_update_user, name='create_or_update_user'),
-
+    path(
+        "api/users/create-or-update/",
+        views.create_or_update_user,
+        name="create_or_update_user",
+    ),
 ]

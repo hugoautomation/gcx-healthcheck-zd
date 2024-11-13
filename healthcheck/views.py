@@ -73,23 +73,28 @@ def app(request):
     client_plan = request.GET.get("plan", "Free")
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
-    user_id = request.GET.get("user_id")  # Get user_id from URL params
+    user_id = request.GET.get("user_id")
 
     initial_data["url_params"] = {
         "installation_id": installation_id,
         "plan": client_plan,
         "app_guid": app_guid,
         "origin": origin,
-        "user_id": user_id,  # Include user_id in url_params
-
+        "user_id": user_id,
     }
+
     if installation_id:
         # Track app load
         analytics.track(
-            user_id,
+            user_id or installation_id,  # Use user_id if available
             "App Loaded",
-            {"plan": client_plan, "subdomain": origin},
+            {
+                "plan": client_plan,
+                "subdomain": origin,
+                "installation_id": installation_id,
+            },
         )
+
         try:
             # Get historical reports
             historical_reports = HealthCheckReport.objects.filter(
@@ -116,16 +121,15 @@ def app(request):
                     last_check=latest_report.created_at,
                 )
 
-                # Update initial data with report context only
+                # Update initial data with report context
                 initial_data.update(
                     {
                         "historical_reports": format_historical_reports(
                             historical_reports
                         ),
-                        "data": report_data,  # Just pass the report_data directly
+                        "data": report_data,
                     }
                 )
-
             else:
                 initial_data.update(
                     {
@@ -150,10 +154,11 @@ def create_or_update_user(request):
     try:
         data = json.loads(request.body)
         user = ZendeskUser.create_or_update(data)
-        return JsonResponse({'status': 'success', 'user_id': user.user_id})
+        return JsonResponse({"status": "success", "user_id": user.user_id})
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-    
+        return JsonResponse({"status": "error", "message": str(e)}, status=400)
+
+
 @csrf_exempt
 def health_check(request):
     if request.method == "POST":
@@ -163,7 +168,6 @@ def health_check(request):
             installation_id = data.get("installation_id")
             client_plan = data.get("plan", "Free")
             user_id = data.get("user_id")  # Get user_id from request data
-
 
             analytics.track(
                 user_id,
@@ -277,7 +281,6 @@ def monitoring(request):
     origin = request.GET.get("origin")
     user_id = request.GET.get("user_id")  # Add user_id
 
-
     if not installation_id:
         messages.error(request, "Installation ID required")
         return HttpResponseRedirect("/")
@@ -292,7 +295,6 @@ def monitoring(request):
         "app_guid": app_guid,
         "origin": origin,
         "user_id": user_id,  # Add user_id to context
-
     }
 
     return render(request, "healthcheck/monitoring.html", context)
@@ -319,7 +321,6 @@ def stripe_webhook(request):
                 report.save()
 
                 user_id = session.get("userInfo", {}).get("id")
-
 
                 print(f"Successfully unlocked report {report_id}")
                 analytics.track(
@@ -456,7 +457,6 @@ def monitoring_settings(request):
         installation_id = request.POST.get("installation_id")
         user_id = request.POST.get("user_id")  # Get user_id from POST
 
-
     if not installation_id:
         error_msg = "Installation ID required"
         if request.content_type == "application/json":
@@ -583,7 +583,6 @@ def update_installation_plan(request):
         installation_id = data.get("installation_id")
         new_plan = data.get("plan")
         user_id = data.get("user_id")  # Get user_id from request
-
 
         if not installation_id or not new_plan:
             return JsonResponse({"error": "Missing required fields"}, status=400)
