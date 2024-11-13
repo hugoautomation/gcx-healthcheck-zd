@@ -86,7 +86,7 @@ def app(request):
     if installation_id:
         # Track app load
         analytics.track(
-            user_id or installation_id,  # Use user_id if available
+            user_id,  # Use user_id if available
             "App Loaded",
             {
                 "plan": client_plan,
