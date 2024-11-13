@@ -19,7 +19,6 @@ from functools import wraps
 import segment.analytics as analytics  # Add this import
 from django.core.management import call_command
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_protect
 
 
 # Add this new decorator to validate JWT tokens
@@ -144,7 +143,7 @@ def app(request):
     return render(request, "healthcheck/app.html", initial_data)
 
 
-@csrf_protect
+@csrf_exempt
 @require_http_methods(["POST"])
 def create_or_update_user(request):
     try:
