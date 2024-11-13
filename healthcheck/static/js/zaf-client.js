@@ -45,15 +45,7 @@ const ZAFClientSingleton = {
 
                
                 
-                    // Identify the user
-                    analytics.identify(this.userInfo.id, {
-                        name: this.userInfo.name,
-                        email: this.userInfo.email,
-                        role: this.userInfo.role,
-                        locale: this.userInfo.locale,
-                        time_zone: this.userInfo.timeZone?.ianaName, // Using ianaName instead of name
-                        avatar_url: this.userInfo.avatarUrl,
-                    });
+
                 
                     // Track group (company) information with enhanced org details
                     analytics.group(this.context.account.subdomain, {
@@ -62,6 +54,16 @@ const ZAFClientSingleton = {
                             plan: this.metadata.plan?.name || 'Free',
                         });
               
+                                         // Identify the user
+                    analytics.identify(this.userInfo.id, {
+                        test: 'test',
+                        name: this.userInfo.name,
+                        email: this.userInfo.email,
+                        role: this.userInfo.role,
+                        locale: this.userInfo.locale,
+                        time_zone: this.userInfo.timeZone?.ianaName, // Using ianaName instead of name
+                        avatar_url: this.userInfo.avatarUrl,
+                    });
 
                         // Add some debug logging
                 console.log('User Info:', this.userInfo);
