@@ -221,13 +221,14 @@ function initializeRunCheck() {
             const response = await client.request(options);
             console.log('Response received:', response);
 
-            if (response.error) {
+            // Check if we have results_html, regardless of error status
+            if (response.results_html) {
+                resultsDiv.innerHTML = response.results_html;
+                initializeComponents();
+            } else {
+                // Only throw if we don't have results to display
                 throw new Error(response.error || 'Unknown error occurred');
             }
-
-            // Update the results
-            resultsDiv.innerHTML = response.results_html;
-            initializeComponents();
 
         } catch (error) {
             console.error('Full error details:', error);
