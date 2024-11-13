@@ -104,7 +104,6 @@ const ZAFClientSingleton = {
                         'X-Subsequent-Request': 'true'
                     },
                     data: userData,
-                    secure: true
                 });
     
                 console.log('User created/updated:', response);
