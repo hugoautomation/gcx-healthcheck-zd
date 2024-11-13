@@ -189,9 +189,14 @@ def health_check(request):
                 "api_token": data.get("api_token"),
                 "status": "active",
             }
+            api_url = (
+                "https://app.configly.io/api/health-check/"
+                if settings.ENVIRONMENT == "production"
+                else "https://django-server-development-1b87.up.railway.app/api/health-check/"
+            )
 
             response = requests.post(
-                "https://app.configly.io/api/health-check/",
+                api_url,
                 headers={
                     "Content-Type": "application/json",
                     "X-API-Token": settings.HEALTHCHECK_TOKEN,

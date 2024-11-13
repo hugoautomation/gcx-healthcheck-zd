@@ -30,7 +30,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = "Hugo Richard <hugo@gravity.cx>"
 SERVER_EMAIL = "Hugo Richard <hugo@gravity.cx>"  # Used for error emails
-
+ENVIRONMENT = os.environ.get("RAILWAY_ENVIRONMENT_NAME", "development")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
