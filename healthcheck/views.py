@@ -100,11 +100,13 @@ def app(request):
                 "email": user.email,
                 "role": user.role,
                 "locale": user.locale,
-                "time_zone": user.time_zone,
+                "timezone": user.time_zone,
                 "avatar": user.avatar_url,
                 "subdomain": user.subdomain,
                 "plan": user.plan or client_plan,  # Use user's plan or fallback to client_plan
-                "installation_id": installation_id
+                "installation_id": installation_id,
+                "last_healthcheck": latest_report.created_at if latest_report else None,
+                "last_healthcheck_paid_for": latest_report.is_unlocked if latest_report else False,
             }
         )
         # Track app load
@@ -435,8 +437,23 @@ def stripe_webhook(request):
                 report.save()
 
                 user_id = session.get("userInfo", {}).get("id")
-
+                user = ZendeskUser.objects.get(user_id=user_id)
                 print(f"Successfully unlocked report {report_id}")
+                analytics.identify(
+                        user_id,
+                        {
+                            "name": user.name,
+                            "email": user.email,
+                            "role": user.role,
+                            "locale": user.locale,
+                            "timezone": user.time_zone,
+                            "avatar": user.avatar_url,
+                            "subdomain": user.subdomain,
+                            "plan": user.plan,
+                            "last_healthcheck": report.created_at,
+                            "last_healthcheck_paid_for": report.is_unlocked,
+                        }
+                    )
                 analytics.track(
                     str(user_id),
                     "Report Unlocked",
