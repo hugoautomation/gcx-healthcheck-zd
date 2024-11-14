@@ -89,26 +89,34 @@ def app(request):
     )
 
     if installation_id:
+        historical_reports = HealthCheckReport.objects.filter(
+                installation_id=installation_id
+            ).order_by("-created_at")[:10]
+
+        latest_report = HealthCheckReport.get_latest_for_installation(
+                installation_id
+            )
+
 
         user = ZendeskUser.objects.get(user_id=user_id)
             
             # Identify user with Segment
         analytics.identify(
-            user_id,
-            {
-                "name": user.name,
-                "email": user.email,
-                "role": user.role,
-                "locale": user.locale,
-                "timezone": user.time_zone,
-                "avatar": user.avatar_url,
-                "subdomain": user.subdomain,
-                "plan": user.plan or client_plan,  # Use user's plan or fallback to client_plan
-                "installation_id": installation_id,
-                "last_healthcheck": latest_report.created_at if latest_report else None,
-                "last_healthcheck_paid_for": latest_report.is_unlocked if latest_report else False,
-            }
-        )
+                user_id,
+                {
+                    "name": user.name,
+                    "email": user.email,
+                    "role": user.role,
+                    "locale": user.locale,
+                    "timezone": user.time_zone,
+                    "avatar": user.avatar_url,
+                    "subdomain": user.subdomain,
+                    "plan": user.plan or client_plan,
+                    "installation_id": installation_id,
+                    "last_healthcheck": latest_report.created_at if latest_report else None,
+                    "last_healthcheck_paid_for": latest_report.is_unlocked if latest_report else False,
+                }
+            )
         # Track app load
         analytics.track(
             user_id,  # Use user_id if available
