@@ -108,16 +108,16 @@ const ZAFClientSingleton = {
                 console.log('User created/updated:', response);
     
                 // Track analytics with user ID
-                analytics.identify(this.userInfo.id, {
-                    name: this.userInfo.name,
-                    email: this.userInfo.email,
-                    subdomain: this.context.account.subdomain,
-                    role: this.userInfo.role,
-                    locale: this.userInfo.locale,
-                    time_zone: this.userInfo.timeZone?.ianaName,
-                    avatar: this.userInfo.avatarUrl,
-                    plan: this.metadata.plan?.name || 'Free',
-                });
+                // analytics.identify(this.userInfo.id, {
+                //     name: this.userInfo.name,
+                //     email: this.userInfo.email,
+                //     subdomain: this.context.account.subdomain,
+                //     role: this.userInfo.role,
+                //     locale: this.userInfo.locale,
+                //     time_zone: this.userInfo.timeZone?.ianaName,
+                //     avatar: this.userInfo.avatarUrl,
+                //     plan: this.metadata.plan?.name || 'Free',
+                // });
     
                 // Track group
                 if (this.context?.account?.subdomain) {

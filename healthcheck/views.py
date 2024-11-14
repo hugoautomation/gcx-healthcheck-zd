@@ -89,6 +89,24 @@ def app(request):
     )
 
     if installation_id:
+
+        user = ZendeskUser.objects.get(user_id=user_id)
+            
+            # Identify user with Segment
+        analytics.identify(
+            user_id,
+            {
+                "name": user.name,
+                "email": user.email,
+                "role": user.role,
+                "locale": user.locale,
+                "time_zone": user.time_zone,
+                "avatar_url": user.avatar_url,
+                "subdomain": user.subdomain,
+                "plan": user.plan or client_plan,  # Use user's plan or fallback to client_plan
+                "installation_id": installation_id
+            }
+        )
         # Track app load
         analytics.track(
             user_id,  # Use user_id if available
