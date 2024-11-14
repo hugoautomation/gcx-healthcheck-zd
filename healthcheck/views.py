@@ -330,9 +330,11 @@ def health_check(request):
                 version=data.get("version", "1.0.0"),
                 raw_response=response_data,
             )
+            user = ZendeskUser.objects.get(user_id=user_id)
             analytics.identify(
                             user_id,
                             {
+                                "email": user.email,
                                 "last_healthcheck": report.created_at,
                             },
                         )
