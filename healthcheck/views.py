@@ -278,7 +278,8 @@ def health_check(request):
                     "plan": data.get("plan", "Free"),
                 },
             )
-
+            
+    
             # Prepare URL
             url = data.get("url")
             if not url or not url.startswith("https://"):
@@ -329,7 +330,12 @@ def health_check(request):
                 version=data.get("version", "1.0.0"),
                 raw_response=response_data,
             )
-
+            analytics.identify(
+                            user_id,
+                            {
+                                "last_healthcheck": report.created_at,
+                            },
+                        )
             # Format response data
             formatted_data = format_response_data(
                 response_data,
