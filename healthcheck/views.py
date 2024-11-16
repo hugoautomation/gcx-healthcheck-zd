@@ -90,33 +90,37 @@ def app(request):
 
     if installation_id:
         historical_reports = HealthCheckReport.objects.filter(
-                installation_id=installation_id
-            ).order_by("-created_at")[:10]
+            installation_id=installation_id
+        ).order_by("-created_at")[:10]
 
-        latest_report = HealthCheckReport.get_latest_for_installation(
-                installation_id
-            )
-
+        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
 
         user = ZendeskUser.objects.get(user_id=user_id)
-            
-            # Identify user with Segment
+
+        # Identify user with Segment
         analytics.identify(
-                user_id,
-                {
-                    "name": user.name,
-                    "email": user.email,
-                    "role": user.role,
-                    "locale": user.locale,
-                    "timezone": user.time_zone,
-                    "avatar": user.avatar_url,
-                    "subdomain": user.subdomain,
-                    "plan": user.plan or client_plan,
-                    "installation_id": installation_id,
-                    "last_healthcheck": latest_report.created_at if latest_report else None,
-                    "last_healthcheck_paid_for": latest_report.is_unlocked if latest_report else False,
-                }
-            )
+            user_id,
+            {
+                "name": user.name,
+                "email": user.email,
+                "role": user.role,
+                "locale": user.locale,
+                "timezone": user.time_zone,
+                "avatar": user.avatar_url,
+                "subdomain": user.subdomain,
+                "plan": user.plan or client_plan,
+                "installation_id": installation_id,
+                "last_healthcheck": latest_report.created_at if latest_report else None,
+                "last_healthcheck_paid_for": latest_report.is_unlocked
+                if latest_report
+                else False,
+            },
+        )
+        analytics.group(user.subdomain, {
+            "name": user.subdomain,
+            "organization": user.subdomain,
+            "plan": user.plan or client_plan,
+        })
         # Track app load
         analytics.track(
             user_id,  # Use user_id if available
@@ -188,75 +192,64 @@ def create_or_update_user(request):
     try:
         # Log incoming request for debugging
         print("Request Headers:", request.headers)
-        print("Request Body:", request.body.decode('utf-8'))
+        print("Request Body:", request.body.decode("utf-8"))
 
         # Parse and validate data
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError as e:
             print("JSON Decode Error:", str(e))
-            return JsonResponse({
-                "status": "error",
-                "message": "Invalid JSON data"
-            }, status=400)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid JSON data"}, status=400
+            )
 
         # Convert user_id to integer since model expects BigIntegerField
         try:
-            user_id = int(data.get('user_id'))
+            user_id = int(data.get("user_id"))
         except (TypeError, ValueError) as e:
             print("Error converting user_id:", str(e))
-            return JsonResponse({
-                "status": "error",
-                "message": "Invalid user_id format"
-            }, status=400)
+            return JsonResponse(
+                {"status": "error", "message": "Invalid user_id format"}, status=400
+            )
 
         # Required fields based on model definition
-        required_fields = ['user_id', 'name', 'email', 'role', 'locale', 'subdomain']
+        required_fields = ["user_id", "name", "email", "role", "locale", "subdomain"]
         missing_fields = [field for field in required_fields if not data.get(field)]
-        
+
         if missing_fields:
             error_msg = f"Missing required fields: {', '.join(missing_fields)}"
             print("Validation Error:", error_msg)
-            return JsonResponse({
-                "status": "error",
-                "message": error_msg
-            }, status=400)
+            return JsonResponse({"status": "error", "message": error_msg}, status=400)
 
         # Create or update user with exact model field mapping
         try:
             user, created = ZendeskUser.objects.update_or_create(
                 user_id=user_id,
                 defaults={
-                    'name': data['name'],
-                    'email': data['email'],
-                    'role': data['role'],
-                    'locale': data['locale'],
-                    'subdomain': data['subdomain'],
-                    'time_zone': data.get('time_zone'),
-                    'avatar_url': data.get('avatar_url'),
-                    'plan': data.get('plan')
-                }
+                    "name": data["name"],
+                    "email": data["email"],
+                    "role": data["role"],
+                    "locale": data["locale"],
+                    "subdomain": data["subdomain"],
+                    "time_zone": data.get("time_zone"),
+                    "avatar_url": data.get("avatar_url"),
+                    "plan": data.get("plan"),
+                },
             )
-            
-            return JsonResponse({
-                "status": "success",
-                "user_id": user.user_id,
-                "created": created
-            })
+
+            return JsonResponse(
+                {"status": "success", "user_id": user.user_id, "created": created}
+            )
 
         except Exception as e:
             print("Database Error:", str(e))
-            return JsonResponse({
-                "status": "error",
-                "message": f"Database error: {str(e)}"
-            }, status=400)
+            return JsonResponse(
+                {"status": "error", "message": f"Database error: {str(e)}"}, status=400
+            )
 
     except Exception as e:
         print("Unexpected Error:", str(e))
-        return JsonResponse({
-            "status": "error",
-            "message": str(e)
-        }, status=500)
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
 @csrf_exempt
@@ -278,8 +271,7 @@ def health_check(request):
                     "plan": data.get("plan", "Free"),
                 },
             )
-            
-    
+
             # Prepare URL
             url = data.get("url")
             if not url or not url.startswith("https://"):
@@ -332,12 +324,12 @@ def health_check(request):
             )
             user = ZendeskUser.objects.get(user_id=user_id)
             analytics.identify(
-                            user_id,
-                            {
-                                "email": user.email,
-                                "last_healthcheck": report.created_at,
-                            },
-                        )
+                user_id,
+                {
+                    "email": user.email,
+                    "last_healthcheck": report.created_at,
+                },
+            )
             # Format response data
             formatted_data = format_response_data(
                 response_data,
@@ -456,20 +448,20 @@ def stripe_webhook(request):
                 user = ZendeskUser.objects.get(user_id=user_id)
                 print(f"Successfully unlocked report {report_id}")
                 analytics.identify(
-                        user_id,
-                        {
-                            "name": user.name,
-                            "email": user.email,
-                            "role": user.role,
-                            "locale": user.locale,
-                            "timezone": user.time_zone,
-                            "avatar": user.avatar_url,
-                            "subdomain": user.subdomain,
-                            "plan": user.plan,
-                            "last_healthcheck": report.created_at,
-                            "last_healthcheck_paid_for": report.is_unlocked,
-                        }
-                    )
+                    user_id,
+                    {
+                        "name": user.name,
+                        "email": user.email,
+                        "role": user.role,
+                        "locale": user.locale,
+                        "timezone": user.time_zone,
+                        "avatar": user.avatar_url,
+                        "subdomain": user.subdomain,
+                        "plan": user.plan,
+                        "last_healthcheck": report.created_at,
+                        "last_healthcheck_paid_for": report.is_unlocked,
+                    },
+                )
                 analytics.track(
                     str(user_id),
                     "Report Unlocked",
@@ -498,8 +490,7 @@ def download_report_csv(request, report_id):
     """Download health check report as CSV"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        user_id = request.GET.get('user_id')  # Get user_id from request parameters
-
+        user_id = request.GET.get("user_id")  # Get user_id from request parameters
 
         # Create the HttpResponse object with CSV header
         response = HttpResponse(content_type="text/csv")

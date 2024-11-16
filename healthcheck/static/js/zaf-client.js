@@ -119,14 +119,7 @@ const ZAFClientSingleton = {
                 //     plan: this.metadata.plan?.name || 'Free',
                 // });
     
-                // Track group
-                if (this.context?.account?.subdomain) {
-                    analytics.group(this.context.account.subdomain, {
-                        name: this.context.account.subdomain,
-                        organization: this.context.account.subdomain,
-                        plan: this.metadata.plan?.name || 'Free',
-                    });
-                }
+            
     
             } catch (error) {
                 console.error('Failed to create/update user:', error);
