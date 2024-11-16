@@ -93,7 +93,8 @@ def app(request):
             installation_id=installation_id
         ).order_by("-created_at")[:10]
 
-        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+        latest_report = HealthCheckReport.get_latest_for_installation(
+            installation_id)
 
         user = ZendeskUser.objects.get(user_id=user_id)
 
@@ -116,11 +117,12 @@ def app(request):
                 else False,
             },
         )
-        analytics.group(user.subdomain, {
-            "name": user.subdomain,
-            "organization": user.subdomain,
-            "plan": user.plan or client_plan,
-        })
+        analytics.group(user_id,  # The user ID that belongs to the group
+                        user.subdomain, {
+                            "name": user.subdomain,
+                            "organization": user.subdomain,
+                            "plan": user.plan or client_plan,
+                        })
         # Track app load
         analytics.track(
             user_id,  # Use user_id if available
@@ -178,7 +180,8 @@ def app(request):
 
         except Exception as e:
             print(f"Error in app view: {str(e)}")
-            initial_data["error"] = f"Error loading health check data: {str(e)}"
+            initial_data["error"] = f"Error loading health check data: {
+                str(e)}"
     else:
         initial_data["error"] = "No installation ID provided. Please reload the app."
 
@@ -213,8 +216,10 @@ def create_or_update_user(request):
             )
 
         # Required fields based on model definition
-        required_fields = ["user_id", "name", "email", "role", "locale", "subdomain"]
-        missing_fields = [field for field in required_fields if not data.get(field)]
+        required_fields = ["user_id", "name",
+                           "email", "role", "locale", "subdomain"]
+        missing_fields = [
+            field for field in required_fields if not data.get(field)]
 
         if missing_fields:
             error_msg = f"Missing required fields: {', '.join(missing_fields)}"
@@ -490,7 +495,8 @@ def download_report_csv(request, report_id):
     """Download health check report as CSV"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        user_id = request.GET.get("user_id")  # Get user_id from request parameters
+        # Get user_id from request parameters
+        user_id = request.GET.get("user_id")
 
         # Create the HttpResponse object with CSV header
         response = HttpResponse(content_type="text/csv")
@@ -605,7 +611,8 @@ def monitoring_settings(request):
         return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
     # Get the latest report to check plan status
-    latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+    latest_report = HealthCheckReport.get_latest_for_installation(
+        installation_id)
     is_free_plan = latest_report.plan == "Free" if latest_report else True
 
     if request.method == "POST":
@@ -626,7 +633,8 @@ def monitoring_settings(request):
             else:
                 is_active = request.POST.get("is_active") == "on"
                 frequency = request.POST.get("frequency", "weekly")
-                notification_emails = request.POST.getlist("notification_emails[]")
+                notification_emails = request.POST.getlist(
+                    "notification_emails[]")
 
             # Filter out empty email fields
             notification_emails = [
@@ -634,7 +642,8 @@ def monitoring_settings(request):
             ]
 
             print(
-                f"Processing settings: active={is_active}, frequency={frequency}, emails={notification_emails}"
+                f"Processing settings: active={is_active}, frequency={
+                    frequency}, emails={notification_emails}"
             )  # Debug log
 
             # Update or create monitoring settings
@@ -657,7 +666,8 @@ def monitoring_settings(request):
                 # Run the scheduled checks command
                 try:
                     call_command("run_scheduled_checks")
-                    print(f"Scheduled check triggered for {monitoring.subdomain}")
+                    print(f"Scheduled check triggered for {
+                          monitoring.subdomain}")
                 except Exception as e:
                     print(f"Error running scheduled check: {str(e)}")
 
