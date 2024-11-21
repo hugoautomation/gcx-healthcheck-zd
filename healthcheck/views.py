@@ -93,8 +93,7 @@ def app(request):
             installation_id=installation_id
         ).order_by("-created_at")[:10]
 
-        latest_report = HealthCheckReport.get_latest_for_installation(
-            installation_id)
+        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
 
         user = ZendeskUser.objects.get(user_id=user_id)
 
@@ -117,12 +116,15 @@ def app(request):
                 else False,
             },
         )
-        analytics.group(user_id,  # The user ID that belongs to the group
-                        user.subdomain, {
-                            "name": user.subdomain,
-                            "organization": user.subdomain,
-                            "plan": user.plan or client_plan,
-                        })
+        analytics.group(
+            user_id,  # The user ID that belongs to the group
+            user.subdomain,
+            {
+                "name": user.subdomain,
+                "organization": user.subdomain,
+                "plan": user.plan or client_plan,
+            },
+        )
         # Track app load
         analytics.track(
             user_id,  # Use user_id if available
@@ -216,10 +218,8 @@ def create_or_update_user(request):
             )
 
         # Required fields based on model definition
-        required_fields = ["user_id", "name",
-                           "email", "role", "locale", "subdomain"]
-        missing_fields = [
-            field for field in required_fields if not data.get(field)]
+        required_fields = ["user_id", "name", "email", "role", "locale", "subdomain"]
+        missing_fields = [field for field in required_fields if not data.get(field)]
 
         if missing_fields:
             error_msg = f"Missing required fields: {', '.join(missing_fields)}"
@@ -611,8 +611,7 @@ def monitoring_settings(request):
         return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
     # Get the latest report to check plan status
-    latest_report = HealthCheckReport.get_latest_for_installation(
-        installation_id)
+    latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
     is_free_plan = latest_report.plan == "Free" if latest_report else True
 
     if request.method == "POST":
@@ -633,8 +632,7 @@ def monitoring_settings(request):
             else:
                 is_active = request.POST.get("is_active") == "on"
                 frequency = request.POST.get("frequency", "weekly")
-                notification_emails = request.POST.getlist(
-                    "notification_emails[]")
+                notification_emails = request.POST.getlist("notification_emails[]")
 
             # Filter out empty email fields
             notification_emails = [
