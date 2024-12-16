@@ -276,6 +276,7 @@ def health_check(request):
                         "installation_id": installation_id,
                         "plan": client_plan,
                         "user_id": user_id,
+                        "data": data,
                     })
                 }
             )
