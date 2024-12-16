@@ -289,6 +289,7 @@ def health_check(request):
                 "api_token": data.get("api_token"),
                 "status": "active",
             }
+            print("api_payload", api_payload)
             api_url = (
                 "https://app.configly.io/api/health-check/"
                 if settings.ENVIRONMENT == "production"

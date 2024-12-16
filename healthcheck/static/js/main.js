@@ -214,7 +214,7 @@ function initializeRunCheck() {
 
             console.log('Request options:', { 
                 ...options, 
-                data: '[REDACTED]' 
+                data: data 
             });
 
             // Make the request
