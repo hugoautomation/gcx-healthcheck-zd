@@ -209,10 +209,7 @@ function initializeRunCheck() {
                     secure: true
                 };
 
-            console.log('Request options:', { 
-                ...options, 
-                data: JSON.stringify(requestData) 
-            });
+
 
             // Make the request
             const response = await client.request(options);
