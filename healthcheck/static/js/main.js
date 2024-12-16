@@ -182,37 +182,47 @@ function initializeRunCheck() {
                 ? 'https://gcx-healthcheck-zd-production.up.railway.app'
                 : 'https://gcx-healthcheck-zd-development.up.railway.app';
 
-                const options = {
-                    url: `${baseUrl}/health_check/`,
-                    type: 'POST',
-                    contentType: 'application/json',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-Subsequent-Request': 'true',
-                        'X-Admin-Email': '{{setting.admin_email}}',
-                        'X-API-Token': '{{setting.api_token}}'
-                    },
-                    data: JSON.stringify({
-                        url: context.account.subdomain + '.zendesk.com',
-                        email: '{{setting.admin_email}}',    // Keep in payload
-                        api_token: '{{setting.api_token}}',  // Keep in payload
-                        instance_guid: context.instanceGuid,
-                        app_guid: metadata.appId,
-                        installation_id: metadata.installationId,
-                        user_id: ZAFClientSingleton.userInfo?.id,
-                        subdomain: context.account.subdomain,
-                        plan: metadata.plan?.name,
-                        stripe_subscription_id: metadata.stripe_subscription_id,
-                        version: metadata.version
-                    }),
-                    secure: true
-                };
+            // Prepare request data
+            const requestData = {
+                url: context.account.subdomain + '.zendesk.com',
+                email: '{{setting.admin_email}}',
+                api_token: '{{setting.api_token}}',
+                instance_guid: context.instanceGuid,
+                app_guid: metadata.appId,
+                installation_id: metadata.installationId,
+                user_id: ZAFClientSingleton.userInfo?.id,
+                subdomain: context.account.subdomain,
+                plan: metadata.plan?.name,
+                stripe_subscription_id: metadata.stripe_subscription_id,
+                version: metadata.version
+            };
 
+            console.log('Making request with data:', { ...requestData, api_token: '[REDACTED]' });
 
+            const options = {
+                url: `${baseUrl}/api/health_check/`,  // Note: Changed from /check/ to /health_check/
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(requestData),
+                secure: true,
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Subsequent-Request': 'true',
+                    'X-Admin-Email': '{{setting.admin_email}}',
+                    'X-API-Token': '{{setting.api_token}}'
+                },
+                secure: true,
+
+            };
+
+            console.log('Request options:', { 
+                ...options, 
+                data: '[REDACTED]' 
+            });
 
             // Make the request
-            const response = await client.request(options);
+            const response = await client.request(options, );
             console.log('Response received:', response);
 
             // Check if we have results_html, regardless of error status
