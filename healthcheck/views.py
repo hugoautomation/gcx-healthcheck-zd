@@ -269,7 +269,14 @@ def health_check(request):
             installation_id = data.get("installation_id")
             client_plan = data.get("plan", "Free")
             user_id = data.get("user_id")  # Get user_id from request data
-
+            logger.info(
+                "Health check details",
+                extra={
+                    "installation_id": installation_id,
+                    "plan": client_plan,
+                    "user_id": user_id,
+                },
+            )
             analytics.track(
                 user_id,
                 "Health Check Started",
@@ -297,7 +304,14 @@ def health_check(request):
                 "api_token": data.get("api_token"),
                 "status": "active",
             }
-            print("Making API request", api_payload)
+            logger.info(
+                "Making API request",
+                extra={
+                    "api_url": api_url,
+                    "subdomain": data.get("subdomain"),
+                    "payload": api_payload,
+                },
+            )
             response = requests.post(
                 api_url,
                 headers={
