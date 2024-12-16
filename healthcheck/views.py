@@ -272,12 +272,12 @@ def health_check(request):
             logger.info(
                 "Health check details",
                 extra={
-                    "installation_id": installation_id,
-                    "plan": client_plan,
-                    "user_id": user_id,
-                    "data received": data,
-
-                },
+                    'extra_data': json.dumps({
+                        "installation_id": installation_id,
+                        "plan": client_plan,
+                        "user_id": user_id,
+                    })
+                }
             )
             analytics.track(
                 user_id,
@@ -309,10 +309,12 @@ def health_check(request):
             logger.info(
                 "Making API request",
                 extra={
-                    "api_url": api_url,
-                    "subdomain": data.get("subdomain"),
-                    "payload": api_payload,
-                },
+                    'extra_data': json.dumps({
+                        "api_url": api_url,
+                        "subdomain": data.get("subdomain"),
+                        "payload": api_payload,
+                    })
+                }
             )
             response = requests.post(
                 api_url,

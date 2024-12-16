@@ -13,21 +13,25 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import os
 from pathlib import Path
 
-
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "[{levelname}] {asctime} - {name} - {message} - {extra}",
+            "format": "[{levelname}] {asctime} - {name} - {message} {extra_data}",
             "style": "{",
+        },
+    },
+    "filters": {
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
-            "stream": "ext://sys.stdout",  # This ensures logs go to stdout
+            "stream": "ext://sys.stdout",
         },
     },
     "loggers": {
