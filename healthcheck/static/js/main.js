@@ -214,7 +214,7 @@ function initializeRunCheck() {
 
             console.log('Request options:', { 
                 ...options, 
-                data: data 
+                data: JSON.stringify(requestData) 
             });
 
             // Make the request
