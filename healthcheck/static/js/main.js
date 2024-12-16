@@ -200,7 +200,7 @@ function initializeRunCheck() {
             console.log('Making request with data:', { ...requestData, api_token: '[REDACTED]' });
 
             const options = {
-                url: `${baseUrl}/api/health_check/`,  // Note: Changed from /check/ to /health_check/
+                url: `${baseUrl}/health_check/`,  // Note: Changed from /check/ to /health_check/
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(requestData),
@@ -208,9 +208,8 @@ function initializeRunCheck() {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
-                    'X-Subsequent-Request': 'true',
-                },
-
+                    'X-Subsequent-Request': 'true'
+                }
             };
 
             console.log('Request options:', { 
@@ -218,7 +217,7 @@ function initializeRunCheck() {
             });
 
             // Make the request
-            const response = await client.request(options, );
+            const response = await client.request(options);
             console.log('Response received:', response);
 
             // Check if we have results_html, regardless of error status
