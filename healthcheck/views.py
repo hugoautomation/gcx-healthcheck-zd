@@ -264,21 +264,19 @@ def create_or_update_user(request):
 def health_check(request):
     if request.method == "POST":
         try:
-           logger.info("Health check request received", extra={
-                'request_method': request.method,
-                'content_type': request.content_type,
-            })
             # Extract data from request
             data = json.loads(request.body) if request.body else {}
             installation_id = data.get("installation_id")
             client_plan = data.get("plan", "Free")
             user_id = data.get("user_id")  # Get user_id from request data
-            logger.info("Health check details", extra={
-                'installation_id': installation_id,
-                'plan': client_plan,
-                'user_id': user_id
-            })
-
+            logger.info(
+                "Health check details",
+                extra={
+                    "installation_id": installation_id,
+                    "plan": client_plan,
+                    "user_id": user_id,
+                },
+            )
             analytics.track(
                 user_id,
                 "Health Check Started",
@@ -306,10 +304,14 @@ def health_check(request):
                 "api_token": data.get("api_token"),
                 "status": "active",
             }
-            logger.info("Making API request", extra={
-                'api_url': api_url,
-                'subdomain': data.get('subdomain'),
-            })
+            logger.info(
+                "Making API request",
+                extra={
+                    "api_url": api_url,
+                    "subdomain": data.get("subdomain"),
+                    "payload": api_payload,
+                },
+            )
             response = requests.post(
                 api_url,
                 headers={
@@ -516,7 +518,6 @@ def download_report_csv(request, report_id):
         response["Content-Disposition"] = (
             f'attachment; filename="healthcheck_report_{report_id}.csv"'
         )
-
 
         # Create CSV writer
         writer = csv.writer(response)

@@ -15,30 +15,30 @@ from pathlib import Path
 
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '[{levelname}] {asctime} - {name} - {message}',
-            'style': '{',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{levelname}] {asctime} - {name} - {message}",
+            "style": "{",
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-            'stream': 'ext://sys.stdout',  # This ensures logs go to stdout
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+            "stream": "ext://sys.stdout",  # This ensures logs go to stdout
         },
     },
-    'loggers': {
-        '': {  # Root logger
-            'handlers': ['console'],
-            'level': 'INFO',
+    "loggers": {
+        "": {  # Root logger
+            "handlers": ["console"],
+            "level": "INFO",
         },
-        'healthcheck': {  # Your app specific logger
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
+        "healthcheck": {  # Your app specific logger
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
 }
