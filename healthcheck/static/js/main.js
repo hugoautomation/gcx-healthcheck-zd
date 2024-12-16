@@ -209,16 +209,12 @@ function initializeRunCheck() {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
                     'X-Subsequent-Request': 'true',
-                    'X-Admin-Email': '{{setting.admin_email}}',
-                    'X-API-Token': '{{setting.api_token}}'
                 },
-                secure: true,
 
             };
 
             console.log('Request options:', { 
-                ...options, 
-                data: '[REDACTED]' 
+                ...options
             });
 
             // Make the request
