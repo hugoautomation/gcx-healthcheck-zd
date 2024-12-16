@@ -19,6 +19,9 @@ from functools import wraps
 import segment.analytics as analytics  # Add this import
 from django.core.management import call_command
 from django.utils import timezone
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Add this new decorator to validate JWT tokens
@@ -261,11 +264,16 @@ def create_or_update_user(request):
 def health_check(request):
     if request.method == "POST":
         try:
+            logger.info("Received health check request")
+
             # Extract data from request
             data = json.loads(request.body) if request.body else {}
             installation_id = data.get("installation_id")
             client_plan = data.get("plan", "Free")
             user_id = data.get("user_id")  # Get user_id from request data
+            logger.info(
+                f"Processing health check for installation_id: {installation_id}, plan: {client_plan}"
+            )
 
             analytics.track(
                 user_id,
@@ -282,6 +290,11 @@ def health_check(request):
             if not url or not url.startswith("https://"):
                 url = f"https://{url}"
 
+            api_url = (
+                "https://app.configly.io/api/health-check/"
+                if settings.ENVIRONMENT == "production"
+                else "https://django-server-development-1b87.up.railway.app/api/health-check/"
+            )
             # Make API request
             api_payload = {
                 "url": url,
@@ -289,12 +302,8 @@ def health_check(request):
                 "api_token": data.get("api_token"),
                 "status": "active",
             }
-            print("api_payload", api_payload)
-            api_url = (
-                "https://app.configly.io/api/health-check/"
-                if settings.ENVIRONMENT == "production"
-                else "https://django-server-development-1b87.up.railway.app/api/health-check/"
-            )
+            logger.info(f"Making API request to: {api_url}")
+            logger.debug(f"API request payload: {api_payload}")
 
             response = requests.post(
                 api_url,
@@ -496,19 +505,13 @@ def download_report_csv(request, report_id):
     """Download health check report as CSV"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        # Get user_id from request parameters
-        user_id = request.GET.get("user_id")
 
         # Create the HttpResponse object with CSV header
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = (
             f'attachment; filename="healthcheck_report_{report_id}.csv"'
         )
-        # analytics.track(
-        #     user_id,
-        #     "Report CSV Downloaded",
-        #     {"report_id": report_id},
-        # )
+
 
         # Create CSV writer
         writer = csv.writer(response)
