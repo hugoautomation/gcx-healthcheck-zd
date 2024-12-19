@@ -5,7 +5,7 @@ python-dotenv==1.0.0
 psycopg2-binary
 python-dateutil
 segment-analytics-python
-djstripe
+dj-stripe
 
 # Testing dependencies
 pytest==7.4.3
