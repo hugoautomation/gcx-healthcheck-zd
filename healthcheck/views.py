@@ -325,6 +325,14 @@ def health_check(request):
                 },
                 json=api_payload,
             )
+            
+            if response.status_code == 401:
+                error_message = "Authentication failed. Please verify your Admin Email and API Token are correct."
+                results_html = render_report_components(
+                    {"data": None, "error": error_message}
+                )
+                return JsonResponse({"error": True, "results_html": results_html})
+            
 
             if response.status_code != 200:
                 results_html = render_report_components(
