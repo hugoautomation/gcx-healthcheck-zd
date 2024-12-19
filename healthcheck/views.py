@@ -298,7 +298,7 @@ def health_check(request):
             api_url = (
                 "https://app.configly.io/api/health-check/"
                 if settings.ENVIRONMENT == "production"
-                else "http://127.0.0.1:8000/api/health-check/"
+                else "https://django-server-development-1b87.up.railway.app/api/health-check/"
             )
             # Make API request
             api_payload = {
