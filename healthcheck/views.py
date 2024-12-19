@@ -795,11 +795,15 @@ def update_installation_plan(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+    
 
+    
 @csrf_exempt
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
     user_id = request.GET.get("user_id")
+    app_guid = request.GET.get("app_guid")
+    origin = request.GET.get("origin")
 
     if not installation_id:
         return JsonResponse({"error": "Installation ID required"}, status=400)
@@ -819,24 +823,18 @@ def billing_page(request):
         'yearly': 'price_1QXYqCBq13Pgax7DTxg73NeW'
     }
 
-    # Create setup intent for future payments
-    stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
-    setup_intent = stripe.SetupIntent.create(
-        payment_method_types=['card'],
-        metadata={
-            'installation_id': installation_id,
-            'user_id': user_id
-        }
-    )
-
     context = {
         'subscription': subscription_status,
-        'installation_id': installation_id,
-        'user_id': user_id,
+        'url_params': {
+            'installation_id': installation_id,
+            'plan': request.GET.get('plan', 'Free'),
+            'app_guid': app_guid,
+            'origin': origin,
+            'user_id': user_id,
+        },
         'user': user,
         'environment': settings.ENVIRONMENT,
         'stripe_publishable_key': settings.STRIPE_PUBLIC_KEY,
-        'client_secret': setup_intent.client_secret,
         'price_ids': PRICE_IDS
     }
     return render(request, 'healthcheck/billing.html', context)

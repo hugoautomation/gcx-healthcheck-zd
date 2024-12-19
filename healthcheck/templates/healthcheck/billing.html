@@ -33,95 +33,118 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
             <!-- Add manage subscription button that redirects to customer portal -->
         </div>
     {% else %}
-    <div class="row">
-        <div class="col-md-6 offset-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <form id="payment-form">
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="plan" value="monthly" id="monthly" checked>
-                                <label class="form-check-label" for="monthly">
-                                    Monthly Plan - $119/month
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="plan" value="yearly" id="yearly">
-                                <label class="form-check-label" for="yearly">
-                                    Yearly Plan - $99/month (Save 17%)
-                                </label>
-                            </div>
-                        </div>
-                        <div id="payment-element" style="display: none;" class="mb-3">
-                            <!-- Stripe Elements will be inserted here -->
-                        </div>
-                        <button id="submit-button" class="btn c-btn c-btn--primary" style="display: none;">
-                            Subscribe
-                        </button>
-                        <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
-                    </form>
-                </div>
+    <div class="row row-cols-1 row-cols-md-3 mb-3 text-center">
+        <div class="col">
+          <div class="card mb-4 rounded-3 shadow-sm">
+            <div class="card-header py-3">
+              <h4 class="my-0 fw-normal">Free</h4>
             </div>
+            <div class="card-body">
+              <h1 class="card-title pricing-card-title">$0<small class="text-body-secondary fw-light">/mo</small></h1>
+              <ul class="list-unstyled mt-3 mb-4">
+                <li>Limited system configuration audit</li>
+                <li>Best practice compliance check                </li>
+                <li>Unlimited use                </li>
+                <li>$249 one-off full report unlock option                </li>
+              </ul>
+              <button type="button" class="w-100 btn btn-lg btn-outline-primary" disabled>Current plan</button>
+            </div>
+          </div>
         </div>
+        <div class="col">
+            <div class="card mb-4 rounded-3 shadow-sm">
+              <div class="card-header py-3">
+                <h4 class="my-0 fw-normal">Monthly</h4>
+              </div>
+              <div class="card-body">
+                <h1 class="card-title pricing-card-title">$119<small class="text-body-secondary fw-light">/mo</small></h1>
+                <ul class="list-unstyled mt-3 mb-4">
+                  <li>Complete system configuration audit</li>
+                  <li>24/7 automated health monitoring</li>
+                  <li>Real-time alert notifications</li>
+                  <li>Export Report as CSV</li>
+                  <li>Priority email & Chat support</li>
+                </ul>
+                <button type="button" 
+                class="w-100 btn c-btn c-btn--sm c-btn--primary subscribe-button" 
+                data-price-id="price_1QXYqCBq13Pgax7DTxg73NeW">
+            Subscribe
+        </button>                </div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="card mb-4 rounded-3 shadow-sm border-primary">
+              <div class="card-header py-3 text-bg-primary border-primary">
+                <h4 class="my-0 fw-normal">Yearly</h4>
+              </div>
+              <div class="card-body">
+                <h1 class="card-title pricing-card-title">$99<small class="text-body-secondary fw-light">/mo </small></h1>
+                <ul class="list-unstyled mt-3 mb-4">
+                  <li>Complete system configuration audit</li>
+                  <li>24/7 automated health monitoring</li>
+                  <li>Real-time alert notifications</li>
+                  <li>Export Report as CSV</li>
+                  <li>Priority email & Chat support</li>
+                </ul>
+                <button type="button" 
+                class="w-100 btn c-btn c-btn--sm c-btn--primary subscribe-button" 
+                data-price-id="price_1QXYqCBq13Pgax7DTxg73NeW">
+            Subscribe
+        </button>            
     </div>
+            </div>
+          </div>
+      </div>
 
     {% endif %}
 
     <script src="{% static 'js/zaf-client.js' %}"></script>
-    <script src="{% static 'js/main.js' %}"></script>
     <script>
-        // Wait for ZAFClientSingleton to initialize
         document.addEventListener('DOMContentLoaded', async () => {
             await ZAFClientSingleton.init();
             
-            document.getElementById('payment-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const submitButton = document.getElementById('submit-button');
-                const errorMessage = document.getElementById('error-message');
-                
-                try {
-                    submitButton.disabled = true;
-                    const planType = document.querySelector('input[name="plan"]:checked').value;
-                    
-                    // Create the subscription through your backend
-                    const baseUrl = window.ENVIRONMENT === 'production' 
-                        ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                        : 'https://gcx-healthcheck-zd-development.up.railway.app';
-    
-                    const response = await ZAFClientSingleton.client.request({
-                        url: `${baseUrl}/create-checkout-session/`,
-                        type: 'POST',
-                        data: {
-                            installation_id: '{{ installation_id }}',
-                            user_id: '{{ user_id }}',
-                            plan_type: planType
+            // Add click handlers to subscribe buttons
+            document.querySelectorAll('.subscribe-button').forEach(button => {
+                button.addEventListener('click', async () => {
+                    try {
+                        const planType = button.closest('.card').querySelector('.card-header h4').textContent.toLowerCase();
+                        
+                        const response = await ZAFClientSingleton.client.request({
+                            url: `${window.location.origin}/create-checkout-session/`,
+                            type: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Subsequent-Request': 'true'
+                            },
+                            data: {
+                                installation_id: '{{ url_params.installation_id }}',
+                                user_id: '{{ url_params.user_id }}',
+                                plan_type: planType
+                            }
+                        });
+
+                        if (response.error) {
+                            throw new Error(response.error);
                         }
-                    });
-    
-                    if (response.error) {
-                        throw new Error(response.error);
+
+                        // Open Stripe Checkout in a new window
+                        const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
+                        const paymentWindow = window.open(response.url, 'StripePayment', windowFeatures);
+
+                        // Check if window is closed
+                        const checkWindow = setInterval(() => {
+                            if (paymentWindow.closed) {
+                                clearInterval(checkWindow);
+                                // Reload the page to check for new subscription status
+                                window.location.reload();
+                            }
+                        }, 1000);
+
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error creating checkout session: ' + error.message);
                     }
-    
-                    // Open Stripe Checkout in a new window
-                    const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
-                    const paymentWindow = window.open(response.url, 'StripePayment', windowFeatures);
-    
-                    // Check if window is closed
-                    const checkWindow = setInterval(() => {
-                        if (paymentWindow.closed) {
-                            clearInterval(checkWindow);
-                            submitButton.disabled = false;
-                            // Reload the page to check for new subscription status
-                            window.location.reload();
-                        }
-                    }, 1000);
-    
-                } catch (error) {
-                    console.error('Error:', error);
-                    errorMessage.textContent = error.message;
-                    errorMessage.style.display = 'block';
-                    submitButton.disabled = false;
-                }
+                });
             });
         });
     </script>
