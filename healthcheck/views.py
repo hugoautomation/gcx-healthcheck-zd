@@ -803,14 +803,18 @@ def billing_page(request):
         return JsonResponse({"error": "Installation ID required"}, status=400)
 
     # Get current subscription status
-    subscription_status = HealthCheckSubscription.get_subscription_status(installation_id)
+    subscription_status = HealthCheckSubscription.get_subscription_status(
+        installation_id
+    )
 
     context = {
-        'subscription': subscription_status,
-        'installation_id': installation_id,
-        'user_id': user_id,
-        'environment': settings.ENVIRONMENT,
-        'stripe_publishable_key': settings.STRIPE_TEST_PUBLIC_KEY if settings.ENVIRONMENT == 'development' else settings.STRIPE_LIVE_PUBLIC_KEY,
+        "subscription": subscription_status,
+        "installation_id": installation_id,
+        "user_id": user_id,
+        "environment": settings.ENVIRONMENT,
+        "stripe_publishable_key": settings.STRIPE_TEST_PUBLIC_KEY
+        if settings.ENVIRONMENT == "development"
+        else settings.STRIPE_LIVE_PUBLIC_KEY,
     }
 
     return render(request, "healthcheck/billing.html", context)

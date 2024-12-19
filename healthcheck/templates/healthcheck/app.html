@@ -14,10 +14,14 @@
             <div class="row align-items-center my-3 justify-content-between">
                 <div class="col-auto">
                     {% if url_params.plan == "Free" %}
-                    <h2 class="rounded bg-body-secondary font-semibold d-inline-block me-2 p-1">{{ url_params.plan }} Plan</h2>
-                    <a class="c-btn c-btn--pill c-btn--sm d-inline-block" target="_blank" href="https://help.gravity.cx/hc/en-au/articles/39628933601689-How-to-Upgrade-your-plan">Upgrade</a>
+                    <h2 class="rounded bg-body-secondary font-semibold d-inline-block me-2 p-1">Free Plan</h2>
+                    <a class="c-btn c-btn--pill c-btn--sm d-inline-block" target="_blank" href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">Upgrade</a>
                     {% else %}
-                    <h2 class="rounded bg-primary-subtle text-primary font-semibold p-1">{{ url_params.plan }} Plan</h2>
+                    <h2 class="rounded bg-primary-subtle text-primary font-semibold p-1">Premium Plan</h2>
+                    <a class="c-btn c-btn--pill c-btn--sm d-inline-block" 
+       href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">
+        Manage Subscription
+    </a>
                     {% endif %}
                 </div>
                 <div class="col-auto">

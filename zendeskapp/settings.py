@@ -77,12 +77,12 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET", "")
 # SECURITY WARNING: don't run with debug turned on in production! Will update to false in Product when published
 DEBUG = DJANGO_ENV == "development"
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"
-DJSTRIPE_WEBHOOK_VALIDATION="retrieve_event"
+DJSTRIPE_WEBHOOK_VALIDATION = "retrieve_event"
 DJSTRIPE_USE_NATIVE_JSONFIELD = True
 STRIPE_LIVE_SECRET_KEY = os.environ.get("STRIPE_LIVE_SECRET_KEY", "")
 DJSTRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 STRIPE_TEST_SECRET_KEY = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
-STRIPE_LIVE_MODE = DJANGO_ENV == "development" 
+STRIPE_LIVE_MODE = DJANGO_ENV == "development"
 ALLOWED_HOSTS = ["*"]
 
 CORS_ALLOW_ALL_ORIGINS = True
