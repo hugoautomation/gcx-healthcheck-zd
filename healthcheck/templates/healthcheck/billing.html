@@ -68,43 +68,48 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
         const client = ZAFClient.init();
         const stripe = Stripe('{{ stripe_publishable_key }}');
     
-        document.querySelectorAll('.subscribe-button').forEach(button => {
-            button.addEventListener('click', async (e) => {
+        document.getElementById('payment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitButton = document.getElementById('submit-button');
+            const errorMessage = document.getElementById('error-message');
+            
+            try {
+                submitButton.disabled = true;
                 const planType = document.querySelector('input[name="plan"]:checked').value;
                 
-                try {
-                    const response = await fetch('/create-checkout-session/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            installation_id: '{{ installation_id }}',
-                            user_id: '{{ user_id }}',
-                            plan_type: planType
-                        })
-                    });
+                const response = await fetch('/create-checkout-session/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        installation_id: '{{ installation_id }}',  // From context
+                        user_id: '{{ user_id }}',                 // From context
+                        plan_type: planType
+                    })
+                });
     
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-    
-                    // Redirect to Stripe Checkout
-                    const { error } = await stripe.redirectToCheckout({
-                        sessionId: data.sessionId
-                    });
-    
-                    if (error) {
-                        throw error;
-                    }
-    
-                } catch (error) {
-                    console.error('Error:', error);
-                    client.invoke('notify', 'Failed to start checkout process. Please try again.', 'error');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
                 }
-            });
+    
+                // Redirect to Stripe Checkout
+                const { error } = await stripe.redirectToCheckout({
+                    sessionId: data.sessionId
+                });
+    
+                if (error) {
+                    throw error;
+                }
+    
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+                submitButton.disabled = false;
+            }
         });
     </script>
     {% endif %}
