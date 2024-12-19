@@ -847,8 +847,9 @@ def create_checkout_session(request):
         installation_id = data.get("installation_id")
         user_id = data.get("user_id")
         plan_type = data.get("plan_type")
+        price_id = data.get("price_id")
 
-        if not all([installation_id, user_id, plan_type]):
+        if not all([installation_id, user_id, plan_type, price_id]):
             return JsonResponse({"error": "Missing required parameters"}, status=400)
 
         # Get user information
@@ -856,16 +857,6 @@ def create_checkout_session(request):
             user = ZendeskUser.objects.get(user_id=user_id)
         except ZendeskUser.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
-
-        # Define price IDs
-        PRICE_IDS = {
-            'monthly': 'price_1QXYqCBq13Pgax7DTxg73NeW',
-            'yearly': 'price_1QXYqCBq13Pgax7DTxg73NeW'
-        }
-
-        price_id = PRICE_IDS.get(plan_type)
-        if not price_id:
-            return JsonResponse({"error": "Invalid plan type"}, status=400)
 
         # Create Stripe checkout session
         stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
@@ -888,8 +879,10 @@ def create_checkout_session(request):
         )
 
         return JsonResponse({
-            'url': checkout_session.url  # Return the URL instead of session ID
+            'url': checkout_session.url
         })
 
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON data"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
