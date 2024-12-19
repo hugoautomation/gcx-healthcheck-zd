@@ -298,7 +298,7 @@ def health_check(request):
             api_url = (
                 "https://app.configly.io/api/health-check/"
                 if settings.ENVIRONMENT == "production"
-                else "https://django-server-development-1b87.up.railway.app/api/health-check"
+                else "http://127.0.0.1:8000/api/health-check/"
             )
             # Make API request
             api_payload = {
@@ -320,8 +320,8 @@ def health_check(request):
             response = requests.post(
                 api_url,
                 headers={
+                     "X-API-Token": settings.HEALTHCHECK_TOKEN,
                     "Content-Type": "application/json",
-                    "X-API-Token": settings.HEALTHCHECK_TOKEN,
                 },
                 json=api_payload,
             )
