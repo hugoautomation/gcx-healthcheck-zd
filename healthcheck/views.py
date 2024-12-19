@@ -28,38 +28,44 @@ stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
 logger = logging.getLogger(__name__)
 
+
+# Add this new decorator to validate JWT tokens
 def validate_jwt_token(f):
     @wraps(f)
     def decorated_function(request, *args, **kwargs):
-        # Check for token in headers first, then in request body
-        token = request.headers.get('X-JWT-Token')
-        
-        if not token and request.method == "POST":
+        # Only validate JWT for initial page loads (POST requests)
+        if request.method == "POST" and not request.headers.get("X-Subsequent-Request"):
             try:
+                # Get token based on content type
                 if request.content_type == "application/json":
-                    data = json.loads(request.body)
-                    token = data.get("token")
+                    try:
+                        data = json.loads(request.body)
+                        token = data.get("token")
+                    except json.JSONDecodeError:
+                        token = None
                 else:
+                    # Handle form data
                     token = request.POST.get("token")
-            except json.JSONDecodeError:
-                token = None
 
-        if not token:
-            return JsonResponse({"error": "No token provided"}, status=403)
+                if not token:
+                    return JsonResponse({"error": "No token provided"}, status=403)
 
-        try:
-            # Validate token
-            decoded_token = jwt.decode(
-                token, options={"verify_signature": False}
-            )
-            request.zendesk_jwt = decoded_token
-            request.subdomain = decoded_token.get("iss", "").replace(
-                ".zendesk.com", ""
-            )
-        except Exception as e:
-            return JsonResponse(
-                {"error": f"Invalid token format: {str(e)}"}, status=403
-            )
+                # Validate token
+                try:
+                    decoded_token = jwt.decode(
+                        token, options={"verify_signature": False}
+                    )
+                    request.zendesk_jwt = decoded_token
+                    request.subdomain = decoded_token.get("iss", "").replace(
+                        ".zendesk.com", ""
+                    )
+                except Exception as e:
+                    return JsonResponse(
+                        {"error": f"Invalid token format: {str(e)}"}, status=403
+                    )
+
+            except Exception as e:
+                return JsonResponse({"error": str(e)}, status=403)
 
         return f(request, *args, **kwargs)
 
@@ -820,6 +826,7 @@ def billing_page(request):
     }
     return render(request, "healthcheck/billing.html", context)
 
+
 @csrf_exempt
 @validate_jwt_token
 def create_checkout_session(request):
@@ -838,23 +845,16 @@ def create_checkout_session(request):
         except ZendeskUser.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
 
-        # Get URL parameters from request
-        url_params = request.GET.dict()
-        url_params.update({
-            'installation_id': installation_id,
-            'user_id': user_id
-        })
-        params_string = '&'.join([f"{k}={v}" for k, v in url_params.items()])
-
         # Create Stripe checkout session
+        stripe.api_key = settings.STRIPE_SECRET_KEY
         checkout_session = stripe.checkout.Session.create(
             client_reference_id=installation_id,
             customer_email=user.email,
             success_url=request.build_absolute_uri(
-                f"/billing/?{params_string}&success=true"
+                f"/billing/?installation_id={installation_id}&success=true"
             ),
             cancel_url=request.build_absolute_uri(
-                f"/billing/?{params_string}&canceled=true"
+                f"/billing/?installation_id={installation_id}&canceled=true"
             ),
             mode="subscription",
             line_items=[{"price": price_id, "quantity": 1}],
