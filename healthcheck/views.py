@@ -797,7 +797,7 @@ def update_installation_plan(request):
         return JsonResponse({"error": str(e)}, status=500)
     
 
-    
+
 @csrf_exempt
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
@@ -838,6 +838,7 @@ def billing_page(request):
         'price_ids': PRICE_IDS
     }
     return render(request, 'healthcheck/billing.html', context)
+
 
 @csrf_exempt
 def create_checkout_session(request):

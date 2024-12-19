@@ -109,28 +109,35 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                     try {
                         const planType = button.closest('.card').querySelector('.card-header h4').textContent.toLowerCase();
                         
+                        // Get base URL based on environment
+                        const baseUrl = window.ENVIRONMENT === 'production' 
+                            ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+                            : 'https://gcx-healthcheck-zd-development.up.railway.app';
+    
                         const response = await ZAFClientSingleton.client.request({
-                            url: `${window.location.origin}/create-checkout-session/`,
+                            url: `${baseUrl}/create-checkout-session/`,
                             type: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Subsequent-Request': 'true'
-                            },
-                            data: {
+                            contentType: 'application/json',  // Add this
+                            data: JSON.stringify({  // Stringify the data
                                 installation_id: '{{ url_params.installation_id }}',
                                 user_id: '{{ url_params.user_id }}',
-                                plan_type: planType
+                                plan_type: planType,
+                                price_id: button.dataset.priceId  // Add price_id from button attribute
+                            }),
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
                             }
                         });
-
+    
                         if (response.error) {
                             throw new Error(response.error);
                         }
-
+    
                         // Open Stripe Checkout in a new window
                         const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
                         const paymentWindow = window.open(response.url, 'StripePayment', windowFeatures);
-
+    
                         // Check if window is closed
                         const checkWindow = setInterval(() => {
                             if (paymentWindow.closed) {
@@ -139,7 +146,7 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                                 window.location.reload();
                             }
                         }, 1000);
-
+    
                     } catch (error) {
                         console.error('Error:', error);
                         alert('Error creating checkout session: ' + error.message);
