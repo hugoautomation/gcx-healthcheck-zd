@@ -1,0 +1,22 @@
+<div class="container">
+    {% if subscription.active %}
+        <!-- Show current subscription info -->
+        <div class="subscription-info">
+            <h2>Current Subscription</h2>
+            <p>Plan: {{ subscription.plan }}</p>
+            <p>Status: {{ subscription.status }}</p>
+            <p>Renews: {{ subscription.current_period_end|date }}</p>
+            <a href="https://billing.stripe.com/p/login/test_4gwaHHgWTeitgsUfYY" class="btn c-btn c-btn--secondary c-btn--sm">Manage Subscription</a>
+            <!-- Add manage subscription button that redirects to customer portal -->
+        </div>
+    {% else %}
+        <!-- Show Stripe Pricing Table -->
+        <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
+<stripe-pricing-table pricing-table-id="prctbl_1QXYt9Bq13Pgax7D7KfmzgGn"
+publishable-key="{{ stripe_publishable_key }}"
+client-reference-id="{{ installation_id }}"
+customer-email="{{ user.email }}">
+</stripe-pricing-table>
+        
+    {% endif %}
+</div>

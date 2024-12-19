@@ -20,6 +20,7 @@ import segment.analytics as analytics  # Add this import
 from django.core.management import call_command
 from django.utils import timezone
 import logging
+from .models import HealthCheckSubscription
 
 logger = logging.getLogger(__name__)
 
@@ -272,13 +273,15 @@ def health_check(request):
             logger.info(
                 "Health check details",
                 extra={
-                    'extra_data': json.dumps({
-                        "installation_id": installation_id,
-                        "plan": client_plan,
-                        "user_id": user_id,
-                        "data": data,
-                    })
-                }
+                    "extra_data": json.dumps(
+                        {
+                            "installation_id": installation_id,
+                            "plan": client_plan,
+                            "user_id": user_id,
+                            "data": data,
+                        }
+                    )
+                },
             )
             analytics.track(
                 user_id,
@@ -310,29 +313,30 @@ def health_check(request):
             logger.info(
                 "Making API request",
                 extra={
-                    'extra_data': json.dumps({
-                        "api_url": api_url,
-                        "subdomain": data.get("subdomain"),
-                        "payload": api_payload,
-                    })
-                }
+                    "extra_data": json.dumps(
+                        {
+                            "api_url": api_url,
+                            "subdomain": data.get("subdomain"),
+                            "payload": api_payload,
+                        }
+                    )
+                },
             )
             response = requests.post(
                 api_url,
                 headers={
-                     "X-API-Token": settings.HEALTHCHECK_TOKEN,
+                    "X-API-Token": settings.HEALTHCHECK_TOKEN,
                     "Content-Type": "application/json",
                 },
                 json=api_payload,
             )
-            
+
             if response.status_code == 401:
                 error_message = "Authentication failed. Please verify your Admin Email and API Token are correct."
                 results_html = render_report_components(
                     {"data": None, "error": error_message}
                 )
                 return JsonResponse({"error": True, "results_html": results_html})
-            
 
             if response.status_code != 200:
                 results_html = render_report_components(
@@ -787,3 +791,26 @@ def update_installation_plan(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+@validate_jwt_token
+def billing_page(request):
+    installation_id = request.GET.get("installation_id")
+    user_id = request.GET.get("user_id")
+
+    if not installation_id:
+        return JsonResponse({"error": "Installation ID required"}, status=400)
+
+    # Get current subscription status
+    subscription_status = HealthCheckSubscription.get_subscription_status(installation_id)
+
+    context = {
+        'subscription': subscription_status,
+        'installation_id': installation_id,
+        'user_id': user_id,
+        'environment': settings.ENVIRONMENT,
+        'stripe_publishable_key': settings.STRIPE_TEST_PUBLIC_KEY if settings.ENVIRONMENT == 'development' else settings.STRIPE_LIVE_PUBLIC_KEY,
+    }
+
+    return render(request, "healthcheck/billing.html", context)
