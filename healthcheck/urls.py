@@ -29,9 +29,5 @@ urlpatterns = [
         name="create_or_update_user",
     ),
     path("billing/", views.billing_page, name="billing"),  # Add this line
-    path(
-        "create-checkout-session/",
-        views.create_checkout_session,
-        name="create_checkout_session",
-    ),
+
 ]

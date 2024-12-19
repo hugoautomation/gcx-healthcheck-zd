@@ -797,7 +797,6 @@ def update_installation_plan(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
-@validate_jwt_token
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
     user_id = request.GET.get("user_id")
@@ -841,59 +840,3 @@ def billing_page(request):
         'price_ids': PRICE_IDS
     }
     return render(request, 'healthcheck/billing.html', context)
-
-@csrf_exempt
-@validate_jwt_token
-def create_checkout_session(request):
-    try:
-        data = json.loads(request.body)
-        installation_id = data.get("installation_id")
-        user_id = data.get("user_id")
-        plan_type = data.get("plan_type")  # 'monthly' or 'yearly'
-
-        if not all([installation_id, user_id, plan_type]):
-            return JsonResponse({"error": "Missing required parameters"}, status=400)
-
-        # Get user information
-        try:
-            user = ZendeskUser.objects.get(user_id=user_id)
-        except ZendeskUser.DoesNotExist:
-            return JsonResponse({"error": "User not found"}, status=404)
-
-        # Define price IDs
-        PRICE_IDS = {
-            'monthly': 'price_1QXYqCBq13Pgax7DTxg73NeW',  # Your monthly price ID
-            'yearly': 'price_1QXYqCBq13Pgax7DTxg73NeW'    # Your yearly price ID
-        }
-
-        price_id = PRICE_IDS.get(plan_type)
-        if not price_id:
-            return JsonResponse({"error": "Invalid plan type"}, status=400)
-
-        # Create Stripe checkout session
-        stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            client_reference_id=installation_id,
-            customer_email=user.email,
-            mode='subscription',
-            line_items=[{
-                'price': price_id,
-                'quantity': 1,
-            }],
-            metadata={
-                'installation_id': installation_id,
-                'user_id': user_id,
-                'plan_type': plan_type
-            },
-            success_url=request.build_absolute_uri(f"/billing/?installation_id={installation_id}&success=true"),
-            cancel_url=request.build_absolute_uri(f"/billing/?installation_id={installation_id}&canceled=true"),
-        )
-
-        return JsonResponse({
-            'sessionId': checkout_session.id,
-            'publishableKey': settings.STRIPE_PUBLIC_KEY
-        })
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
