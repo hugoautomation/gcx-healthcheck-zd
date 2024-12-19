@@ -62,7 +62,7 @@ EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = "Hugo Richard <hugo@gravity.cx>"
-STRIPE_API_VERSION = "2024-09-30.acacia"
+STRIPE_API_VERSION = "2024-09-30"
 
 SERVER_EMAIL = "Hugo Richard <hugo@gravity.cx>"  # Used for error emails
 ENVIRONMENT = os.environ.get("RAILWAY_ENVIRONMENT_NAME", "development")
