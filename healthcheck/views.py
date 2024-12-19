@@ -797,7 +797,6 @@ def update_installation_plan(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
-@validate_jwt_token
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
     print(f"Installation ID: {installation_id}")
@@ -834,7 +833,6 @@ def billing_page(request):
     return render(request, 'healthcheck/billing.html', context)
 
 @csrf_exempt
-@validate_jwt_token
 def create_checkout_session(request):
     try:
         data = json.loads(request.body)
