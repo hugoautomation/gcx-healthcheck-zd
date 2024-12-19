@@ -800,7 +800,9 @@ def update_installation_plan(request):
 @validate_jwt_token
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
+    print(f"Installation ID: {installation_id}")
     user_id = request.GET.get("user_id")
+    print(f"User ID: {user_id}")
 
     if not installation_id:
         return JsonResponse({"error": "Installation ID required"}, status=400)
