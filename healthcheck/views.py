@@ -803,15 +803,19 @@ def billing_page(request):
         return JsonResponse({"error": "Installation ID required"}, status=400)
 
     # Get current subscription status
-    subscription_status = HealthCheckSubscription.get_subscription_status(
-        installation_id
-    )
+    subscription_status = HealthCheckSubscription.get_subscription_status(installation_id)
+    
+    # Get user information
+    try:
+        user = ZendeskUser.objects.get(user_id=user_id)
+    except ZendeskUser.DoesNotExist:
+        user = None
 
     context = {
-        "subscription": subscription_status,
-        "installation_id": installation_id,
-        "user_id": user_id,
-        "environment": settings.ENVIRONMENT,
+        'subscription': subscription_status,
+        'installation_id': installation_id,
+        'user_id': user_id,
+        'user': user,
+        'environment': settings.ENVIRONMENT,
     }
-
-    return render(request, "healthcheck/billing.html", context)
+    return render(request, 'healthcheck/billing.html', context)
