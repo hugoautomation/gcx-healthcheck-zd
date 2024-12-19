@@ -1,8 +1,10 @@
+{% load static %}
+
 <div class="container">
     <div class="sticky-header">
         <div class="row align-items-center my-3">
             <div class="col">
-                <h2 class="text-2xl font-semibold">Billing</h2>
+                <h2 class="text-2xl font-semibold">Monitoring Settings</h2>
             </div>
             <div class="col-auto">
                 <a href="{% url 'app' %}?installation_id={{ url_params.installation_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}&user_id={{ url_params.user_id }}" 
