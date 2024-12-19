@@ -871,13 +871,13 @@ def create_checkout_session(request):
                 'price': price_id,
                 'quantity': 1,
             }],
-            subscription_data={
+            subscription_data=[{
                 'metadata': {
                     'installation_id': installation_id,
                     'user_id': user_id,
                     'plan_type': plan_type
                 }
-            },
+            }],
             metadata={
                 'installation_id': installation_id,
                 'user_id': user_id,
