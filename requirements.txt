@@ -6,6 +6,7 @@ psycopg2-binary
 python-dateutil
 segment-analytics-python
 dj-stripe
+stripe
 
 # Testing dependencies
 pytest==7.4.3
