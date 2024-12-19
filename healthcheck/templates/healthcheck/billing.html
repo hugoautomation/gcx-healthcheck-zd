@@ -44,15 +44,45 @@ allow-top-navigation-by-user-activation="true">
         
     {% endif %}
 </div>
+
 <script>
-    // Initialize the Zendesk App Framework client
     const client = ZAFClient.init();
     
-    // Listen for successful subscription creation
-    window.addEventListener('message', function(event) {
+    // Handle pricing table checkout
+    window.addEventListener('message', async function(event) {
+        if (event.data.type === 'checkout:clicked') {
+            event.preventDefault(); // Prevent default navigation
+    
+            try {
+                // Get the checkout URL from the event data
+                const checkoutUrl = event.data.checkoutUrl;
+    
+                // Use Zendesk client to open URL in new tab
+                await client.invoke('routeTo', {
+                    url: checkoutUrl,
+                    newTab: true
+                });
+            } catch (error) {
+                console.error('Error handling checkout:', error);
+            }
+        }
+        
         if (event.data.type === 'checkout.session.completed') {
-            // Refresh the page or update the UI
+            // Refresh the page after successful checkout
             window.location.reload();
+        }
+    });
+    
+    // Initialize pricing table with custom behavior
+    document.addEventListener('DOMContentLoaded', function() {
+        const pricingTable = document.querySelector('stripe-pricing-table');
+        if (pricingTable) {
+            pricingTable.addEventListener('click', function(event) {
+                // Prevent default navigation behavior
+                if (event.target.closest('a[href*="checkout.stripe.com"]')) {
+                    event.preventDefault();
+                }
+            });
         }
     });
     </script>
