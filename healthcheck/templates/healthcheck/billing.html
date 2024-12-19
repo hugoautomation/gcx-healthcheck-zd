@@ -52,10 +52,10 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                                 </label>
                             </div>
                         </div>
-                        <div id="payment-element" class="mb-3">
+                        <div id="payment-element" style="display: none;" class="mb-3">
                             <!-- Stripe Elements will be inserted here -->
                         </div>
-                        <button id="submit-button" class="btn c-btn c-btn--primary">
+                        <button id="submit-button" class="btn c-btn c-btn--primary" style="display: none;">
                             Subscribe
                         </button>
                         <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
@@ -70,8 +70,19 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
     <script src="{% static 'js/zaf-client.js' %}"></script>
     <script src="{% static 'js/main.js' %}"></script>
     <script>
-        // Use the existing ZAFClientSingleton instead of initializing a new client
         const stripe = Stripe('{{ stripe_publishable_key }}');
+        
+        const elements = stripe.elements();
+        const cardElement = elements.create('card');
+        
+        // Show/hide payment element when plan is selected
+        document.querySelectorAll('input[name="plan"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                document.getElementById('payment-element').style.display = 'block';
+                document.getElementById('submit-button').style.display = 'block';
+                cardElement.mount('#payment-element');
+            });
+        });
     
         document.getElementById('payment-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -82,29 +93,17 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                 submitButton.disabled = true;
                 const planType = document.querySelector('input[name="plan"]:checked').value;
                 
-                // Get the base URL from the environment
-                const baseUrl = window.ENVIRONMENT === 'production' 
-                    ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                    : 'https://gcx-healthcheck-zd-development.up.railway.app';
-    
-                // Use ZAFClientSingleton to make the request
-                const options = {
-                    url: `${baseUrl}/create-checkout-session/`,
+                // Create the subscription through your backend
+                const response = await ZAFClientSingleton.client.request({
+                    url: `${window.location.origin}/create-checkout-session/`,
                     type: 'POST',
-                    contentType: 'application/json',
-                    headers: {
-                        'X-Subsequent-Request': 'true'
-                    },
-                    data: JSON.stringify({
+                    data: {
                         installation_id: '{{ installation_id }}',
                         user_id: '{{ user_id }}',
                         plan_type: planType
-                    }),
-                    secure: true
-                };
+                    }
+                });
     
-                const response = await ZAFClientSingleton.client.request(options);
-                
                 if (response.error) {
                     throw new Error(response.error);
                 }

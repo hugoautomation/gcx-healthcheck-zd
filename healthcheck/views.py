@@ -800,9 +800,7 @@ def update_installation_plan(request):
 @validate_jwt_token
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
-    print(f"Installation ID: {installation_id}")
     user_id = request.GET.get("user_id")
-    print(f"User ID: {user_id}")
 
     if not installation_id:
         return JsonResponse({"error": "Installation ID required"}, status=400)
@@ -818,9 +816,19 @@ def billing_page(request):
 
     # Define your price IDs
     PRICE_IDS = {
-        'monthly': 'price_1QXYqCBq13Pgax7DTxg73NeW',  # Your monthly price ID
-        'yearly': 'price_1QXYqCBq13Pgax7DTxg73NeW'    # Your yearly price ID
+        'monthly': 'price_1QXYqCBq13Pgax7DTxg73NeW',
+        'yearly': 'price_1QXYqCBq13Pgax7DTxg73NeW'
     }
+
+    # Create setup intent for future payments
+    stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
+    setup_intent = stripe.SetupIntent.create(
+        payment_method_types=['card'],
+        metadata={
+            'installation_id': installation_id,
+            'user_id': user_id
+        }
+    )
 
     context = {
         'subscription': subscription_status,
@@ -829,6 +837,7 @@ def billing_page(request):
         'user': user,
         'environment': settings.ENVIRONMENT,
         'stripe_publishable_key': settings.STRIPE_PUBLIC_KEY,
+        'client_secret': setup_intent.client_secret,
         'price_ids': PRICE_IDS
     }
     return render(request, 'healthcheck/billing.html', context)
