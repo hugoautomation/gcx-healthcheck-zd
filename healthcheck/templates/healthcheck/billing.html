@@ -64,60 +64,48 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
             </div>
         </div>
     </div>
-
     <script>
         const client = ZAFClient.init();
         const stripe = Stripe('{{ stripe_publishable_key }}');
-        let elements;
-
-        async function handleSubmit(e) {
-            e.preventDefault();
-            
-            const planType = document.querySelector('input[name="plan"]:checked').value;
-            
-            try {
-                const response = await fetch('/create-checkout-session/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-JWT-Token': await getJWTToken()
-                    },
-                    body: JSON.stringify({
-                        installation_id: '{{ installation_id }}',
-                        user_id: '{{ user_id }}',
-                        plan_type: planType
-                    })
-                });
-
-                const data = await response.json();
+    
+        document.querySelectorAll('.subscribe-button').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const planType = document.querySelector('input[name="plan"]:checked').value;
                 
-                if (data.error) {
-                    throw new Error(data.error);
+                try {
+                    const response = await fetch('/create-checkout-session/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            installation_id: '{{ installation_id }}',
+                            user_id: '{{ user_id }}',
+                            plan_type: planType
+                        })
+                    });
+    
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+    
+                    // Redirect to Stripe Checkout
+                    const { error } = await stripe.redirectToCheckout({
+                        sessionId: data.sessionId
+                    });
+    
+                    if (error) {
+                        throw error;
+                    }
+    
+                } catch (error) {
+                    console.error('Error:', error);
+                    client.invoke('notify', 'Failed to start checkout process. Please try again.', 'error');
                 }
-
-                // Redirect to Stripe Checkout
-                const { error } = await stripe.redirectToCheckout({
-                    sessionId: data.sessionId
-                });
-
-                if (error) {
-                    throw error;
-                }
-
-            } catch (error) {
-                const errorDiv = document.getElementById('error-message');
-                errorDiv.textContent = error.message;
-                errorDiv.style.display = 'block';
-                console.error('Error:', error);
-            }
-        }
-
-        async function getJWTToken() {
-            const auth = await client.get('currentUser.jwt');
-            return auth.currentUser.jwt;
-        }
-
-        document.getElementById('payment-form').addEventListener('submit', handleSubmit);
+            });
+        });
     </script>
     {% endif %}
 </div>
