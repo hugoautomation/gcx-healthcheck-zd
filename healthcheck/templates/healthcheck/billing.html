@@ -64,8 +64,13 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
             </div>
         </div>
     </div>
+
+    {% endif %}
+
+    <script src="{% static 'js/zaf-client.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
     <script>
-        const client = ZAFClient.init();
+        // Use the existing ZAFClientSingleton instead of initializing a new client
         const stripe = Stripe('{{ stripe_publishable_key }}');
     
         document.getElementById('payment-form').addEventListener('submit', async (e) => {
@@ -77,27 +82,36 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                 submitButton.disabled = true;
                 const planType = document.querySelector('input[name="plan"]:checked').value;
                 
-                const response = await fetch('/create-checkout-session/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        installation_id: '{{ installation_id }}',  // From context
-                        user_id: '{{ user_id }}',                 // From context
-                        plan_type: planType
-                    })
-                });
+                // Get the base URL from the environment
+                const baseUrl = window.ENVIRONMENT === 'production' 
+                    ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+                    : 'https://gcx-healthcheck-zd-development.up.railway.app';
     
-                const data = await response.json();
+                // Use ZAFClientSingleton to make the request
+                const options = {
+                    url: `${baseUrl}/create-checkout-session/`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'X-Subsequent-Request': 'true'
+                    },
+                    data: JSON.stringify({
+                        installation_id: '{{ installation_id }}',
+                        user_id: '{{ user_id }}',
+                        plan_type: planType
+                    }),
+                    secure: true
+                };
+    
+                const response = await ZAFClientSingleton.client.request(options);
                 
-                if (data.error) {
-                    throw new Error(data.error);
+                if (response.error) {
+                    throw new Error(response.error);
                 }
     
                 // Redirect to Stripe Checkout
                 const { error } = await stripe.redirectToCheckout({
-                    sessionId: data.sessionId
+                    sessionId: response.sessionId
                 });
     
                 if (error) {
@@ -112,7 +126,6 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
             }
         });
     </script>
-    {% endif %}
 </div>
 </body>
 </html>
