@@ -15,23 +15,24 @@
     <div class="text-muted small mb-3 d-inline-block">Last checked: {{ data.time_since_check }} ago</div>
 </div>
     <div class="col text-right">
-        {% if data.is_free_plan and not data.is_unlocked %}
-            {% if data.report_id %}  {# Only show download button if we have a report ID #}
-                <a href="#" class="btn c-btn c-btn--sm d-inline-block disabled">
-            Download CSV Report
-        </a>
+        {% if subscription.is_active or data.is_unlocked %}
+        {% if data.report_id %}  {# Only show download button if we have a report ID #}
+        <a href="{% url 'download_report_csv' report_id=data.report_id %}?user_id={{ url_params.user_id }}" class="btn c-btn c-btn--sm d-inline-block">
+            Download as CSV
+            </a>
     {% endif %}
     {% else %}
-    {% if data.report_id %}  {# Only show download button if we have a report ID #}
-    <a href="{% url 'download_report_csv' report_id=data.report_id %}?user_id={{ url_params.user_id }}" class="btn c-btn c-btn--sm d-inline-block">
-        Download as CSV
+    {% if data.report_id %}
+    <a href="#" class="btn c-btn c-btn--sm d-inline-block disabled"
+    title="Requires active subscription">
+    🔒 Download CSV Report
         </a>
     {% endif %}
     {% endif %}
 </div>
 </div>
-    {% if data.is_free_plan and not data.is_unlocked %}
-        <div class="alert alert-info mb-4">
+{% if not subscription.is_active and not data.is_unlocked %}
+<div class="alert alert-info mb-4">
             <p>You're viewing the free version of the report which only shows Ticket Forms and Ticket Fields issues, without the ability to download the full report.</p>
             
             {% if data.hidden_issues_count > 0 %}

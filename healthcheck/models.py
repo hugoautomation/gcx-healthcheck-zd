@@ -15,7 +15,16 @@ class HealthCheckSubscription(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True)
     subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    updated_at = models.DateTimeField(auto_now=True)    
+    
+    @classmethod
+    def link_subscription(cls, installation_id, djstripe_subscription):
+        """Link a djstripe Subscription to an installation"""
+        subscription_link, _ = cls.objects.update_or_create(
+            installation_id=installation_id,
+            defaults={'subscription': djstripe_subscription}
+        )
+        return subscription_link
 
     @classmethod
     def get_subscription_status(cls, installation_id):

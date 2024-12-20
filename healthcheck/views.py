@@ -78,32 +78,23 @@ def validate_jwt_token(f):
 def app(request):
     initial_data = {}
     installation_id = request.GET.get("installation_id")
-    client_plan = request.GET.get("plan", "Free")
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
     user_id = request.GET.get("user_id")
 
-    initial_data.update(
-        {
-            "url_params": {
-                "installation_id": installation_id,
-                "plan": client_plan,
-                "app_guid": app_guid,
-                "origin": origin,
-                "user_id": user_id,
-            },
-            "environment": settings.ENVIRONMENT,  # Add environment to context
-        }
-    )
+    if not installation_id:
+        initial_data["error"] = "No installation ID provided. Please reload the app."
+        return render(request, "healthcheck/app.html", initial_data)
 
-    if installation_id:
+    # Get real subscription status
+    subscription_status = HealthCheckSubscription.get_subscription_status(installation_id)
+
+    try:
+        user = ZendeskUser.objects.get(user_id=user_id)
+        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
         historical_reports = HealthCheckReport.objects.filter(
             installation_id=installation_id
         ).order_by("-created_at")[:10]
-
-        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
-
-        user = ZendeskUser.objects.get(user_id=user_id)
 
         # Identify user with Segment
         analytics.identify(
@@ -116,84 +107,77 @@ def app(request):
                 "timezone": user.time_zone,
                 "avatar": user.avatar_url,
                 "subdomain": user.subdomain,
-                "plan": user.plan or client_plan,
+                "subscription_status": subscription_status["status"],
+                "subscription_active": subscription_status["active"],
                 "installation_id": installation_id,
                 "last_healthcheck": latest_report.created_at if latest_report else None,
-                "last_healthcheck_paid_for": latest_report.is_unlocked
-                if latest_report
-                else False,
+                "last_healthcheck_unlocked": latest_report.is_unlocked if latest_report else False,
             },
         )
+
+        # Group analytics
         analytics.group(
-            user_id,  # The user ID that belongs to the group
+            user_id,
             user.subdomain,
             {
                 "name": user.subdomain,
                 "organization": user.subdomain,
-                "plan": user.plan or client_plan,
+                "subscription_status": subscription_status["status"],
             },
         )
+
         # Track app load
         analytics.track(
-            user_id,  # Use user_id if available
+            user_id,
             "App Loaded",
             {
-                "plan": client_plan,
+                "subscription_status": subscription_status["status"],
+                "subscription_active": subscription_status["active"],
                 "subdomain": origin,
                 "installation_id": installation_id,
             },
         )
 
-        try:
-            # Get historical reports
-            historical_reports = HealthCheckReport.objects.filter(
-                installation_id=installation_id
-            ).order_by("-created_at")[:10]
-
-            # Get latest report
-            latest_report = HealthCheckReport.get_latest_for_installation(
-                installation_id
+        if latest_report:
+            # Format the report data
+            report_data = format_response_data(
+                latest_report.raw_response,
+                plan=subscription_status["plan"] if subscription_status["active"] else "Free",
+                report_id=latest_report.id,
+                last_check=latest_report.created_at,
             )
 
-            if latest_report:
-                # Update unlock status for non-free plans
-                if client_plan != "Free":
-                    HealthCheckReport.update_all_reports_unlock_status(
-                        installation_id, client_plan
-                    )
+            initial_data.update({
+                "historical_reports": format_historical_reports(historical_reports),
+                "data": report_data,
+            })
+        else:
+            initial_data.update({
+                "warning": "No health check reports found. Please run your first health check.",
+                "historical_reports": [],
+                "data": None,
+            })
 
-                # Format the report data
-                report_data = format_response_data(
-                    latest_report.raw_response,
-                    plan=client_plan,
-                    report_id=latest_report.id,
-                    last_check=latest_report.created_at,
-                )
+    except Exception as e:
+        print(f"Error in app view: {str(e)}")
+        initial_data["error"] = f"Error loading health check data: {str(e)}"
 
-                # Update initial data with report context
-                initial_data.update(
-                    {
-                        "historical_reports": format_historical_reports(
-                            historical_reports
-                        ),
-                        "data": report_data,
-                    }
-                )
-            else:
-                initial_data.update(
-                    {
-                        "warning": "No health check reports found. Please run your first health check.",
-                        "historical_reports": [],
-                        "data": None,
-                    }
-                )
-
-        except Exception as e:
-            print(f"Error in app view: {str(e)}")
-            initial_data["error"] = f"Error loading health check data: {
-                str(e)}"
-    else:
-        initial_data["error"] = "No installation ID provided. Please reload the app."
+    # Prepare context for template
+    initial_data.update({
+        "url_params": {
+            "installation_id": installation_id,
+            "app_guid": app_guid,
+            "origin": origin,
+            "user_id": user_id,
+        },
+        "subscription": {
+            "is_active": subscription_status["active"],
+            "status": subscription_status["status"],
+            "current_period_end": subscription_status.get("current_period_end"),
+            "plan": subscription_status.get("plan"),
+        },
+        "environment": settings.ENVIRONMENT,
+    })
 
     return render(request, "healthcheck/app.html", initial_data)
 
@@ -466,66 +450,6 @@ def monitoring(request):
 
     return render(request, "healthcheck/monitoring.html", context)
 
-
-@csrf_exempt
-def stripe_webhook(request):
-    try:
-        event = json.loads(request.body)
-        print("Received webhook event:", event["type"])  # Debug logging
-
-        if event["type"] == "checkout.session.completed":
-            session = event["data"]["object"]
-            report_id = session.get("client_reference_id")
-
-            if not report_id:
-                print("No report ID provided in webhook")
-                return HttpResponse("No report ID provided", status=400)
-
-            try:
-                report = HealthCheckReport.objects.get(id=report_id)
-                report.is_unlocked = True
-                report.stripe_payment_id = session["payment_intent"]
-                report.save()
-
-                user_id = session.get("userInfo", {}).get("id")
-                user = ZendeskUser.objects.get(user_id=user_id)
-                print(f"Successfully unlocked report {report_id}")
-                analytics.identify(
-                    user_id,
-                    {
-                        "name": user.name,
-                        "email": user.email,
-                        "role": user.role,
-                        "locale": user.locale,
-                        "timezone": user.time_zone,
-                        "avatar": user.avatar_url,
-                        "subdomain": user.subdomain,
-                        "plan": user.plan,
-                        "last_healthcheck": report.created_at,
-                        "last_healthcheck_paid_for": report.is_unlocked,
-                    },
-                )
-                analytics.track(
-                    str(user_id),
-                    "Report Unlocked",
-                    {
-                        "report_id": report_id,
-                        "payment_amount": 249,
-                        "payment_type": "one_off",
-                    },
-                )
-                return HttpResponse("Success", status=200)
-
-            except HealthCheckReport.DoesNotExist:
-                print(f"Report {report_id} not found")
-                return HttpResponse("Report not found", status=404)
-
-    except json.JSONDecodeError:
-        print("Invalid JSON in webhook request")
-        return HttpResponse("Invalid JSON", status=400)
-    except Exception as e:
-        print(f"Webhook error: {str(e)}")
-        return HttpResponse(str(e), status=400)
 
 
 @csrf_exempt
