@@ -131,12 +131,16 @@ def create_payment_intent(request):
                     },
                     "unit_amount": 24900,  # $249.00
                 },
+                "allow_promotion_codes": True,
+                "billing_address_collection": "required",
+                "automatic_tax": {"enabled": True},
                 "quantity": 1,
             }],
             metadata={
                 "report_id": report_id,
                 "installation_id": installation_id,
-                "user_id": user_id
+                "user_id": user_id,
+                "subdomain": user.subdomain
             },
             success_url=request.build_absolute_uri(f"/report/{report_id}/?success=true"),
             cancel_url=request.build_absolute_uri(f"/report/{report_id}/?canceled=true"),
@@ -903,6 +907,9 @@ def create_checkout_session(request):
             client_reference_id=installation_id,
             customer_email=user.email,
             mode="subscription",
+            allow_promotion_codes=True,
+            billing_address_collection="required",
+            automatic_tax={"enabled": True},
             line_items=[
                 {
                     "price": price_id,
@@ -919,6 +926,7 @@ def create_checkout_session(request):
             },
             metadata={
                 "installation_id": installation_id,
+                "subdomain": user.subdomain,
                 "user_id": user_id,
                 "plan_type": plan_type,
             },
