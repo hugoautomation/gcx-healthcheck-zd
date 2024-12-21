@@ -419,6 +419,18 @@ def monitoring(request):
     origin = request.GET.get("origin")
     user_id = request.GET.get("user_id")
 
+    try:
+        user = ZendeskUser.objects.get(user_id=user_id)
+        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+        
+        if not subscription_status["active"]:
+            messages.error(request, "Monitoring requires an active subscription")
+            return HttpResponseRedirect(f"/app/?installation_id={installation_id}")
+
+    except Exception as e:
+        print(f"Error in monitoring view: {str(e)}")
+        return HttpResponseRedirect("/")
+
     # Validate installation_id
     try:
         if not installation_id or installation_id.lower() == "none":

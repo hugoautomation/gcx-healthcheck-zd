@@ -25,12 +25,19 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
     {% if subscription.active %}
         <!-- Show current subscription info -->
         <div class="subscription-info">
+          <div class="subscription-info">
             <h2>Current Subscription</h2>
-            <p>Plan: {{ subscription.plan }}</p>
-            <p>Status: {{ subscription.status }}</p>
-            <p>Renews: {{ subscription.current_period_end|date }}</p>
-            <a href="https://billing.stripe.com/p/login/test_4gwaHHgWTeitgsUfYY" class="btn c-btn c-btn--secondary c-btn--sm">Manage Subscription</a>
-            <!-- Add manage subscription button that redirects to customer portal -->
+            <div class="card mb-4 rounded-3 shadow-sm border-primary">
+                <div class="card-header py-3 text-bg-primary border-primary">
+                    <h4 class="my-0 fw-normal">{{ subscription.plan }}</h4>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2"><strong>Status:</strong> <span class="badge bg-success">{{ subscription.status|title }}</span></p>
+                    <p class="mb-2"><strong>Current Period Ends:</strong> {{ subscription.current_period_end|date:"F j, Y" }}</p>
+                    <a href="https://billing.stripe.com/p/login/test_4gwaHHgWTeitgsUfYY" 
+                       class="btn c-btn c-btn--primary c-btn--sm mt-3">Manage Subscription</a>
+                </div>
+            </div>
         </div>
     {% else %}
     <div class="row row-cols-1 row-cols-md-3 mb-3 text-center">
