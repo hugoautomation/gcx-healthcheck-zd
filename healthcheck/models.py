@@ -5,49 +5,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import EmailValidator
-from djstripe.models import Subscription, Customer
-
-
-class HealthCheckSubscription(models.Model):
-    """Links Zendesk installations with Stripe subscriptions"""
-
-    installation_id = models.BigIntegerField(unique=True)
-    customer = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True)
-    subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)    
-    
-    @classmethod
-    def link_subscription(cls, installation_id, djstripe_subscription):
-        """Link a djstripe Subscription to an installation"""
-        subscription_link, _ = cls.objects.update_or_create(
-            installation_id=installation_id,
-            defaults={'subscription': djstripe_subscription}
-        )
-        return subscription_link
-
-    @classmethod
-    def get_subscription_status(cls, installation_id):
-        """Get subscription status for an installation"""
-        try:
-            subscription_link = cls.objects.select_related("subscription").get(
-                installation_id=installation_id
-            )
-            if subscription_link.subscription:
-                return {
-                    "status": subscription_link.subscription.status,
-                    "current_period_end": subscription_link.subscription.current_period_end,
-                    "plan": subscription_link.subscription.plan.nickname,
-                    "active": subscription_link.subscription.status == "active",
-                }
-        except cls.DoesNotExist:
-            pass
-        return {"status": "no_subscription", "active": False}
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["installation_id"]),
-        ]
+from djstripe.models import Subscription
 
 
 class HealthCheckReport(models.Model):
@@ -93,7 +51,7 @@ class HealthCheckReport(models.Model):
     @property
     def has_active_subscription(self):
         """Check if this installation has an active subscription"""
-        status = HealthCheckSubscription.get_subscription_status(self.installation_id)
+        status = ZendeskUser.get_subscription_status(self.subdomain)
         return status["active"]
 
     @classmethod
@@ -105,8 +63,8 @@ class HealthCheckReport(models.Model):
             latest_report.save()
 
             # Check subscription status
-            subscription_status = HealthCheckSubscription.get_subscription_status(
-                installation_id
+            subscription_status = ZendeskUser.get_subscription_status(
+                latest_report.subdomain
             )
             if subscription_status["active"]:
                 # Update all reports for this installation based on the subscription
@@ -143,6 +101,9 @@ class HealthCheckReport(models.Model):
         indexes = [
             models.Index(fields=["instance_guid", "created_at"]),
             models.Index(fields=["installation_id", "created_at"]),
+            models.Index(
+                fields=["subdomain", "created_at"]
+            ),  # Add this for subscription queries
         ]
 
     def save(self, *args, **kwargs):
@@ -247,6 +208,39 @@ class ZendeskUser(models.Model):
             },
         )
         return user
+
+    @classmethod
+    def get_subscription_status(cls, subdomain):
+        """Get subscription status for a subdomain"""
+        try:
+            # Look up subscription by metadata and include plan details
+            subscription = (
+                Subscription.objects.filter(
+                    metadata__subdomain=subdomain,
+                    status__in=[
+                        "active",
+                        "trialing",
+                    ],  # Include trials if you support them
+                )
+                .select_related("plan")
+                .latest("created")
+            )
+
+            return {
+                "status": subscription.status,
+                "current_period_end": subscription.current_period_end,
+                "plan": subscription.plan.nickname if subscription.plan else None,
+                "active": subscription.status in ["active", "trialing"],
+                "subscription_id": subscription.id,
+            }
+        except Subscription.DoesNotExist:
+            return {
+                "status": "no_subscription",
+                "active": False,
+                "plan": "Free",
+                "current_period_end": None,
+                "subscription_id": None,
+            }
 
     class Meta:
         indexes = [

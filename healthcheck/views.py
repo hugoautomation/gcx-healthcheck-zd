@@ -20,7 +20,6 @@ import segment.analytics as analytics  # Add this import
 from django.core.management import call_command
 from django.utils import timezone
 import logging
-from .models import HealthCheckSubscription
 import stripe
 import os
 
@@ -86,15 +85,16 @@ def app(request):
         initial_data["error"] = "No installation ID provided. Please reload the app."
         return render(request, "healthcheck/app.html", initial_data)
 
-    # Get real subscription status
-    subscription_status = HealthCheckSubscription.get_subscription_status(installation_id)
-
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
         historical_reports = HealthCheckReport.objects.filter(
             installation_id=installation_id
         ).order_by("-created_at")[:10]
+        # Get real subscription status
+        subscription_status = subscription_status = ZendeskUser.get_subscription_status(
+            user.subdomain
+        )
 
         # Identify user with Segment
         analytics.identify(
@@ -108,10 +108,13 @@ def app(request):
                 "avatar": user.avatar_url,
                 "subdomain": user.subdomain,
                 "subscription_status": subscription_status["status"],
+                "subscription_plan": subscription_status["plan"],
                 "subscription_active": subscription_status["active"],
                 "installation_id": installation_id,
                 "last_healthcheck": latest_report.created_at if latest_report else None,
-                "last_healthcheck_unlocked": latest_report.is_unlocked if latest_report else False,
+                "last_healthcheck_unlocked": latest_report.is_unlocked
+                if latest_report
+                else False,
             },
         )
 
@@ -142,42 +145,50 @@ def app(request):
             # Format the report data
             report_data = format_response_data(
                 latest_report.raw_response,
-                plan=subscription_status["plan"] if subscription_status["active"] else "Free",
+                plan=subscription_status["plan"]
+                if subscription_status["active"]
+                else "Free",
                 report_id=latest_report.id,
                 last_check=latest_report.created_at,
             )
 
-            initial_data.update({
-                "historical_reports": format_historical_reports(historical_reports),
-                "data": report_data,
-            })
+            initial_data.update(
+                {
+                    "historical_reports": format_historical_reports(historical_reports),
+                    "data": report_data,
+                }
+            )
         else:
-            initial_data.update({
-                "warning": "No health check reports found. Please run your first health check.",
-                "historical_reports": [],
-                "data": None,
-            })
+            initial_data.update(
+                {
+                    "warning": "No health check reports found. Please run your first health check.",
+                    "historical_reports": [],
+                    "data": None,
+                }
+            )
 
     except Exception as e:
         print(f"Error in app view: {str(e)}")
         initial_data["error"] = f"Error loading health check data: {str(e)}"
 
     # Prepare context for template
-    initial_data.update({
-        "url_params": {
-            "installation_id": installation_id,
-            "app_guid": app_guid,
-            "origin": origin,
-            "user_id": user_id,
-        },
-        "subscription": {
-            "is_active": subscription_status["active"],
-            "status": subscription_status["status"],
-            "current_period_end": subscription_status.get("current_period_end"),
-            "plan": subscription_status.get("plan"),
-        },
-        "environment": settings.ENVIRONMENT,
-    })
+    initial_data.update(
+        {
+            "url_params": {
+                "installation_id": installation_id,
+                "app_guid": app_guid,
+                "origin": origin,
+                "user_id": user_id,
+            },
+            "subscription": {
+                "is_active": subscription_status["active"],
+                "status": subscription_status["status"],
+                "current_period_end": subscription_status.get("current_period_end"),
+                "plan": subscription_status.get("plan"),
+            },
+            "environment": settings.ENVIRONMENT,
+        }
+    )
 
     return render(request, "healthcheck/app.html", initial_data)
 
@@ -451,7 +462,6 @@ def monitoring(request):
     return render(request, "healthcheck/monitoring.html", context)
 
 
-
 @csrf_exempt
 def download_report_csv(request, report_id):
     """Download health check report as CSV"""
@@ -719,7 +729,6 @@ def update_installation_plan(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-    
 
 
 @csrf_exempt
@@ -733,35 +742,36 @@ def billing_page(request):
         return JsonResponse({"error": "Installation ID required"}, status=400)
 
     # Get current subscription status
-    subscription_status = HealthCheckSubscription.get_subscription_status(installation_id)
-    
+
     # Get user information
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
+        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+
     except ZendeskUser.DoesNotExist:
         user = None
 
     # Define your price IDs
     PRICE_IDS = {
-        'monthly': 'price_1QXYqCBq13Pgax7DTxg73NeW',
-        'yearly': 'price_1QXYqCBq13Pgax7DTxg73NeW'
+        "monthly": "price_1QXYqCBq13Pgax7DTxg73NeW",
+        "yearly": "price_1QXYqCBq13Pgax7DTxg73NeW",
     }
 
     context = {
-        'subscription': subscription_status,
-        'url_params': {
-            'installation_id': installation_id,
-            'plan': request.GET.get('plan', 'Free'),
-            'app_guid': app_guid,
-            'origin': origin,
-            'user_id': user_id,
+        "subscription": subscription_status,
+        "url_params": {
+            "installation_id": installation_id,
+            "plan": request.GET.get("plan", "Free"),
+            "app_guid": app_guid,
+            "origin": origin,
+            "user_id": user_id,
         },
-        'user': user,
-        'environment': settings.ENVIRONMENT,
-        'stripe_publishable_key': settings.STRIPE_PUBLIC_KEY,
-        'price_ids': PRICE_IDS
+        "user": user,
+        "environment": settings.ENVIRONMENT,
+        "stripe_publishable_key": settings.STRIPE_PUBLIC_KEY,
+        "price_ids": PRICE_IDS,
     }
-    return render(request, 'healthcheck/billing.html', context)
+    return render(request, "healthcheck/billing.html", context)
 
 
 @csrf_exempt
@@ -787,33 +797,38 @@ def create_checkout_session(request):
         stripe.api_version = "2020-03-02"
 
         checkout_session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
+            payment_method_types=["card"],
             client_reference_id=installation_id,
             customer_email=user.email,
-            mode='subscription',
-            line_items=[{
-                'price': price_id,
-                'quantity': 1,
-            }],
+            mode="subscription",
+            line_items=[
+                {
+                    "price": price_id,
+                    "quantity": 1,
+                }
+            ],
             subscription_data={
-                'metadata': {
-                    'installation_id': installation_id,
-                    'user_id': user_id,
-                    'plan_type': plan_type
+                "metadata": {
+                    "subdomain": user.subdomain,
+                    "installation_id": installation_id,
+                    "user_id": user_id,
+                    "plan_type": plan_type,
                 }
             },
             metadata={
-                'installation_id': installation_id,
-                'user_id': user_id,
-                'plan_type': plan_type
+                "installation_id": installation_id,
+                "user_id": user_id,
+                "plan_type": plan_type,
             },
-            success_url=request.build_absolute_uri(f"/billing/?installation_id={installation_id}&success=true"),
-            cancel_url=request.build_absolute_uri(f"/billing/?installation_id={installation_id}&canceled=true"),
+            success_url=request.build_absolute_uri(
+                f"/billing/?installation_id={installation_id}&success=true"
+            ),
+            cancel_url=request.build_absolute_uri(
+                f"/billing/?installation_id={installation_id}&canceled=true"
+            ),
         )
 
-        return JsonResponse({
-            'url': checkout_session.url
-        })
+        return JsonResponse({"url": checkout_session.url})
 
     except json.JSONDecodeError:
         return JsonResponse({"error": "Invalid JSON data"}, status=400)
