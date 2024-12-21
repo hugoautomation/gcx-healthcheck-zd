@@ -5,8 +5,8 @@ from .models import HealthCheckReport, HealthCheckMonitoring, ZendeskUser
 
 @admin.register(HealthCheckReport)
 class HealthCheckReportAdmin(admin.ModelAdmin):
-    list_display = ("installation_id", "subdomain", "plan", "is_unlocked", "created_at")
-    list_filter = ("plan", "is_unlocked", "created_at", "updated_at")
+    list_display = ("installation_id", "subdomain" , "is_unlocked", "created_at")
+    list_filter = ("is_unlocked", "created_at", "updated_at")
     search_fields = ("installation_id", "subdomain", "instance_guid", "admin_email")
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
@@ -22,7 +22,7 @@ class HealthCheckReportAdmin(admin.ModelAdmin):
                 )
             },
         ),
-        ("Plan Information", {"fields": ("plan", "stripe_subscription_id", "version")}),
+        ("Plan Information", {"fields": ( "stripe_subscription_id", "version")}),
         ("Report Status", {"fields": ("is_unlocked", "stripe_payment_id")}),
         ("Report Data", {"fields": ("raw_response",)}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
@@ -63,4 +63,4 @@ class HealthCheckMonitoringAdmin(admin.ModelAdmin):
 
 @admin.register(ZendeskUser)
 class ZendeskUserAdmin(admin.ModelAdmin):
-    list_display = ("user_id", "name", "email", "role", "subdomain", "plan")
+    list_display = ("user_id", "name", "email", "role", "subdomain", )

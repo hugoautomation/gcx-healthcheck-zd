@@ -24,7 +24,6 @@ class HealthCheckReport(models.Model):
     )
 
     # App metadata
-    plan = models.CharField(max_length=320, null=True, blank=True)
     stripe_subscription_id = models.CharField(max_length=320, null=True, blank=True)
     version = models.CharField(max_length=50)
 
@@ -71,12 +70,10 @@ class HealthCheckReport(models.Model):
                 cls.update_all_reports_unlock_status(installation_id, new_plan)
 
     @classmethod
-    def update_all_reports_unlock_status(cls, installation_id, plan):
-        """Update unlock status for all reports of an installation based on plan"""
-        should_unlock = plan != "Free"
+    def update_all_reports_unlock_status(cls, installation_id, subscription_active):
+        """Update unlock status for all reports of an installation based on subscription status"""
         cls.objects.filter(installation_id=installation_id).update(
-            is_unlocked=should_unlock,
-            plan=plan,  # Optionally update plan for all reports
+            is_unlocked=subscription_active
         )
 
     @property
@@ -107,16 +104,18 @@ class HealthCheckReport(models.Model):
         ]
 
     def save(self, *args, **kwargs):
-        # Auto-unlock for non-Free plans
-        if self.plan != "Free":
+        # Get subscription status for this installation's subdomain
+        subscription_status = ZendeskUser.get_subscription_status(self.subdomain)
+        
+        # Auto-unlock if subscription is active
+        if subscription_status["active"]:
             self.is_unlocked = True
             # Update all other reports for this installation
-            if not kwargs.pop(
-                "skip_others", False
-            ):  # Add skip flag to prevent recursion
+            if not kwargs.pop("skip_others", False):  # Add skip flag to prevent recursion
                 self.__class__.update_all_reports_unlock_status(
-                    self.installation_id, self.plan
+                    self.installation_id, subscription_status["active"]
                 )
+        
         super().save(*args, **kwargs)
 
 

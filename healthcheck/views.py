@@ -519,7 +519,6 @@ def download_report_csv(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
-
 @csrf_exempt
 def check_unlock_status(request):
     report_id = request.GET.get("report_id")
@@ -528,14 +527,17 @@ def check_unlock_status(request):
 
     try:
         report = HealthCheckReport.objects.get(id=report_id)
+        user = ZendeskUser.objects.get(subdomain=report.subdomain)
+        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
 
-        if report.is_unlocked:
+        if report.is_unlocked or subscription_status["active"]:
             # Format the full report data
             report_data = format_response_data(
                 report.raw_response,
-                plan=report.plan,
+                subscription_active=subscription_status["active"],
                 report_id=report.id,
                 last_check=report.created_at,
+                is_unlocked=report.is_unlocked
             )
 
             # Use render_report_components utility
