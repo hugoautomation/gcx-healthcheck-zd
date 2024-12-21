@@ -49,9 +49,7 @@
             <button class="btn c-btn  unlock-report" data-report-id="{{ data.report_id }}">
                 $249 One off Unlock Full Report
             </button>
-            <a class="btn c-btn c-btn--primary" href="https://help.gravity.cx/hc/en-au/articles/39628933601689-How-to-Upgrade-your-plan" target="_blank">
-               Subscribe
-            </a>
+            <a class="c-btn c-btn--pill c-btn--sm d-inline-block"href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">Upgrade</a>
         </div>
     {% endif %}
 

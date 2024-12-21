@@ -123,6 +123,9 @@ def create_payment_intent(request):
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             mode="payment",
+            allow_promotion_codes=True,
+            billing_address_collection="required",
+            automatic_tax={"enabled": True},
             line_items=[{
                 "price_data": {
                     "currency": "usd",
@@ -131,9 +134,6 @@ def create_payment_intent(request):
                     },
                     "unit_amount": 24900,  # $249.00
                 },
-                "allow_promotion_codes": True,
-                "billing_address_collection": "required",
-                "automatic_tax": {"enabled": True},
                 "quantity": 1,
             }],
             metadata={
@@ -909,7 +909,6 @@ def create_checkout_session(request):
             mode="subscription",
             allow_promotion_codes=True,
             billing_address_collection="required",
-            automatic_tax={"enabled": True},
             line_items=[
                 {
                     "price": price_id,
