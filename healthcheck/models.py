@@ -106,16 +106,18 @@ class HealthCheckReport(models.Model):
     def save(self, *args, **kwargs):
         # Get subscription status for this installation's subdomain
         subscription_status = ZendeskUser.get_subscription_status(self.subdomain)
-        
+
         # Auto-unlock if subscription is active
         if subscription_status["active"]:
             self.is_unlocked = True
             # Update all other reports for this installation
-            if not kwargs.pop("skip_others", False):  # Add skip flag to prevent recursion
+            if not kwargs.pop(
+                "skip_others", False
+            ):  # Add skip flag to prevent recursion
                 self.__class__.update_all_reports_unlock_status(
                     self.installation_id, subscription_status["active"]
                 )
-        
+
         super().save(*args, **kwargs)
 
 

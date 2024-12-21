@@ -22,8 +22,6 @@ from django.utils import timezone
 import logging
 import stripe
 import os
-from djstripe import webhooks
-from djstripe.models import PaymentIntent
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -73,54 +71,55 @@ def validate_jwt_token(f):
     return decorated_function
 
 
-
 @csrf_exempt
-@require_POST
 def handle_payment_success(request):
     payload = request.body
-    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-    
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
+
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
         )
-        
+
         # Handle successful payment
-        if event.type == 'checkout.session.completed':
+        if event.type == "checkout.session.completed":
             session = event.data.object
-            report_id = session.metadata.get('report_id')
-            
+            report_id = session.metadata.get("report_id")
+
             if report_id:
                 try:
                     report = HealthCheckReport.objects.get(id=report_id)
                     report.is_unlocked = True
                     report.stripe_payment_id = session.payment_intent
                     report.save(skip_others=True)  # Don't update other reports
-                    
+
                     # Track the successful payment
                     analytics.track(
-                        session.metadata.get('user_id'),
+                        session.metadata.get("user_id"),
                         "Report Unlocked",
                         {
                             "report_id": report_id,
                             "payment_id": session.payment_intent,
                             "amount": session.amount_total / 100,  # Convert from cents
-                        }
+                        },
                     )
-                    
+
                 except HealthCheckReport.DoesNotExist:
-                    logger.error(f"Report {report_id} not found for payment {session.id}")
-                    
-        return JsonResponse({'status': 'success'})
-        
+                    logger.error(
+                        f"Report {report_id} not found for payment {session.id}"
+                    )
+
+        return JsonResponse({"status": "success"})
+
     except ValueError as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({"error": str(e)}, status=400)
     except stripe.error.SignatureVerificationError as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({"error": str(e)}, status=400)
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
-        return JsonResponse({'error': str(e)}, status=400)
-    
+        return JsonResponse({"error": str(e)}, status=400)
+
+
 @csrf_exempt
 def create_payment_intent(request):
     try:
@@ -134,7 +133,7 @@ def create_payment_intent(request):
 
         # Get user information
         user = ZendeskUser.objects.get(user_id=user_id)
-        
+
         # Create Stripe checkout session for one-time payment
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=["card"],
@@ -142,31 +141,38 @@ def create_payment_intent(request):
             allow_promotion_codes=True,
             billing_address_collection="required",
             automatic_tax={"enabled": True},
-            line_items=[{
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {
-                        "name": "Health Check Report Unlock",
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "product_data": {
+                            "name": "Health Check Report Unlock",
+                        },
+                        "unit_amount": 24900,  # $249.00
                     },
-                    "unit_amount": 24900,  # $249.00
-                },
-                "quantity": 1,
-            }],
+                    "quantity": 1,
+                }
+            ],
             metadata={
                 "report_id": report_id,
                 "installation_id": installation_id,
                 "user_id": user_id,
-                "subdomain": user.subdomain
+                "subdomain": user.subdomain,
             },
-            success_url=request.build_absolute_uri(f"/report/{report_id}/?success=true"),
-            cancel_url=request.build_absolute_uri(f"/report/{report_id}/?canceled=true"),
+            success_url=request.build_absolute_uri(
+                f"/report/{report_id}/?success=true"
+            ),
+            cancel_url=request.build_absolute_uri(
+                f"/report/{report_id}/?canceled=true"
+            ),
         )
 
         return JsonResponse({"url": checkout_session.url})
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
-    
+
+
 # Update the app view to remove monitoring context
 @csrf_exempt
 @validate_jwt_token
@@ -245,7 +251,6 @@ def app(request):
                 report_id=latest_report.id,
                 last_check=latest_report.created_at,
                 is_unlocked=latest_report.is_unlocked,  # Added
-
             )
 
             initial_data.update(
@@ -355,6 +360,7 @@ def create_or_update_user(request):
         print("Unexpected Error:", str(e))
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
+
 @csrf_exempt
 def health_check(request):
     if request.method == "POST":
@@ -402,7 +408,7 @@ def health_check(request):
                 if settings.ENVIRONMENT == "production"
                 else "https://django-server-development-1b87.up.railway.app/api/health-check/"
             )
-            
+
             # Make API request
             api_payload = {
                 "url": url,
@@ -410,7 +416,7 @@ def health_check(request):
                 "api_token": data.get("api_token"),
                 "status": "active",
             }
-            
+
             logger.info(
                 "Making API request",
                 extra={
@@ -423,7 +429,7 @@ def health_check(request):
                     )
                 },
             )
-            
+
             response = requests.post(
                 api_url,
                 headers={
@@ -476,7 +482,7 @@ def health_check(request):
                 subscription_active=subscription_status["active"],
                 report_id=report.id,
                 last_check=report.created_at,
-                is_unlocked=report.is_unlocked
+                is_unlocked=report.is_unlocked,
             )
 
             # Render results using utility function
@@ -526,7 +532,7 @@ def monitoring(request):
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
-        
+
         if not subscription_status["active"]:
             messages.error(request, "Monitoring requires an active subscription")
             return HttpResponseRedirect(f"/app/?installation_id={installation_id}")
@@ -549,7 +555,9 @@ def monitoring(request):
 
     # Get monitoring context
     try:
-        context = get_monitoring_context(installation_id, subscription_status["active"], None)
+        context = get_monitoring_context(
+            installation_id, subscription_status["active"], None
+        )
     except HealthCheckMonitoring.DoesNotExist:
         # Handle case where monitoring settings don't exist yet
         context = {
@@ -615,6 +623,7 @@ def download_report_csv(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
+
 @csrf_exempt
 def check_unlock_status(request):
     report_id = request.GET.get("report_id")
@@ -623,10 +632,7 @@ def check_unlock_status(request):
 
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        return JsonResponse({
-            "is_unlocked": report.is_unlocked,
-            "report_id": report.id
-        })
+        return JsonResponse({"is_unlocked": report.is_unlocked, "report_id": report.id})
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
@@ -778,20 +784,18 @@ def monitoring_settings(request):
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
-        
+
         context = get_monitoring_context(
             installation_id,
             subscription_status["active"],  # Changed from plan
-            latest_report
+            latest_report,
         )
-        context["url_params"] = {
-            "installation_id": installation_id,
-            "user_id": user_id
-        }
-        
+        context["url_params"] = {"installation_id": installation_id, "user_id": user_id}
+
         return render(request, "healthcheck/monitoring.html", context)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
 
 @csrf_exempt
 def update_installation_plan(request):
@@ -827,8 +831,8 @@ def update_installation_plan(request):
             {
                 "subscription_status": subscription_status["status"],
                 "subscription_active": subscription_status["active"],
-                "plan": subscription_status["plan"]
-            }
+                "plan": subscription_status["plan"],
+            },
         )
         return JsonResponse({"status": "success"})
 
@@ -836,6 +840,7 @@ def update_installation_plan(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
 
 @csrf_exempt
 def billing_page(request):

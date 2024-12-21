@@ -2,7 +2,14 @@ from django.template.loader import render_to_string
 from .models import HealthCheckMonitoring
 from django.utils.timesince import timesince
 
-def format_response_data(response_data, subscription_active=False, report_id=None, last_check=None, is_unlocked=False):
+
+def format_response_data(
+    response_data,
+    subscription_active=False,
+    report_id=None,
+    last_check=None,
+    is_unlocked=False,
+):
     """
     Helper function to format response data consistently
     Shows full data if either:
@@ -131,5 +138,3 @@ def format_historical_reports(reports):
         }
         for report in reports
     ]
-
-
