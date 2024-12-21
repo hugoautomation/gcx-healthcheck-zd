@@ -145,11 +145,11 @@ def app(request):
             # Format the report data
             report_data = format_response_data(
                 latest_report.raw_response,
-                plan=subscription_status["plan"]
-                if subscription_status["active"]
-                else "Free",
+                subscription_active=subscription_status["active"],  # Changed
                 report_id=latest_report.id,
                 last_check=latest_report.created_at,
+                is_unlocked=latest_report.is_unlocked,  # Added
+
             )
 
             initial_data.update(
@@ -259,7 +259,6 @@ def create_or_update_user(request):
         print("Unexpected Error:", str(e))
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
-
 @csrf_exempt
 def health_check(request):
     if request.method == "POST":
@@ -267,28 +266,33 @@ def health_check(request):
             # Extract data from request
             data = json.loads(request.body) if request.body else {}
             installation_id = data.get("installation_id")
-            client_plan = data.get("plan", "Free")
-            user_id = data.get("user_id")  # Get user_id from request data
+            user_id = data.get("user_id")
+
             logger.info(
                 "Health check details",
                 extra={
                     "extra_data": json.dumps(
                         {
                             "installation_id": installation_id,
-                            "plan": client_plan,
                             "user_id": user_id,
                             "data": data,
                         }
                     )
                 },
             )
+
+            # Get user and subscription status
+            user = ZendeskUser.objects.get(user_id=user_id)
+            subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+
             analytics.track(
                 user_id,
                 "Health Check Started",
                 {
                     "subdomain": data.get("subdomain"),
                     "email": data.get("email"),
-                    "plan": data.get("plan", "Free"),
+                    "subscription_status": subscription_status["status"],
+                    "subscription_active": subscription_status["active"],
                 },
             )
 
@@ -302,6 +306,7 @@ def health_check(request):
                 if settings.ENVIRONMENT == "production"
                 else "https://django-server-development-1b87.up.railway.app/api/health-check/"
             )
+            
             # Make API request
             api_payload = {
                 "url": url,
@@ -309,6 +314,7 @@ def health_check(request):
                 "api_token": data.get("api_token"),
                 "status": "active",
             }
+            
             logger.info(
                 "Making API request",
                 extra={
@@ -321,6 +327,7 @@ def health_check(request):
                     )
                 },
             )
+            
             response = requests.post(
                 api_url,
                 headers={
@@ -341,7 +348,6 @@ def health_check(request):
                 results_html = render_report_components(
                     {"data": None, "error": f"API Error: {response.text}"}
                 )
-
                 return JsonResponse({"error": True, "results_html": results_html})
 
             # Get response data
@@ -354,13 +360,12 @@ def health_check(request):
                 admin_email=data.get("email"),
                 instance_guid=data.get("instance_guid"),
                 subdomain=data.get("subdomain", ""),
-                plan=client_plan,
                 app_guid=data.get("app_guid"),
-                stripe_subscription_id=data.get("stripe_subscription_id"),
+                stripe_subscription_id=subscription_status.get("subscription_id"),
                 version=data.get("version", "1.0.0"),
                 raw_response=response_data,
             )
-            user = ZendeskUser.objects.get(user_id=user_id)
+
             analytics.identify(
                 user_id,
                 {
@@ -368,12 +373,14 @@ def health_check(request):
                     "last_healthcheck": report.created_at,
                 },
             )
-            # Format response data
+
+            # Format response data with subscription status
             formatted_data = format_response_data(
                 response_data,
-                plan=client_plan,
+                subscription_active=subscription_status["active"],
                 report_id=report.id,
                 last_check=report.created_at,
+                is_unlocked=report.is_unlocked
             )
 
             # Render results using utility function
@@ -395,8 +402,9 @@ def health_check(request):
                         for issue in response_data.get("issues", [])
                         if issue.get("type") == "warning"
                     ),
-                    "is_unlocked": report.is_unlocked,  # Add unlock status
-                    "plan": client_plan,
+                    "is_unlocked": report.is_unlocked,
+                    "subscription_status": subscription_status["status"],
+                    "subscription_active": subscription_status["active"],
                 },
             )
 
@@ -445,7 +453,7 @@ def monitoring(request):
 
     # Get monitoring context
     try:
-        context = get_monitoring_context(installation_id, client_plan, None)
+        context = get_monitoring_context(installation_id, subscription_status["active"], None)
     except HealthCheckMonitoring.DoesNotExist:
         # Handle case where monitoring settings don't exist yet
         context = {
@@ -685,55 +693,60 @@ def monitoring_settings(request):
         if request.content_type != "application/json":
             return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
-    # GET request - render the monitoring page
-    context = get_monitoring_context(
-        installation_id, latest_report.plan if latest_report else "Free", None
-    )
-    context["url_params"] = {
-        "installation_id": installation_id,
-        "plan": latest_report.plan if latest_report else "Free",
-    }
-
-    return render(request, "healthcheck/monitoring.html", context)
-
+    try:
+        user = ZendeskUser.objects.get(user_id=user_id)
+        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+        
+        context = get_monitoring_context(
+            installation_id,
+            subscription_status["active"],  # Changed from plan
+            latest_report
+        )
+        context["url_params"] = {
+            "installation_id": installation_id,
+            "user_id": user_id
+        }
+        
+        return render(request, "healthcheck/monitoring.html", context)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
 def update_installation_plan(request):
-    """Handle plan updates from Zendesk"""
+    """Handle subscription updates from Zendesk"""
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
     try:
         data = json.loads(request.body)
         installation_id = data.get("installation_id")
-        new_plan = data.get("plan")
-        user_id = data.get("user_id")  # Get user_id from request
+        user_id = data.get("user_id")
 
-        if not installation_id or not new_plan:
+        if not installation_id or not user_id:
             return JsonResponse({"error": "Missing required fields"}, status=400)
 
-        # Update the latest report's plan
-        HealthCheckReport.update_latest_report_plan(installation_id, new_plan)
+        user = ZendeskUser.objects.get(user_id=user_id)
+        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
 
-        # Update monitoring settings if downgrading to free plan
-        if new_plan == "Free":
+        # Update monitoring settings if subscription is inactive
+        if not subscription_status["active"]:
             try:
                 monitoring = HealthCheckMonitoring.objects.get(
                     installation_id=installation_id
                 )
-                monitoring.is_active = False  # Disable monitoring for free plan
+                monitoring.is_active = False
                 monitoring.save()
             except HealthCheckMonitoring.DoesNotExist:
                 pass
+
         analytics.track(
             user_id,
-            "Plan Updated",
+            "Subscription Status Updated",
             {
-                "new_plan": new_plan,
-                "previous_plan": HealthCheckReport.get_latest_for_installation(
-                    installation_id
-                ).plan,
-            },
+                "subscription_status": subscription_status["status"],
+                "subscription_active": subscription_status["active"],
+                "plan": subscription_status["plan"]
+            }
         )
         return JsonResponse({"status": "success"})
 
@@ -741,7 +754,6 @@ def update_installation_plan(request):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
 
 @csrf_exempt
 def billing_page(request):

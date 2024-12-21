@@ -1,44 +1,37 @@
 from django.template.loader import render_to_string
-from .models import HealthCheckReport, HealthCheckMonitoring
+from .models import HealthCheckMonitoring
 from django.utils.timesince import timesince
 
-
-def format_response_data(response_data, plan="Free", report_id=None, last_check=None):
-    """Helper function to format response data consistently"""
+def format_response_data(response_data, subscription_active=False, report_id=None, last_check=None, is_unlocked=False):
+    """
+    Helper function to format response data consistently
+    Shows full data if either:
+    - Has active subscription
+    - Report is unlocked via one-off payment
+    """
     issues = response_data.get("issues", [])
     counts = response_data.get("counts", {})
     total_counts = response_data.get("sum_totals", {})
 
-    # Calculate hidden issues for free plan
+    # Calculate hidden issues for users without access
     hidden_issues_count = 0
     hidden_categories = {}
 
-    if plan == "Free" and report_id:
-        try:
-            report = HealthCheckReport.objects.get(id=report_id)
-            is_unlocked = report.is_unlocked
-        except HealthCheckReport.DoesNotExist:
-            is_unlocked = False
+    # Filter issues if user has no access (neither subscription nor one-off unlock)
+    if not subscription_active and not is_unlocked and report_id:
+        # Count issues by category before filtering
+        for issue in issues:
+            item_type = issue.get("item_type")
+            if item_type not in ["TicketForms", "TicketFields"]:
+                hidden_categories[item_type] = hidden_categories.get(item_type, 0) + 1
+                hidden_issues_count += 1
 
-        if not is_unlocked:
-            # Count issues by category before filtering
-            for issue in issues:
-                item_type = issue.get("item_type")
-                if item_type not in [
-                    "TicketForms",
-                    "TicketFields",
-                ]:  # Changed condition
-                    hidden_categories[item_type] = (
-                        hidden_categories.get(item_type, 0) + 1
-                    )
-                    hidden_issues_count += 1
-
-            # Show only Ticket Forms and Fields issues for free plan
-            issues = [
-                issue
-                for issue in issues
-                if issue.get("item_type") in ["TicketForms", "TicketFields"]
-            ]  # Changed condition
+        # Show only Ticket Forms and Fields issues for users without access
+        issues = [
+            issue
+            for issue in issues
+            if issue.get("item_type") in ["TicketForms", "TicketFields"]
+        ]
 
     return {
         "instance": {
@@ -75,8 +68,7 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
         ),
         "hidden_issues_count": hidden_issues_count,
         "hidden_categories": hidden_categories,
-        "is_free_plan": plan == "Free",
-        "is_unlocked": is_unlocked if plan == "Free" else True,
+        "is_unlocked": is_unlocked,
         "report_id": report_id,
         "issues": [
             {
@@ -88,6 +80,15 @@ def format_response_data(response_data, plan="Free", report_id=None, last_check=
             for issue in issues
         ],
     }
+
+
+def render_report_components(formatted_data):
+    """Helper function to render report template"""
+    # If it's an error message, don't nest it under 'data'
+    if "error" in formatted_data and len(formatted_data) == 1:
+        return render_to_string("healthcheck/results.html", formatted_data)
+    # Otherwise, wrap it in 'data' as before
+    return render_to_string("healthcheck/results.html", {"data": formatted_data})
 
 
 def get_monitoring_context(installation_id, client_plan, latest_report=None):
@@ -132,10 +133,3 @@ def format_historical_reports(reports):
     ]
 
 
-def render_report_components(formatted_data):
-    """Helper function to render report template"""
-    # If it's an error message, don't nest it under 'data'
-    if "error" in formatted_data and len(formatted_data) == 1:
-        return render_to_string("healthcheck/results.html", formatted_data)
-    # Otherwise, wrap it in 'data' as before
-    return render_to_string("healthcheck/results.html", {"data": formatted_data})
