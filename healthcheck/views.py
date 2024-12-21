@@ -157,7 +157,9 @@ def create_payment_intent(request):
                 "installation_id": installation_id,
                 "user_id": user_id,
                 "subdomain": user.subdomain
-            }
+            },
+            success_url=request.build_absolute_uri(f"/report/{report_id}/?success=true"),
+            cancel_url=request.build_absolute_uri(f"/report/{report_id}/?canceled=true"),
         )
 
         return JsonResponse({"url": checkout_session.url})
