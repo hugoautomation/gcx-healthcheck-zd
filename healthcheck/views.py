@@ -22,6 +22,8 @@ from django.utils import timezone
 import logging
 import stripe
 import os
+from djstripe import webhooks
+from djstripe.models import PaymentIntent
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -71,6 +73,80 @@ def validate_jwt_token(f):
     return decorated_function
 
 
+
+
+@webhooks.handler("payment_intent.succeeded")
+def handle_payment_success(event):
+    """Handle successful one-time payments"""
+    try:
+        payment_intent = event.data["object"]
+        report_id = payment_intent["metadata"].get("report_id")
+        
+        if report_id:
+            report = HealthCheckReport.objects.get(id=report_id)
+            report.is_unlocked = True
+            report.stripe_payment_id = payment_intent["id"]
+            report.save(skip_others=True)  # Don't update other reports
+            
+            # Track the successful payment
+            analytics.track(
+                report.installation_id,
+                "Report Unlocked",
+                {
+                    "report_id": report.id,
+                    "payment_id": payment_intent["id"],
+                    "amount": payment_intent["amount"] / 100,  # Convert from cents
+                }
+            )
+            
+        return JsonResponse({"status": "success"})
+        
+    except Exception as e:
+        logger.error(f"Error processing payment success: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=400)
+    
+@csrf_exempt
+def create_payment_intent(request):
+    try:
+        data = json.loads(request.body)
+        report_id = data.get("report_id")
+        installation_id = data.get("installation_id")
+        user_id = data.get("user_id")
+
+        if not all([report_id, installation_id, user_id]):
+            return JsonResponse({"error": "Missing required parameters"}, status=400)
+
+        # Get user information
+        user = ZendeskUser.objects.get(user_id=user_id)
+        
+        # Create Stripe checkout session for one-time payment
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="payment",
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": "Health Check Report Unlock",
+                    },
+                    "unit_amount": 24900,  # $249.00
+                },
+                "quantity": 1,
+            }],
+            metadata={
+                "report_id": report_id,
+                "installation_id": installation_id,
+                "user_id": user_id
+            },
+            success_url=request.build_absolute_uri(f"/report/{report_id}/?success=true"),
+            cancel_url=request.build_absolute_uri(f"/report/{report_id}/?canceled=true"),
+        )
+
+        return JsonResponse({"url": checkout_session.url})
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+    
 # Update the app view to remove monitoring context
 @csrf_exempt
 @validate_jwt_token

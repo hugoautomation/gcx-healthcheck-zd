@@ -108,46 +108,67 @@ function initializeUnlockButtons() {
         const newButton = document.querySelector(`.unlock-report[data-report-id="${button.dataset.reportId}"]`);
 
         if (newButton) {
-            newButton.addEventListener('click', function () {
+            newButton.addEventListener('click', async function() {
                 const reportId = this.dataset.reportId;
-                const stripePaymentLink = `https://buy.stripe.com/dR68zbfDvboy7mweUU?client_reference_id=${reportId}`;
-                const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
-                const paymentWindow = window.open(stripePaymentLink, 'StripePayment', windowFeatures);
+                
+                try {
+                    const baseUrl = window.ENVIRONMENT === 'production' 
+                        ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+                        : 'https://gcx-healthcheck-zd-development.up.railway.app';
 
-                // Start polling for unlock status
-                const pollInterval = setInterval(async () => {
-                    try {
-                        const baseUrl = window.ENVIRONMENT === 'production' 
-                            ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                            : 'https://gcx-healthcheck-zd-development.up.railway.app';
+                    // Create a payment intent with report metadata
+                    const response = await client.request({
+                        url: `${baseUrl}/create-payment-intent/`,
+                        type: 'POST',
+                        data: JSON.stringify({
+                            report_id: reportId,
+                            installation_id: metadata.installationId,
+                            user_id: ZAFClientSingleton.userInfo?.id
+                        }),
+                        secure: true
+                    });
 
-                        const options = {
-                            url: `${baseUrl}/check-unlock-status/?report_id=${reportId}`,
-                            type: 'GET',
-                            secure: true
-                        };
-                        
-                        const data = await client.request(options);
+                    if (response.error) {
+                        throw new Error(response.error);
+                    }
 
-                        if (data.is_unlocked) {
-                            document.getElementById('results').innerHTML = data.html;
-                            initializeFilters();
-                            initializeUnlockButtons();
-                            adjustContentHeight();
-                            clearInterval(pollInterval);
+                    // Open Stripe payment page
+                    const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
+                    const paymentWindow = window.open(response.url, 'StripePayment', windowFeatures);
+
+                    // Poll for unlock status
+                    const pollInterval = setInterval(async () => {
+                        try {
+                            const statusResponse = await client.request({
+                                url: `${baseUrl}/check-unlock-status/?report_id=${reportId}`,
+                                type: 'GET',
+                                secure: true
+                            });
+
+                            if (statusResponse.is_unlocked) {
+                                document.getElementById('results').innerHTML = statusResponse.html;
+                                initializeFilters();
+                                initializeUnlockButtons();
+                                adjustContentHeight();
+                                clearInterval(pollInterval);
+                            }
+                        } catch (error) {
+                            console.error('Error checking unlock status:', error);
                         }
-                    } catch (error) {
-                        console.error('Error checking unlock status:', error);
-                    }
-                }, 2000);
+                    }, 2000);
 
-                // Stop polling if payment window is closed
-                const checkWindow = setInterval(() => {
-                    if (paymentWindow.closed) {
-                        clearInterval(pollInterval);
-                        clearInterval(checkWindow);
-                    }
-                }, 1000);
+                    // Stop polling if payment window is closed
+                    const checkWindow = setInterval(() => {
+                        if (paymentWindow.closed) {
+                            clearInterval(pollInterval);
+                            clearInterval(checkWindow);
+                        }
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Error creating payment:', error);
+                    alert('Error creating payment. Please try again.');
+                }
             });
         }
     });
