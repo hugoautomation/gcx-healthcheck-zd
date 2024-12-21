@@ -101,7 +101,6 @@ function initializeFilters() {
     severityFilter.addEventListener('change', filterIssues);
     categoryFilter.addEventListener('change', filterIssues);
 }
-
 function initializeUnlockButtons() {
     document.querySelectorAll('.unlock-report').forEach(button => {
         button.replaceWith(button.cloneNode(true));
@@ -134,10 +133,10 @@ function initializeUnlockButtons() {
 
                     // Open Stripe payment page
                     const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
-                    const paymentWindow = window.open(response.url, 'StripePayment', windowFeatures);
+                    window.open(response.url, 'StripePayment', windowFeatures);
 
-                    // Poll for unlock status
-                    const pollInterval = setInterval(async () => {
+                    // Start polling for unlock status
+                    const pollUnlockStatus = async () => {
                         try {
                             const statusResponse = await client.request({
                                 url: `${baseUrl}/check-unlock-status/?report_id=${reportId}`,
@@ -146,24 +145,34 @@ function initializeUnlockButtons() {
                             });
 
                             if (statusResponse.is_unlocked) {
-                                document.getElementById('results').innerHTML = statusResponse.html;
-                                initializeFilters();
-                                initializeUnlockButtons();
-                                adjustContentHeight();
-                                clearInterval(pollInterval);
+                                // Refresh the report content
+                                const reportResponse = await client.request({
+                                    url: `${baseUrl}/report/${reportId}/?installation_id=${metadata.installationId}&user_id=${ZAFClientSingleton.userInfo?.id}`,
+                                    type: 'GET',
+                                    secure: true
+                                });
+                                
+                                document.getElementById('results').innerHTML = reportResponse.results_html;
+                                initializeComponents();
+                                return true; // Stop polling
                             }
+                            return false; // Continue polling
                         } catch (error) {
                             console.error('Error checking unlock status:', error);
+                            return false;
+                        }
+                    };
+
+                    // Poll every 2 seconds for up to 5 minutes
+                    const maxAttempts = 150; // 5 minutes = 300 seconds / 2 seconds
+                    let attempts = 0;
+                    const pollInterval = setInterval(async () => {
+                        attempts++;
+                        const isUnlocked = await pollUnlockStatus();
+                        if (isUnlocked || attempts >= maxAttempts) {
+                            clearInterval(pollInterval);
                         }
                     }, 2000);
-
-                    // Stop polling if payment window is closed
-                    const checkWindow = setInterval(() => {
-                        if (paymentWindow.closed) {
-                            clearInterval(pollInterval);
-                            clearInterval(checkWindow);
-                        }
-                    }, 1000);
 
                 } catch (error) {
                     console.error('Error creating payment:', error);

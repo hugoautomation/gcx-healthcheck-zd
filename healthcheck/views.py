@@ -74,36 +74,52 @@ def validate_jwt_token(f):
 
 
 
-
-@webhooks.handler("payment_intent.succeeded")
-def handle_payment_success(event):
-    """Handle successful one-time payments"""
+@csrf_exempt
+@require_POST
+def handle_payment_success(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+    
     try:
-        payment_intent = event.data["object"]
-        report_id = payment_intent["metadata"].get("report_id")
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
         
-        if report_id:
-            report = HealthCheckReport.objects.get(id=report_id)
-            report.is_unlocked = True
-            report.stripe_payment_id = payment_intent["id"]
-            report.save(skip_others=True)  # Don't update other reports
+        # Handle successful payment
+        if event.type == 'checkout.session.completed':
+            session = event.data.object
+            report_id = session.metadata.get('report_id')
             
-            # Track the successful payment
-            analytics.track(
-                report.installation_id,
-                "Report Unlocked",
-                {
-                    "report_id": report.id,
-                    "payment_id": payment_intent["id"],
-                    "amount": payment_intent["amount"] / 100,  # Convert from cents
-                }
-            )
-            
-        return JsonResponse({"status": "success"})
+            if report_id:
+                try:
+                    report = HealthCheckReport.objects.get(id=report_id)
+                    report.is_unlocked = True
+                    report.stripe_payment_id = session.payment_intent
+                    report.save(skip_others=True)  # Don't update other reports
+                    
+                    # Track the successful payment
+                    analytics.track(
+                        session.metadata.get('user_id'),
+                        "Report Unlocked",
+                        {
+                            "report_id": report_id,
+                            "payment_id": session.payment_intent,
+                            "amount": session.amount_total / 100,  # Convert from cents
+                        }
+                    )
+                    
+                except HealthCheckReport.DoesNotExist:
+                    logger.error(f"Report {report_id} not found for payment {session.id}")
+                    
+        return JsonResponse({'status': 'success'})
         
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=400)
+    except stripe.error.SignatureVerificationError as e:
+        return JsonResponse({'error': str(e)}, status=400)
     except Exception as e:
-        logger.error(f"Error processing payment success: {str(e)}")
-        return JsonResponse({"error": str(e)}, status=400)
+        logger.error(f"Error processing webhook: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=400)
     
 @csrf_exempt
 def create_payment_intent(request):
@@ -141,9 +157,7 @@ def create_payment_intent(request):
                 "installation_id": installation_id,
                 "user_id": user_id,
                 "subdomain": user.subdomain
-            },
-            success_url=request.build_absolute_uri(f"/report/{report_id}/?success=true"),
-            cancel_url=request.build_absolute_uri(f"/report/{report_id}/?canceled=true"),
+            }
         )
 
         return JsonResponse({"url": checkout_session.url})
@@ -607,26 +621,10 @@ def check_unlock_status(request):
 
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        user = ZendeskUser.objects.get(subdomain=report.subdomain)
-        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
-
-        if report.is_unlocked or subscription_status["active"]:
-            # Format the full report data
-            report_data = format_response_data(
-                report.raw_response,
-                subscription_active=subscription_status["active"],
-                report_id=report.id,
-                last_check=report.created_at,
-                is_unlocked=report.is_unlocked
-            )
-
-            # Use render_report_components utility
-            results_html = render_report_components(report_data)
-
-            return JsonResponse({"is_unlocked": True, "html": results_html})
-
-        return JsonResponse({"is_unlocked": False})
-
+        return JsonResponse({
+            "is_unlocked": report.is_unlocked,
+            "report_id": report.id
+        })
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
@@ -909,6 +907,7 @@ def create_checkout_session(request):
             mode="subscription",
             allow_promotion_codes=True,
             billing_address_collection="required",
+            automatic_tax={"enabled": True},
             line_items=[
                 {
                     "price": price_id,
