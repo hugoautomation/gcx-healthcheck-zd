@@ -207,9 +207,9 @@ def create_payment_intent(request):
                 "user_id": user_id,
                 "subdomain": user.subdomain,
             },
-            # success_url=request.build_absolute_uri(
-            #     f"/report/{report_id}/?success=true"
-            # ),
+            success_url=request.build_absolute_uri(
+                f"/report/{report_id}/?success=true"
+            ),
         )
 
         return JsonResponse({"url": checkout_session.url})
@@ -229,7 +229,7 @@ def app(request):
     user_id = request.GET.get("user_id")
 
     if not installation_id:
-        initial_data["error"] = "No installation ID provided. Please reload the app."
+        initial_data["loading"] = "Loading your workspace..."  # Changed from error to loading
         return render(request, "healthcheck/app.html", initial_data)
 
     try:
@@ -1022,12 +1022,12 @@ def create_checkout_session(request):
                 "user_id": user_id,
                 "plan_type": plan_type,
             },
-            # success_url=request.build_absolute_uri(
-            #     f"/billing/?installation_id={installation_id}&success=true"
-            # ),
-            cancel_url=request.build_absolute_uri(
-                f"/billing/?installation_id={installation_id}&canceled=true"
+            success_url=request.build_absolute_uri(
+                f"/billing/?installation_id={installation_id}&success=true"
             ),
+            # cancel_url=request.build_absolute_uri(
+            #     f"/billing/?installation_id={installation_id}&canceled=true"
+            # ),
         )
 
         return JsonResponse({"url": checkout_session.url})
