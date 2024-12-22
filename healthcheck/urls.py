@@ -38,6 +38,4 @@ urlpatterns = [
         views.create_payment_intent,
         name="create_payment_intent",
     ),
-    # Webhook endpoint for Stripe events
-    path("webhooks/stripe/", views.handle_payment_success, name="stripe_webhook"),
 ]

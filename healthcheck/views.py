@@ -24,6 +24,7 @@ import stripe
 import os
 from djstripe import webhooks
 from django.db import transaction
+from djstripe.models import Event
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -74,28 +75,28 @@ def validate_jwt_token(f):
 
 
 @webhooks.handler("checkout.session.completed")
-def handle_payment_success(event, **kwargs):
+def handle_checkout_completed(event: Event, **kwargs):
     """Handle successful checkout session completion"""
     try:
         # Get the session data from the event
         session = event.data["object"]
         metadata = session.get("metadata", {})
-        
+
         # Extract metadata
         report_id = metadata.get("report_id")
         subdomain = metadata.get("subdomain")
         user_id = metadata.get("user_id")
-        
+
         if not all([report_id, subdomain]):
             logger.error("Missing required metadata in webhook event")
-            return JsonResponse({"error": "Missing required metadata"}, status=400)
+            return HttpResponse(status=400)
 
         # Use transaction to ensure database consistency
         with transaction.atomic():
             try:
                 report = HealthCheckReport.objects.get(
                     id=report_id,
-                    subdomain=subdomain  # Additional validation
+                    subdomain=subdomain,  # Additional validation
                 )
                 report.is_unlocked = True
                 report.stripe_payment_id = session.get("payment_intent")
@@ -109,27 +110,22 @@ def handle_payment_success(event, **kwargs):
                         {
                             "report_id": report_id,
                             "payment_id": session.get("payment_intent"),
-                            "amount": session.get("amount_total", 0) / 100,  # Convert from cents
-                            "subdomain": subdomain
-                        }
+                            "amount": session.get("amount_total", 0) / 100,
+                            "subdomain": subdomain,
+                        },
                     )
 
                 transaction.on_commit(track_payment)
-                
-                return JsonResponse({"status": "success"})
 
             except HealthCheckReport.DoesNotExist:
-                logger.error(
-                    f"Report {report_id} not found for subdomain {subdomain}"
-                )
-                return JsonResponse(
-                    {"error": "Report not found"}, 
-                    status=404
-                )
+                logger.error(f"Report {report_id} not found for subdomain {subdomain}")
+                return HttpResponse(status=404)
+
+        return HttpResponse(status=200)
 
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
-        return JsonResponse({"error": str(e)}, status=400)
+        return HttpResponse(status=400)
 
 
 @csrf_exempt
@@ -174,7 +170,6 @@ def create_payment_intent(request):
             success_url=request.build_absolute_uri(
                 f"/report/{report_id}/?success=true"
             ),
-
         )
 
         return JsonResponse({"url": checkout_session.url})
