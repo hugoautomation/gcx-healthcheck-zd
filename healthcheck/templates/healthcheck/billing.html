@@ -58,7 +58,12 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                 {% endif %}
         
                 <p class="mb-2"><strong>Current Period Ends:</strong> {{ subscription.current_period_end|date:"F j, Y" }}</p>
-                
+                {% if subscription.cancel_at_period_end %}
+                <p class="mb-2"><strong>Subscription will end:</strong> {{ subscription.cancel_at_period_end|date:"F j, Y" }}</p>
+                {% else %}
+                <p class="mb-2"><strong>Subscription will renew:</strong> {{ subscription.current_period_end|date:"F j, Y" }}</p>
+
+                {% endif %}
                 {% if subscription.hosted_invoice_url %}
                 <a href="{{ subscription.hosted_invoice_url }}" target="_blank"
                    class="btn c-btn c-btn--secondary c-btn--sm mt-3 me-2" target="_blank">View Latest Invoice</a>
