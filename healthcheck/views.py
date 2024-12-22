@@ -72,6 +72,8 @@ def validate_jwt_token(f):
         return f(request, *args, **kwargs)
 
     return decorated_function
+
+
 @webhooks.handler("checkout.session.completed")
 def handle_checkout_completed(event: Event, **kwargs):
     """Handle successful checkout session completion"""
@@ -82,7 +84,7 @@ def handle_checkout_completed(event: Event, **kwargs):
 
         # Get the checkout session
         checkout_session = event.data.get("object", {})
-        
+
         if not checkout_session:
             logger.error("No checkout session found in event data")
             return HttpResponse(status=400)
@@ -94,12 +96,14 @@ def handle_checkout_completed(event: Event, **kwargs):
         # Extract and log metadata
         metadata = checkout_session.get("metadata", {})
         logger.info(f"Metadata received: {metadata}")
-        
+
         report_id = metadata.get("report_id")
         subdomain = metadata.get("subdomain")
         user_id = metadata.get("user_id")
 
-        logger.info(f"Extracted data - Report ID: {report_id}, Subdomain: {subdomain}, User ID: {user_id}")
+        logger.info(
+            f"Extracted data - Report ID: {report_id}, Subdomain: {subdomain}, User ID: {user_id}"
+        )
 
         # Verify payment status
         payment_status = checkout_session.get("payment_status")
@@ -114,17 +118,22 @@ def handle_checkout_completed(event: Event, **kwargs):
         # Use transaction to ensure database consistency
         with transaction.atomic():
             try:
-                logger.info(f"Attempting to find report with ID: {report_id} and subdomain: {subdomain}")
-                report = HealthCheckReport.objects.get(
-                    id=report_id,
-                    subdomain=subdomain
+                logger.info(
+                    f"Attempting to find report with ID: {report_id} and subdomain: {subdomain}"
                 )
-                
-                logger.info(f"Found report, current unlock status: {report.is_unlocked}")
+                report = HealthCheckReport.objects.get(
+                    id=report_id, subdomain=subdomain
+                )
+
+                logger.info(
+                    f"Found report, current unlock status: {report.is_unlocked}"
+                )
                 report.is_unlocked = True
                 report.stripe_payment_id = checkout_session.get("id")
                 report.save()  # Removed skip_others=True
-                logger.info(f"Successfully updated report {report_id} unlock status to True")
+                logger.info(
+                    f"Successfully updated report {report_id} unlock status to True"
+                )
 
                 # Track the successful payment
                 def track_payment():
@@ -137,9 +146,13 @@ def handle_checkout_completed(event: Event, **kwargs):
                             "payment_id": checkout_session.get("id"),
                             "amount": checkout_session.get("amount_subtotal", 0) / 100,
                             "subdomain": subdomain,
-                            "discount_amount": checkout_session.get("total_details", {}).get("amount_discount", 0) / 100,
-                            "final_amount": checkout_session.get("amount_total", 0) / 100
-                        }
+                            "discount_amount": checkout_session.get(
+                                "total_details", {}
+                            ).get("amount_discount", 0)
+                            / 100,
+                            "final_amount": checkout_session.get("amount_total", 0)
+                            / 100,
+                        },
                     )
 
                 transaction.on_commit(track_payment)
@@ -674,7 +687,7 @@ def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        
+
         # Get subscription status for the report's subdomain
         subscription_status = ZendeskUser.get_subscription_status(report.subdomain)
 
@@ -684,7 +697,7 @@ def get_historical_report(request, report_id):
             subscription_active=subscription_status["active"],
             report_id=report.id,
             last_check=report.created_at,
-            is_unlocked=report.is_unlocked
+            is_unlocked=report.is_unlocked,
         )
 
         # Use render_report_components utility
@@ -836,6 +849,7 @@ def monitoring_settings(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+
 @webhooks.handler("customer.subscription.created")
 @webhooks.handler("customer.subscription.updated")
 @webhooks.handler("customer.subscription.deleted")
@@ -847,29 +861,33 @@ def handle_subscription_update(event: Event, **kwargs):
 
         subscription = event.data["object"]
         metadata = subscription.get("metadata", {})
-        
+
         # Extract metadata
         user_id = metadata.get("user_id")
         subdomain = metadata.get("subdomain")  # Get subdomain from metadata
         installation_id = metadata.get("installation_id")
 
         if not all([user_id, subdomain]):
-            logger.error(f"Missing required metadata. user_id: {user_id}, subdomain: {subdomain}")
+            logger.error(
+                f"Missing required metadata. user_id: {user_id}, subdomain: {subdomain}"
+            )
             return HttpResponse(status=400)
 
         # Get subscription status
         status = subscription.get("status")
         is_active = status in ["active", "trialing"]
         plan_id = subscription.get("plan", {}).get("id")
-        
-        logger.info(f"Subscription status for {subdomain}: {status}, is_active: {is_active}")
+
+        logger.info(
+            f"Subscription status for {subdomain}: {status}, is_active: {is_active}"
+        )
 
         try:
             # Verify subdomain exists
             if not ZendeskUser.objects.filter(subdomain=subdomain).exists():
                 logger.error(f"User not found for subdomain: {subdomain}")
                 return HttpResponse(status=404)
-            
+
             # Update monitoring settings if subscription is inactive
             if not is_active and installation_id:
                 try:
@@ -878,9 +896,13 @@ def handle_subscription_update(event: Event, **kwargs):
                     )
                     monitoring.is_active = False
                     monitoring.save()
-                    logger.info(f"Updated monitoring status for installation {installation_id}")
+                    logger.info(
+                        f"Updated monitoring status for installation {installation_id}"
+                    )
                 except HealthCheckMonitoring.DoesNotExist:
-                    logger.info(f"No monitoring settings found for installation {installation_id}")
+                    logger.info(
+                        f"No monitoring settings found for installation {installation_id}"
+                    )
 
             # Track the event
             analytics.track(
@@ -892,10 +914,12 @@ def handle_subscription_update(event: Event, **kwargs):
                     "subscription_active": is_active,
                     "plan": plan_id,
                     "subdomain": subdomain,
-                    "installation_id": installation_id
-                }
+                    "installation_id": installation_id,
+                },
             )
-            logger.info(f"Successfully tracked subscription update for subdomain {subdomain}")
+            logger.info(
+                f"Successfully tracked subscription update for subdomain {subdomain}"
+            )
 
             return HttpResponse(status=200)
 
@@ -906,6 +930,7 @@ def handle_subscription_update(event: Event, **kwargs):
     except Exception as e:
         logger.error(f"Error processing subscription webhook: {str(e)}", exc_info=True)
         return HttpResponse(status=400)
+
 
 @csrf_exempt
 def billing_page(request):

@@ -16,11 +16,6 @@ urlpatterns = [
         name="get_historical_report",
     ),
     path("monitoring-settings/", views.monitoring_settings, name="monitoring_settings"),
-    path(
-        "update-installation-plan/",
-        views.update_installation_plan,
-        name="update_installation_plan",
-    ),
     path("monitoring/", views.monitoring, name="monitoring"),
     path(
         "api/users/create-or-update/",
