@@ -1,9 +1,15 @@
 <div class="results-container">
-    {% if error %}
-        <div class="alert alert-danger" role="alert">
-            <h5>Error</h5>
-            <p>{{ error }}</p>
+    {% if loading %}
+    <div class="text-center my-5">
+        <div class="spinner-border text-primary mb-3" role="status">
+            <span class="visually-hidden">Loading...</span>
         </div>
+        <p class="text-muted">{{ loading }}</p>
+    </div>
+{% elif error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
     {% elif not data %}
         <div class="alert alert-info" role="alert">
             <h5>Welcome to Zendesk Healthcheck</h5>
