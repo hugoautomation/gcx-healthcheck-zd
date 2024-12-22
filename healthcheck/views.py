@@ -836,51 +836,76 @@ def monitoring_settings(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-
-@csrf_exempt
-def update_installation_plan(request):
-    """Handle subscription updates from Zendesk"""
-    if request.method != "POST":
-        return JsonResponse({"error": "Method not allowed"}, status=405)
-
+@webhooks.handler("customer.subscription.created")
+@webhooks.handler("customer.subscription.updated")
+@webhooks.handler("customer.subscription.deleted")
+def handle_subscription_update(event: Event, **kwargs):
+    """Handle subscription updates from Stripe"""
     try:
-        data = json.loads(request.body)
-        installation_id = data.get("installation_id")
-        user_id = data.get("user_id")
+        logger.info(f"Received subscription webhook event: {event.type}")
+        logger.info(f"Full event data: {event.data}")
 
-        if not installation_id or not user_id:
-            return JsonResponse({"error": "Missing required fields"}, status=400)
+        subscription = event.data["object"]
+        metadata = subscription.get("metadata", {})
+        
+        # Extract metadata
+        user_id = metadata.get("user_id")
+        subdomain = metadata.get("subdomain")  # Get subdomain from metadata
+        installation_id = metadata.get("installation_id")
 
-        user = ZendeskUser.objects.get(user_id=user_id)
-        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+        if not all([user_id, subdomain]):
+            logger.error(f"Missing required metadata. user_id: {user_id}, subdomain: {subdomain}")
+            return HttpResponse(status=400)
 
-        # Update monitoring settings if subscription is inactive
-        if not subscription_status["active"]:
-            try:
-                monitoring = HealthCheckMonitoring.objects.get(
-                    installation_id=installation_id
-                )
-                monitoring.is_active = False
-                monitoring.save()
-            except HealthCheckMonitoring.DoesNotExist:
-                pass
+        # Get subscription status
+        status = subscription.get("status")
+        is_active = status in ["active", "trialing"]
+        plan_id = subscription.get("plan", {}).get("id")
+        
+        logger.info(f"Subscription status for {subdomain}: {status}, is_active: {is_active}")
 
-        analytics.track(
-            user_id,
-            "Subscription Status Updated",
-            {
-                "subscription_status": subscription_status["status"],
-                "subscription_active": subscription_status["active"],
-                "plan": subscription_status["plan"],
-            },
-        )
-        return JsonResponse({"status": "success"})
+        try:
+            # Verify subdomain exists
+            if not ZendeskUser.objects.filter(subdomain=subdomain).exists():
+                logger.error(f"User not found for subdomain: {subdomain}")
+                return HttpResponse(status=404)
+            
+            # Update monitoring settings if subscription is inactive
+            if not is_active and installation_id:
+                try:
+                    monitoring = HealthCheckMonitoring.objects.get(
+                        installation_id=installation_id
+                    )
+                    monitoring.is_active = False
+                    monitoring.save()
+                    logger.info(f"Updated monitoring status for installation {installation_id}")
+                except HealthCheckMonitoring.DoesNotExist:
+                    logger.info(f"No monitoring settings found for installation {installation_id}")
 
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
+            # Track the event
+            analytics.track(
+                user_id,
+                "Subscription Status Updated",
+                {
+                    "event_type": event.type,
+                    "subscription_status": status,
+                    "subscription_active": is_active,
+                    "plan": plan_id,
+                    "subdomain": subdomain,
+                    "installation_id": installation_id
+                }
+            )
+            logger.info(f"Successfully tracked subscription update for subdomain {subdomain}")
+
+            return HttpResponse(status=200)
+
+        except Exception as e:
+            logger.error(f"Database error: {str(e)}", exc_info=True)
+            return HttpResponse(status=500)
+
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
+        logger.error(f"Error processing subscription webhook: {str(e)}", exc_info=True)
+        return HttpResponse(status=400)
 
 @csrf_exempt
 def billing_page(request):
