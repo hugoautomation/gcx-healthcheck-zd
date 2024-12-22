@@ -72,7 +72,6 @@ def validate_jwt_token(f):
         return f(request, *args, **kwargs)
 
     return decorated_function
-
 @webhooks.handler("checkout.session.completed")
 def handle_checkout_completed(event: Event, **kwargs):
     """Handle successful checkout session completion"""
@@ -124,7 +123,7 @@ def handle_checkout_completed(event: Event, **kwargs):
                 logger.info(f"Found report, current unlock status: {report.is_unlocked}")
                 report.is_unlocked = True
                 report.stripe_payment_id = checkout_session.get("id")
-                report.save(skip_others=True)
+                report.save()  # Removed skip_others=True
                 logger.info(f"Successfully updated report {report_id} unlock status to True")
 
                 # Track the successful payment
