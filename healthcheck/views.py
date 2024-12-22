@@ -22,6 +22,8 @@ from django.utils import timezone
 import logging
 import stripe
 import os
+from djstripe import webhooks
+from django.db import transaction
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -71,50 +73,60 @@ def validate_jwt_token(f):
     return decorated_function
 
 
-@csrf_exempt
-def handle_payment_success(request):
-    payload = request.body
-    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
-
+@webhooks.handler("checkout.session.completed")
+def handle_payment_success(event, **kwargs):
+    """Handle successful checkout session completion"""
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-        )
+        # Get the session data from the event
+        session = event.data["object"]
+        metadata = session.get("metadata", {})
+        
+        # Extract metadata
+        report_id = metadata.get("report_id")
+        subdomain = metadata.get("subdomain")
+        user_id = metadata.get("user_id")
+        
+        if not all([report_id, subdomain]):
+            logger.error("Missing required metadata in webhook event")
+            return JsonResponse({"error": "Missing required metadata"}, status=400)
 
-        # Handle successful payment
-        if event.type == "checkout.session.completed":
-            session = event.data.object
-            report_id = session.metadata.get("report_id")
+        # Use transaction to ensure database consistency
+        with transaction.atomic():
+            try:
+                report = HealthCheckReport.objects.get(
+                    id=report_id,
+                    subdomain=subdomain  # Additional validation
+                )
+                report.is_unlocked = True
+                report.stripe_payment_id = session.get("payment_intent")
+                report.save(skip_others=True)  # Don't update other reports
 
-            if report_id:
-                try:
-                    report = HealthCheckReport.objects.get(id=report_id)
-                    report.is_unlocked = True
-                    report.stripe_payment_id = session.payment_intent
-                    report.save(skip_others=True)  # Don't update other reports
-
-                    # Track the successful payment
+                # Track the successful payment using transaction.on_commit
+                def track_payment():
                     analytics.track(
-                        session.metadata.get("user_id"),
+                        user_id,
                         "Report Unlocked",
                         {
                             "report_id": report_id,
-                            "payment_id": session.payment_intent,
-                            "amount": session.amount_total / 100,  # Convert from cents
-                        },
+                            "payment_id": session.get("payment_intent"),
+                            "amount": session.get("amount_total", 0) / 100,  # Convert from cents
+                            "subdomain": subdomain
+                        }
                     )
 
-                except HealthCheckReport.DoesNotExist:
-                    logger.error(
-                        f"Report {report_id} not found for payment {session.id}"
-                    )
+                transaction.on_commit(track_payment)
+                
+                return JsonResponse({"status": "success"})
 
-        return JsonResponse({"status": "success"})
+            except HealthCheckReport.DoesNotExist:
+                logger.error(
+                    f"Report {report_id} not found for subdomain {subdomain}"
+                )
+                return JsonResponse(
+                    {"error": "Report not found"}, 
+                    status=404
+                )
 
-    except ValueError as e:
-        return JsonResponse({"error": str(e)}, status=400)
-    except stripe.error.SignatureVerificationError as e:
-        return JsonResponse({"error": str(e)}, status=400)
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
         return JsonResponse({"error": str(e)}, status=400)
@@ -162,9 +174,7 @@ def create_payment_intent(request):
             success_url=request.build_absolute_uri(
                 f"/report/{report_id}/?success=true"
             ),
-            cancel_url=request.build_absolute_uri(
-                f"/report/{report_id}/?canceled=true"
-            ),
+
         )
 
         return JsonResponse({"url": checkout_session.url})
@@ -852,9 +862,6 @@ def billing_page(request):
     if not installation_id:
         return JsonResponse({"error": "Installation ID required"}, status=400)
 
-    # Get current subscription status
-
-    # Get user information
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
