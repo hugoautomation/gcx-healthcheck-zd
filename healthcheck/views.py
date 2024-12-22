@@ -24,7 +24,7 @@ import stripe
 import os
 from djstripe import webhooks
 from django.db import transaction
-from djstripe.models import Event
+from djstripe.models import Event, Customer, Subscription, Invoice
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -931,6 +931,8 @@ def handle_subscription_update(event: Event, **kwargs):
         logger.error(f"Error processing subscription webhook: {str(e)}", exc_info=True)
         return HttpResponse(status=400)
 
+from djstripe.models import Customer, Subscription
+from django.shortcuts import render
 
 @csrf_exempt
 def billing_page(request):
@@ -945,6 +947,27 @@ def billing_page(request):
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+        
+        # Get Stripe customer and latest invoice details
+        if subscription_status.get("stripe_customer_id"):
+            try:
+                # Get latest invoice for this customer
+                latest_invoice = Invoice.objects.filter(
+                    customer_id=subscription_status["stripe_customer_id"]
+                ).order_by('-created').first()
+
+                if latest_invoice:
+                    subscription_status.update({
+                        "customer_name": latest_invoice.customer_name,
+                        "customer_email": latest_invoice.customer_email,
+                        "customer_phone": latest_invoice.customer_phone,
+                        "customer_address": latest_invoice.customer_address,
+                        "customer_shipping": latest_invoice.customer_shipping,
+                        "hosted_invoice_url": latest_invoice.hosted_invoice_url,
+                        "currency": latest_invoice.currency,
+                    })
+            except Exception as e:
+                logger.error(f"Error fetching invoice details: {str(e)}")
 
     except ZendeskUser.DoesNotExist:
         user = None

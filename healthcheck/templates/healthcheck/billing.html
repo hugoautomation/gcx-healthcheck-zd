@@ -24,19 +24,47 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
     </div>
     {% if subscription.active %}
         <!-- Show current subscription info -->
-        <div class="subscription-info">
-          <div class="subscription-info">
-            <h2>Current Subscription</h2>
-            <div class="card mb-4 rounded-3 shadow-sm border-primary">
-                <div class="card-header py-3 text-bg-primary border-primary">
-                    <h4 class="my-0 fw-normal">{{ subscription.plan }}</h4>
+        <h2>Current Subscription</h2>
+        <div class="card mb-4 rounded-3 shadow-sm">
+            <div class="card-header py-3">
+                <h4 class="my-0 fw-normal">{{ subscription.plan }}</h4>
+            </div>
+            <div class="card-body">
+                <p class="mb-2"><strong>Status:</strong> <span class="badge bg-success">{{ subscription.status|title }}</span></p>
+                
+                {% if subscription.customer_name or subscription.customer_email %}
+                <div class="customer-details mb-3">
+                    <h5 class="mb-2">Customer Details</h5>
+                    {% if subscription.customer_name %}
+                    <p class="mb-1"><strong>Name:</strong> {{ subscription.customer_name }}</p>
+                    {% endif %}
+                    {% if subscription.customer_email %}
+                    <p class="mb-1"><strong>Email:</strong> {{ subscription.customer_email }}</p>
+                    {% endif %}
+                    {% if subscription.customer_phone %}
+                    <p class="mb-1"><strong>Phone:</strong> {{ subscription.customer_phone }}</p>
+                    {% endif %}
+                    {% if subscription.customer_address %}
+                    <p class="mb-1"><strong>Billing Address:</strong><br>
+                        {{ subscription.customer_address.line1 }}{% if subscription.customer_address.line2 %}<br>{{ subscription.customer_address.line2 }}{% endif %}<br>
+                        {{ subscription.customer_address.city }}, 
+                        {{ subscription.customer_address.state }} 
+                        {{ subscription.customer_address.postal_code }}<br>
+                        {{ subscription.customer_address.country }}
+                    </p>
+                    {% endif %}
+
                 </div>
-                <div class="card-body">
-                    <p class="mb-2"><strong>Status:</strong> <span class="badge bg-success">{{ subscription.status|title }}</span></p>
-                    <p class="mb-2"><strong>Current Period Ends:</strong> {{ subscription.current_period_end|date:"F j, Y" }}</p>
-                    <a href="https://billing.stripe.com/p/login/test_4gwaHHgWTeitgsUfYY" 
-                       class="btn c-btn c-btn--primary c-btn--sm mt-3">Manage Subscription</a>
-                </div>
+                {% endif %}
+        
+                <p class="mb-2"><strong>Current Period Ends:</strong> {{ subscription.current_period_end|date:"F j, Y" }}</p>
+                
+                {% if subscription.hosted_invoice_url %}
+                <a href="{{ subscription.hosted_invoice_url }}" target="_blank"
+                   class="btn c-btn c-btn--secondary c-btn--sm mt-3 me-2" target="_blank">View Latest Invoice</a>
+                {% endif %}
+                <a href="https://billing.stripe.com/p/login/test_4gwaHHgWTeitgsUfYY" target="_blank"
+                   class="btn c-btn c-btn--primary c-btn--sm mt-3">Manage Subscription</a>
             </div>
         </div>
     {% else %}
