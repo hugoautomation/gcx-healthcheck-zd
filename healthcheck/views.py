@@ -669,17 +669,93 @@ def download_report_csv(request, report_id):
         return JsonResponse({"error": "Report not found"}, status=404)
 
 
-@csrf_exempt
-def check_unlock_status(request):
-    report_id = request.GET.get("report_id")
-    if not report_id:
-        return JsonResponse({"error": "No report ID provided"}, status=400)
-
+@webhooks.handler("customer.subscription.created")
+@webhooks.handler("customer.subscription.updated")
+@webhooks.handler("customer.subscription.deleted")
+def handle_subscription_update(event: Event, **kwargs):
+    """Handle subscription updates from Stripe"""
     try:
-        report = HealthCheckReport.objects.get(id=report_id)
-        return JsonResponse({"is_unlocked": report.is_unlocked, "report_id": report.id})
-    except HealthCheckReport.DoesNotExist:
-        return JsonResponse({"error": "Report not found"}, status=404)
+        logger.info(f"Received subscription webhook event: {event.type}")
+        logger.info(f"Full event data: {event.data}")
+
+        subscription = event.data["object"]
+        metadata = subscription.get("metadata", {})
+
+        # Extract metadata
+        user_id = metadata.get("user_id")
+        subdomain = metadata.get("subdomain")
+        installation_id = metadata.get("installation_id")
+
+        if not all([user_id, subdomain]):
+            logger.error(
+                f"Missing required metadata. user_id: {user_id}, subdomain: {subdomain}"
+            )
+            return HttpResponse(status=400)
+
+        # Get subscription status
+        status = subscription.get("status")
+        is_active = status in ["active", "trialing"]
+
+        logger.info(
+            f"Subscription status for {subdomain}: {status}, is_active: {is_active}"
+        )
+
+        try:
+            # Verify subdomain exists
+            if not ZendeskUser.objects.filter(subdomain=subdomain).exists():
+                logger.error(f"User not found for subdomain: {subdomain}")
+                return HttpResponse(status=404)
+
+            # Update all reports unlock status based on subscription status
+            HealthCheckReport.objects.filter(subdomain=subdomain).update(
+                is_unlocked=is_active
+            )
+            logger.info(
+                f"Updated reports unlock status to {is_active} for subdomain {subdomain}"
+            )
+
+            # Update monitoring settings if subscription is inactive
+            if not is_active and installation_id:
+                try:
+                    monitoring = HealthCheckMonitoring.objects.get(
+                        installation_id=installation_id
+                    )
+                    monitoring.is_active = False
+                    monitoring.save()
+                    logger.info(
+                        f"Updated monitoring status for installation {installation_id}"
+                    )
+                except HealthCheckMonitoring.DoesNotExist:
+                    logger.info(
+                        f"No monitoring settings found for installation {installation_id}"
+                    )
+
+            # Track the event
+            analytics.track(
+                user_id,
+                "Subscription Status Updated",
+                {
+                    "event_type": event.type,
+                    "subscription_status": status,
+                    "subscription_active": is_active,
+                    "subdomain": subdomain,
+                    "installation_id": installation_id,
+                    "reports_unlocked": is_active,
+                },
+            )
+            logger.info(
+                f"Successfully processed subscription update for subdomain {subdomain}"
+            )
+
+            return HttpResponse(status=200)
+
+        except Exception as e:
+            logger.error(f"Database error: {str(e)}", exc_info=True)
+            return HttpResponse(status=500)
+
+    except Exception as e:
+        logger.error(f"Error processing subscription webhook: {str(e)}", exc_info=True)
+        return HttpResponse(status=400)
 
 
 @csrf_exempt
