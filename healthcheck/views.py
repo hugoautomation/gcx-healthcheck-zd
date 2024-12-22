@@ -77,18 +77,30 @@ def validate_jwt_token(f):
 def handle_checkout_completed(event: Event, **kwargs):
     """Handle successful checkout session completion"""
     try:
-        # The event.data contains 'object' key with the checkout session
+        # Log the entire event for debugging
+        logger.info(f"Received checkout.session.completed webhook event: {event.id}")
+        logger.info(f"Full event data: {event.data}")
+
+        # Get the checkout session
         checkout_session = event.data.get("object", {})
         
         if not checkout_session:
             logger.error("No checkout session found in event data")
             return HttpResponse(status=400)
 
-        # Extract metadata from the checkout session
+        # Log checkout session details
+        logger.info(f"Checkout session ID: {checkout_session.get('id')}")
+        logger.info(f"Payment status: {checkout_session.get('payment_status')}")
+
+        # Extract and log metadata
         metadata = checkout_session.get("metadata", {})
+        logger.info(f"Metadata received: {metadata}")
+        
         report_id = metadata.get("report_id")
         subdomain = metadata.get("subdomain")
         user_id = metadata.get("user_id")
+
+        logger.info(f"Extracted data - Report ID: {report_id}, Subdomain: {subdomain}, User ID: {user_id}")
 
         # Verify payment status
         payment_status = checkout_session.get("payment_status")
@@ -103,16 +115,21 @@ def handle_checkout_completed(event: Event, **kwargs):
         # Use transaction to ensure database consistency
         with transaction.atomic():
             try:
+                logger.info(f"Attempting to find report with ID: {report_id} and subdomain: {subdomain}")
                 report = HealthCheckReport.objects.get(
                     id=report_id,
                     subdomain=subdomain
                 )
+                
+                logger.info(f"Found report, current unlock status: {report.is_unlocked}")
                 report.is_unlocked = True
-                report.stripe_payment_id = checkout_session.get("id")  # Use session ID as reference
+                report.stripe_payment_id = checkout_session.get("id")
                 report.save(skip_others=True)
+                logger.info(f"Successfully updated report {report_id} unlock status to True")
 
                 # Track the successful payment
                 def track_payment():
+                    logger.info(f"Tracking payment for report {report_id}")
                     analytics.track(
                         user_id,
                         "Report Unlocked",
@@ -127,8 +144,7 @@ def handle_checkout_completed(event: Event, **kwargs):
                     )
 
                 transaction.on_commit(track_payment)
-
-                logger.info(f"Successfully unlocked report {report_id} for subdomain {subdomain}")
+                logger.info(f"Successfully processed webhook for report {report_id}")
                 return HttpResponse(status=200)
 
             except HealthCheckReport.DoesNotExist:
@@ -136,7 +152,7 @@ def handle_checkout_completed(event: Event, **kwargs):
                 return HttpResponse(status=404)
 
     except Exception as e:
-        logger.error(f"Error processing webhook: {str(e)}")
+        logger.error(f"Error processing webhook: {str(e)}", exc_info=True)
         return HttpResponse(status=400)
 
 
