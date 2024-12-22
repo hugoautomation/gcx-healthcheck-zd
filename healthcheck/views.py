@@ -933,7 +933,6 @@ def handle_subscription_update(event: Event, **kwargs):
 
 from djstripe.models import Customer, Subscription
 from django.shortcuts import render
-
 @csrf_exempt
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
@@ -948,26 +947,57 @@ def billing_page(request):
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
         
-        # Get Stripe customer and latest invoice details
+        # Get Stripe customer details
         if subscription_status.get("stripe_customer_id"):
             try:
-                # Get latest invoice for this customer
+                # Get the customer object
+                customer = Customer.objects.get(id=subscription_status["stripe_customer_id"])
+                
+                # Get active subscription
+                active_subscription = customer.active_subscriptions.first()
+                
+                # Get latest invoice
                 latest_invoice = Invoice.objects.filter(
-                    customer_id=subscription_status["stripe_customer_id"]
+                    customer_id=customer.id
                 ).order_by('-created').first()
 
-                if latest_invoice:
+                subscription_status.update({
+                    # Customer details
+                    "customer_name": customer.name,
+                    "customer_email": customer.email,
+                    "customer_address": customer.address,
+                    "customer_currency": customer.currency,
+                    "customer_balance": customer.balance,
+                    "customer_delinquent": customer.delinquent,
+                    
+                    # Payment method details
+                    "default_payment_method": customer.default_payment_method.type if customer.default_payment_method else None,
+                    
+                    # Invoice details
+                    "hosted_invoice_url": latest_invoice.hosted_invoice_url if latest_invoice else None,
+                    
+                    # Subscription details from active subscription
+                    "current_period_end": active_subscription.current_period_end if active_subscription else None,
+                    "cancel_at": active_subscription.cancel_at if active_subscription else None,
+                    
+                    # Discount information
+                    "has_discount": bool(customer.discount),
+                    "discount_details": customer.discount,
+                })
+
+                # Add coupon information if present
+                if customer.coupon:
                     subscription_status.update({
-                        "customer_name": latest_invoice.customer_name,
-                        "customer_email": latest_invoice.customer_email,
-                        "customer_phone": latest_invoice.customer_phone,
-                        "customer_address": latest_invoice.customer_address,
-                        "customer_shipping": latest_invoice.customer_shipping,
-                        "hosted_invoice_url": latest_invoice.hosted_invoice_url,
-                        "currency": latest_invoice.currency,
+                        "coupon": {
+                            "end": customer.coupon_end,
+                            "start": customer.coupon_start,
+                        }
                     })
+
+            except Customer.DoesNotExist:
+                logger.error(f"Stripe customer not found: {subscription_status['stripe_customer_id']}")
             except Exception as e:
-                logger.error(f"Error fetching invoice details: {str(e)}")
+                logger.error(f"Error fetching customer details: {str(e)}")
 
     except ZendeskUser.DoesNotExist:
         user = None
@@ -993,7 +1023,6 @@ def billing_page(request):
         "price_ids": PRICE_IDS,
     }
     return render(request, "healthcheck/billing.html", context)
-
 
 @csrf_exempt
 def create_checkout_session(request):
