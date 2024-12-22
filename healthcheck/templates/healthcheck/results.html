@@ -46,10 +46,10 @@
                 </div>
             {% endif %}
             
-            <button class="btn c-btn  unlock-report" data-report-id="{{ data.report_id }}">
+            <button class="btn c-btn c-btn--sm unlock-report" data-report-id="{{ data.report_id }}">
                 $249 One off Unlock Full Report
             </button>
-            <a class="c-btn c-btn--pill c-btn--sm d-inline-block"href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">Upgrade</a>
+            <a class="c-btn c-btn c-btn--sm d-inline-block"href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">Subscribe</a>
         </div>
     {% endif %}
 

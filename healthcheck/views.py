@@ -73,22 +73,31 @@ def validate_jwt_token(f):
 
     return decorated_function
 
-
 @webhooks.handler("checkout.session.completed")
 def handle_checkout_completed(event: Event, **kwargs):
     """Handle successful checkout session completion"""
     try:
-        # Get the session data from the event
-        session = event.data["object"]
-        metadata = session.get("metadata", {})
+        # The event.data contains 'object' key with the checkout session
+        checkout_session = event.data.get("object", {})
+        
+        if not checkout_session:
+            logger.error("No checkout session found in event data")
+            return HttpResponse(status=400)
 
-        # Extract metadata
+        # Extract metadata from the checkout session
+        metadata = checkout_session.get("metadata", {})
         report_id = metadata.get("report_id")
         subdomain = metadata.get("subdomain")
         user_id = metadata.get("user_id")
 
+        # Verify payment status
+        payment_status = checkout_session.get("payment_status")
+        if payment_status != "paid":
+            logger.error(f"Unexpected payment status: {payment_status}")
+            return HttpResponse(status=400)
+
         if not all([report_id, subdomain]):
-            logger.error("Missing required metadata in webhook event")
+            logger.error("Missing required metadata in checkout session")
             return HttpResponse(status=400)
 
         # Use transaction to ensure database consistency
@@ -96,32 +105,35 @@ def handle_checkout_completed(event: Event, **kwargs):
             try:
                 report = HealthCheckReport.objects.get(
                     id=report_id,
-                    subdomain=subdomain,  # Additional validation
+                    subdomain=subdomain
                 )
                 report.is_unlocked = True
-                report.stripe_payment_id = session.get("payment_intent")
-                report.save(skip_others=True)  # Don't update other reports
+                report.stripe_payment_id = checkout_session.get("id")  # Use session ID as reference
+                report.save(skip_others=True)
 
-                # Track the successful payment using transaction.on_commit
+                # Track the successful payment
                 def track_payment():
                     analytics.track(
                         user_id,
                         "Report Unlocked",
                         {
                             "report_id": report_id,
-                            "payment_id": session.get("payment_intent"),
-                            "amount": session.get("amount_total", 0) / 100,
+                            "payment_id": checkout_session.get("id"),
+                            "amount": checkout_session.get("amount_subtotal", 0) / 100,
                             "subdomain": subdomain,
-                        },
+                            "discount_amount": checkout_session.get("total_details", {}).get("amount_discount", 0) / 100,
+                            "final_amount": checkout_session.get("amount_total", 0) / 100
+                        }
                     )
 
                 transaction.on_commit(track_payment)
 
+                logger.info(f"Successfully unlocked report {report_id} for subdomain {subdomain}")
+                return HttpResponse(status=200)
+
             except HealthCheckReport.DoesNotExist:
                 logger.error(f"Report {report_id} not found for subdomain {subdomain}")
                 return HttpResponse(status=404)
-
-        return HttpResponse(status=200)
 
     except Exception as e:
         logger.error(f"Error processing webhook: {str(e)}")
@@ -647,13 +659,17 @@ def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
         report = HealthCheckReport.objects.get(id=report_id)
+        
+        # Get subscription status for the report's subdomain
+        subscription_status = ZendeskUser.get_subscription_status(report.subdomain)
 
         # Format the report data
         report_data = format_response_data(
             report.raw_response,
-            plan=report.plan,
+            subscription_active=subscription_status["active"],
             report_id=report.id,
             last_check=report.created_at,
+            is_unlocked=report.is_unlocked
         )
 
         # Use render_report_components utility
@@ -662,7 +678,11 @@ def get_historical_report(request, report_id):
         return JsonResponse({"results_html": results_html})
 
     except HealthCheckReport.DoesNotExist:
+        logger.error(f"Report {report_id} not found")
         return JsonResponse({"error": "Report not found"}, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching historical report: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @csrf_exempt
