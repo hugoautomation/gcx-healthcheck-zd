@@ -947,7 +947,6 @@ def handle_subscription_update(event: Event, **kwargs):
         logger.error(f"Error processing subscription webhook: {str(e)}", exc_info=True)
         return HttpResponse(status=400)
 
-
 @csrf_exempt
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
@@ -962,69 +961,96 @@ def billing_page(request):
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
 
-        # Get Stripe customer details
-        if subscription_status.get("customer_id"):
-            try:
-                # Get the customer object
-                customer = Customer.objects.get(id=subscription_status["customer_id"])
+        # Get detailed subscription information
+        try:
+            # Get all subscriptions for the subdomain
+            subscriptions = Subscription.objects.filter(
+                metadata__subdomain=user.subdomain
+            ).select_related(
+                'customer',
+                'plan',
+                'plan__product',
+                'default_payment_method',
+                'latest_invoice'
+            )
 
-                # Get active subscription
-                active_subscription = customer.active_subscriptions.first()
+            # Get active subscription
+            active_subscription = subscriptions.active().first()
 
-                # Get latest invoice
-                latest_invoice = (
-                    Invoice.objects.filter(customer_id=customer.id)
-                    .order_by("-created")
-                    .first()
-                )
+            # Get customer if there's an active subscription
+            if active_subscription:
+                customer = active_subscription.customer
+                latest_invoice = active_subscription.latest_invoice
 
-                subscription_status.update(
-                    {
-                        # Customer details
-                        "customer_name": customer.name,
-                        "customer_email": customer.email,
-                        "customer_address": customer.address,
-                        "customer_currency": customer.currency,
-                        "customer_balance": customer.balance,
-                        "customer_delinquent": customer.delinquent,
-                        # Payment method details
-                        "default_payment_method": customer.default_payment_method.type
-                        if customer.default_payment_method
-                        else None,
-                        # Invoice details
-                        "hosted_invoice_url": latest_invoice.hosted_invoice_url
-                        if latest_invoice
-                        else None,
-                        # Subscription details from active subscription
-                        "current_period_end": active_subscription.current_period_end
-                        if active_subscription
-                        else None,
-                        "cancel_at": active_subscription.cancel_at
-                        if active_subscription
-                        else None,
-                        # Discount information
-                        "has_discount": bool(customer.discount),
-                        "discount_details": customer.discount,
-                    }
-                )
+                subscription_details = {
+                    # Basic subscription info
+                    "status": active_subscription.status,
+                    "current_period_start": active_subscription.current_period_start,
+                    "current_period_end": active_subscription.current_period_end,
+                    "start_date": active_subscription.start_date,
+                    "ended_at": active_subscription.ended_at,
+                    "cancel_at": active_subscription.cancel_at,
+                    "canceled_at": active_subscription.canceled_at,
+                    "trial_start": active_subscription.trial_start,
+                    "trial_end": active_subscription.trial_end,
 
-                # Add coupon information if present
-                if customer.coupon:
-                    subscription_status.update(
-                        {
-                            "coupon": {
-                                "end": customer.coupon_end,
-                                "start": customer.coupon_start,
-                            }
-                        }
-                    )
+                    # Plan details
+                    "plan": {
+                        "id": active_subscription.plan.id,
+                        "nickname": active_subscription.plan.nickname,
+                        "amount": active_subscription.plan.amount,
+                        "interval": active_subscription.plan.interval,
+                        "product_name": active_subscription.plan.product.name,
+                        "currency": active_subscription.plan.currency,
+                    },
 
-            except Customer.DoesNotExist:
-                logger.error(
-                    f"Stripe customer not found: {subscription_status['stripe_customer_id']}"
-                )
-            except Exception as e:
-                logger.error(f"Error fetching customer details: {str(e)}")
+                    # Customer details
+                    "customer": {
+                        "name": customer.name,
+                        "email": customer.email,
+                        "address": customer.address,
+                        "currency": customer.currency,
+                        "balance": customer.balance,
+                        "delinquent": customer.delinquent,
+                        "default_payment_method": {
+                            "type": customer.default_payment_method.type if customer.default_payment_method else None,
+                            "card_brand": customer.default_payment_method.card.brand if customer.default_payment_method and hasattr(customer.default_payment_method, 'card') else None,
+                            "card_last4": customer.default_payment_method.card.last4 if customer.default_payment_method and hasattr(customer.default_payment_method, 'card') else None,
+                        } if customer.default_payment_method else None,
+                    },
+
+                    # Invoice details
+                    "latest_invoice": {
+                        "number": latest_invoice.number if latest_invoice else None,
+                        "amount_due": latest_invoice.amount_due if latest_invoice else None,
+                        "amount_paid": latest_invoice.amount_paid if latest_invoice else None,
+                        "hosted_invoice_url": latest_invoice.hosted_invoice_url if latest_invoice else None,
+                        "pdf_url": latest_invoice.invoice_pdf if latest_invoice else None,
+                        "status": latest_invoice.status if latest_invoice else None,
+                    } if latest_invoice else None,
+
+                    # Discount information
+                    "discount": {
+                        "coupon": {
+                            "amount_off": customer.coupon.amount_off if customer.coupon else None,
+                            "percent_off": customer.coupon.percent_off if customer.coupon else None,
+                            "duration": customer.coupon.duration if customer.coupon else None,
+                            "duration_in_months": customer.coupon.duration_in_months if customer.coupon else None,
+                        } if customer.coupon else None,
+                        "start": customer.coupon_start,
+                        "end": customer.coupon_end,
+                    } if customer.coupon else None,
+                }
+
+                # Update subscription status with detailed information
+                subscription_status.update(subscription_details)
+
+            else:
+                logger.info(f"No active subscription found for subdomain: {user.subdomain}")
+
+        except Exception as e:
+            logger.error(f"Error fetching subscription details: {str(e)}")
+            logger.exception(e)
 
     except ZendeskUser.DoesNotExist:
         user = None
