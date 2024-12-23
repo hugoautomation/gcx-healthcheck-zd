@@ -317,4 +317,7 @@ function initializeHistoricalReports() {
 }
 
 // Event Listeners
-document.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeLoadingButtons();
+    initializeApp();
+});
