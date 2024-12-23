@@ -22,7 +22,7 @@
                 <div class="col-auto">
                     {% if subscription.is_active %}
                    <h2 class="rounded bg-primary-subtle text-primary font-semibold p-1 d-inline-block">Premium Plan</h2>
-                    <a class="c-btn c-btn--pill c-btn--sm d-inline-block" 
+                    <a class="c-btn c-btn--pill c-btn--sm d-inline-block loading-button" 
        href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">
         Billing
     </a>
@@ -67,7 +67,7 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
                         </div>
                     </div>
                     {% endif %}
-                    <button id="run-check" class="btn c-btn c-btn--sm c-btn--primary d-inline-block">Run Health Check</button>
+                    <button id="run-check" class="btn c-btn c-btn--sm c-btn--primary d-inline-block loading-button">Run Health Check</button>
                 </div>
             </div>
         </div>
