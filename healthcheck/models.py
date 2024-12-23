@@ -53,30 +53,6 @@ class HealthCheckReport(models.Model):
         status = ZendeskUser.get_subscription_status(self.subdomain)
         return status["active"]
 
-    @classmethod
-    def update_latest_report_plan(cls, installation_id, new_plan):
-        """Update the plan for the latest report of an installation"""
-        latest_report = cls.get_latest_for_installation(installation_id)
-        if latest_report:
-            latest_report.plan = new_plan
-            latest_report.save()
-
-            # Check subscription status
-            subscription_status = ZendeskUser.get_subscription_status(
-                latest_report.subdomain
-            )
-            if subscription_status["active"]:
-                # Update all reports for this installation based on the subscription
-                cls.update_all_reports_unlock_status(installation_id, new_plan)
-
-    @classmethod
-    def update_all_reports_unlock_status(cls, installation_id, subscription_active):
-        """Update unlock status for all reports of an installation based on subscription status"""
-        if subscription_active:
-            cls.objects.filter(installation_id=installation_id).update(
-                is_unlocked=subscription_active
-            )
-
     @property
     def is_latest(self):
         """Check if this is the latest report for the installation"""

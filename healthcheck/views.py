@@ -980,9 +980,8 @@ def handle_subscription_update(event: Event, **kwargs):
 
             # Only update reports that haven't been individually unlocked
             affected_reports = HealthCheckReport.objects.filter(
-                subdomain=subdomain,
-                stripe_payment_id__isnull=True  # Only update subscription-based reports
-            ).update(is_unlocked=is_active)
+                subdomain=subdomain,# Only update subscription-based reports
+            ).update(is_unlocked=True)
 
             logger.info(
                 f"Updated {affected_reports} subscription-based reports for {subdomain} to is_unlocked={is_active}"
