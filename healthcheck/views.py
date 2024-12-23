@@ -24,7 +24,7 @@ import stripe
 import os
 from djstripe import webhooks
 from django.db import transaction
-from djstripe.models import Event, Customer, Subscription, Invoice
+from djstripe.models import Event, Customer, Invoice
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -1007,8 +1007,7 @@ def handle_subscription_update(event: Event, **kwargs):
         logger.error(f"Error processing subscription webhook: {str(e)}", exc_info=True)
         return HttpResponse(status=400)
 
-from djstripe.models import Customer, Subscription
-from django.shortcuts import render
+
 @csrf_exempt
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
@@ -1024,10 +1023,10 @@ def billing_page(request):
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
         
         # Get Stripe customer details
-        if subscription_status.get("stripe_customer_id"):
+        if subscription_status.get("customer_id"):
             try:
                 # Get the customer object
-                customer = Customer.objects.get(id=subscription_status["stripe_customer_id"])
+                customer = Customer.objects.get(id=subscription_status["customer_id"])
                 
                 # Get active subscription
                 active_subscription = customer.active_subscriptions.first()

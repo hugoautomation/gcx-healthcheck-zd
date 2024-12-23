@@ -24,10 +24,9 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
     </div>
     {% if subscription.active %}
         <!-- Show current subscription info -->
-        <h2>Current Subscription</h2>
         <div class="card mb-4 rounded-3 shadow-sm">
             <div class="card-header py-3">
-                <h4 class="my-0 fw-normal">{{ subscription.plan }}</h4>
+                <h4 class="my-0 fw-normal">Current Subscription</h4>
             </div>
             <div class="card-body">
                 <p class="mb-2"><strong>Status:</strong> <span class="badge bg-success">{{ subscription.status|title }}</span></p>
@@ -57,12 +56,10 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                 </div>
                 {% endif %}
         
-                <p class="mb-2"><strong>Current Period Ends:</strong> {{ subscription.current_period_end|date:"F j, Y" }}</p>
                 {% if subscription.cancel_at_period_end %}
-                <p class="mb-2"><strong>Subscription will end:</strong> {{ subscription.cancel_at_period_end|date:"F j, Y" }}</p>
+                <p class="mb-2"><strong>Your subscription will end on</strong> {{ subscription.cancel_at_period_end|date:"F j, Y" }}</p>
                 {% else %}
-                <p class="mb-2"><strong>Subscription will renew:</strong> {{ subscription.current_period_end|date:"F j, Y" }}</p>
-
+                <p class="mb-2"><strong>Your subscription will renew on</strong> {{ subscription.current_period_end|date:"F j, Y" }}</p>
                 {% endif %}
                 {% if subscription.hosted_invoice_url %}
                 <a href="{{ subscription.hosted_invoice_url }}" target="_blank"
