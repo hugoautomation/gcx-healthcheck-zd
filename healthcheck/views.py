@@ -207,9 +207,9 @@ def create_payment_intent(request):
                 "user_id": user_id,
                 "subdomain": user.subdomain,
             },
-     success_url=request.build_absolute_uri(
-        f"/payment/one-off/success/"
-    ),
+            success_url=request.build_absolute_uri(
+                f"/payment/one-off/success/?installation_id={installation_id}&report_id={report_id}"
+            ),
         )
 
         return JsonResponse({"url": checkout_session.url})

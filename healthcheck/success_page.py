@@ -2,11 +2,10 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
-from djstripe.models import Subscription, PaymentIntent
 import logging
 from django.utils import timezone
 logger = logging.getLogger(__name__)
-
+from healthcheck.models import HealthCheckReport
 
 @csrf_exempt
 def subscription_success(request):
@@ -15,7 +14,36 @@ def subscription_success(request):
 
 @csrf_exempt
 def one_off_success(request):
-        return render(request, "healthcheck/success/one_off_success.html")
+    """Handle successful one-off payments"""
+    installation_id = request.GET.get("installation_id")
+    report_id = request.GET.get("report_id")
+    
+    if not all([installation_id, report_id]):
+        messages.error(request, "Missing required parameters")
+        return HttpResponseRedirect("/")
+        
+    try:
+        report = HealthCheckReport.objects.get(id=report_id)
+        
+        context = {
+            "success": True,
+            "report": {
+                "id": report.id,
+                "created_at": report.created_at,
+            },
+            "installation_id": installation_id,
+            "report_id": report_id
+        }
+        
+        return render(request, "healthcheck/success/one_off_success.html", context)
+        
+    except HealthCheckReport.DoesNotExist:
+        messages.error(request, "Report not found")
+        return HttpResponseRedirect(f"/billing/?installation_id={installation_id}")
+    except Exception as e:
+        logger.error(f"Error processing payment success: {str(e)}")
+        messages.error(request, "Error processing payment")
+        return HttpResponseRedirect(f"/billing/?installation_id={installation_id}")
 
 
 
