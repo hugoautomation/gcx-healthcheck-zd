@@ -229,7 +229,9 @@ def app(request):
     user_id = request.GET.get("user_id")
 
     if not installation_id:
-        initial_data["loading"] = "Loading your workspace..."  # Changed from error to loading
+        initial_data["loading"] = (
+            "Loading your workspace..."  # Changed from error to loading
+        )
         return render(request, "healthcheck/app.html", initial_data)
 
     try:
@@ -668,6 +670,7 @@ def download_report_csv(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
+
 @csrf_exempt
 def check_unlock_status(request):
     report_id = request.GET.get("report_id")
@@ -676,10 +679,7 @@ def check_unlock_status(request):
 
     try:
         report = HealthCheckReport.objects.get(id=report_id)
-        return JsonResponse({
-            "is_unlocked": report.is_unlocked, 
-            "report_id": report.id
-        })
+        return JsonResponse({"is_unlocked": report.is_unlocked, "report_id": report.id})
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
@@ -892,7 +892,7 @@ def handle_subscription_update(event: Event, **kwargs):
 
             # Only update reports that haven't been individually unlocked
             affected_reports = HealthCheckReport.objects.filter(
-                subdomain=subdomain,# Only update subscription-based reports
+                subdomain=subdomain,  # Only update subscription-based reports
             ).update(is_unlocked=True)
 
             logger.info(
@@ -927,10 +927,10 @@ def handle_subscription_update(event: Event, **kwargs):
                     "subdomain": subdomain,
                     "installation_id": installation_id,
                     "affected_reports_count": affected_reports,
-                    "individually_unlocked_reports_preserved": True
+                    "individually_unlocked_reports_preserved": True,
                 },
             )
-            
+
             logger.info(
                 f"Successfully processed subscription update for subdomain {subdomain}. "
                 f"Updated {affected_reports} subscription-based reports. "
@@ -947,6 +947,7 @@ def handle_subscription_update(event: Event, **kwargs):
         logger.error(f"Error processing subscription webhook: {str(e)}", exc_info=True)
         return HttpResponse(status=400)
 
+
 @csrf_exempt
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
@@ -960,56 +961,68 @@ def billing_page(request):
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
-        
+
         # Get Stripe customer details
         if subscription_status.get("customer_id"):
             try:
                 # Get the customer object
                 customer = Customer.objects.get(id=subscription_status["customer_id"])
-                
+
                 # Get active subscription
                 active_subscription = customer.active_subscriptions.first()
-                
-                # Get latest invoice
-                latest_invoice = Invoice.objects.filter(
-                    customer_id=customer.id
-                ).order_by('-created').first()
 
-                subscription_status.update({
-                    # Customer details
-                    "customer_name": customer.name,
-                    "customer_email": customer.email,
-                    "customer_address": customer.address,
-                    "customer_currency": customer.currency,
-                    "customer_balance": customer.balance,
-                    "customer_delinquent": customer.delinquent,
-                    
-                    # Payment method details
-                    "default_payment_method": customer.default_payment_method.type if customer.default_payment_method else None,
-                    
-                    # Invoice details
-                    "hosted_invoice_url": latest_invoice.hosted_invoice_url if latest_invoice else None,
-                    
-                    # Subscription details from active subscription
-                    "current_period_end": active_subscription.current_period_end if active_subscription else None,
-                    "cancel_at": active_subscription.cancel_at if active_subscription else None,
-                    
-                    # Discount information
-                    "has_discount": bool(customer.discount),
-                    "discount_details": customer.discount,
-                })
+                # Get latest invoice
+                latest_invoice = (
+                    Invoice.objects.filter(customer_id=customer.id)
+                    .order_by("-created")
+                    .first()
+                )
+
+                subscription_status.update(
+                    {
+                        # Customer details
+                        "customer_name": customer.name,
+                        "customer_email": customer.email,
+                        "customer_address": customer.address,
+                        "customer_currency": customer.currency,
+                        "customer_balance": customer.balance,
+                        "customer_delinquent": customer.delinquent,
+                        # Payment method details
+                        "default_payment_method": customer.default_payment_method.type
+                        if customer.default_payment_method
+                        else None,
+                        # Invoice details
+                        "hosted_invoice_url": latest_invoice.hosted_invoice_url
+                        if latest_invoice
+                        else None,
+                        # Subscription details from active subscription
+                        "current_period_end": active_subscription.current_period_end
+                        if active_subscription
+                        else None,
+                        "cancel_at": active_subscription.cancel_at
+                        if active_subscription
+                        else None,
+                        # Discount information
+                        "has_discount": bool(customer.discount),
+                        "discount_details": customer.discount,
+                    }
+                )
 
                 # Add coupon information if present
                 if customer.coupon:
-                    subscription_status.update({
-                        "coupon": {
-                            "end": customer.coupon_end,
-                            "start": customer.coupon_start,
+                    subscription_status.update(
+                        {
+                            "coupon": {
+                                "end": customer.coupon_end,
+                                "start": customer.coupon_start,
+                            }
                         }
-                    })
+                    )
 
             except Customer.DoesNotExist:
-                logger.error(f"Stripe customer not found: {subscription_status['stripe_customer_id']}")
+                logger.error(
+                    f"Stripe customer not found: {subscription_status['stripe_customer_id']}"
+                )
             except Exception as e:
                 logger.error(f"Error fetching customer details: {str(e)}")
 
@@ -1037,6 +1050,7 @@ def billing_page(request):
         "price_ids": PRICE_IDS,
     }
     return render(request, "healthcheck/billing.html", context)
+
 
 @csrf_exempt
 def create_checkout_session(request):
