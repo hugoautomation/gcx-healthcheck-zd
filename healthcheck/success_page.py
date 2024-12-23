@@ -25,6 +25,11 @@ def one_off_success(request):
     try:
         report = HealthCheckReport.objects.get(id=report_id)
         
+        # Update report unlock status if not already unlocked
+        if not report.is_unlocked:
+            report.is_unlocked = True
+            report.save()
+            
         context = {
             "success": True,
             "report": {
