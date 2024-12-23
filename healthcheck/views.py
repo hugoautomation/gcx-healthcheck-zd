@@ -24,7 +24,7 @@ import stripe
 import os
 from djstripe import webhooks
 from django.db import transaction
-from djstripe.models import Event, Customer, Invoice
+from djstripe.models import Event, Subscription
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
