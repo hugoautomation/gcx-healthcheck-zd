@@ -959,17 +959,20 @@ def billing_page(request):
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
 
         # Get detailed subscription information
+        # Get detailed subscription information
         try:
-            # Get all subscriptions for the subdomain
-            subscriptions = Subscription.objects.filter(
-                metadata__subdomain=user.subdomain
-            )
-            logger.info(f"Subscriptions: {subscriptions}")
-
-            # Get active subscription
-            active_subscription = subscriptions.filter(
-                status__in=["active", "trialing", "canceled"]
+            # First try to get active or trialing subscription
+            active_subscription = Subscription.objects.filter(
+                metadata__subdomain=user.subdomain,
+                status__in=["active", "trialing"]
             ).first()
+
+            # If no active/trialing subscription, get the most recent canceled one
+            if not active_subscription:
+                active_subscription = Subscription.objects.filter(
+                    metadata__subdomain=user.subdomain,
+                    status="canceled"
+                ).order_by('-canceled_at').first()
             # Get customer if there's an active subscription
             if active_subscription:
                 customer = active_subscription.customer
