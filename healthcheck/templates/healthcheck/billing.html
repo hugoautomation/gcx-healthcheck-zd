@@ -45,7 +45,7 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
             <div class="subscription-status mb-3">
                 <p class="mb-2">
                     <strong>Status:</strong> 
-                    <span class="badge bg-success">{{ subscription.status|title }}</span>
+                    <span class="badge bg-success">{{ subscription.status|title }} <small class="text-muted">{% if subscription.cancel_at_period_end %} (will cancel on {{ subscription.cancel_at|date:"F j, Y" }}){% endif %}</small></span>
                 </p>
                 <p class="mb-2">
                     <strong>Plan:</strong> 
