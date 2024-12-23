@@ -1151,9 +1151,7 @@ def create_checkout_session(request):
                 "subdomain": user.subdomain,
                 "user_id": user_id,
             },
-            success_url=request.build_absolute_uri(
-        "/payment/subscription/success/"
-    ),
+            success_url=request.build_absolute_uri("/payment/subscription/success/"),
             # cancel_url=request.build_absolute_uri(
             #     f"/billing/?installation_id={installation_id}&canceled=true"
             # ),
