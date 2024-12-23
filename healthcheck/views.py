@@ -207,9 +207,9 @@ def create_payment_intent(request):
                 "user_id": user_id,
                 "subdomain": user.subdomain,
             },
-            success_url=request.build_absolute_uri(
-                f"/report/{report_id}/?success=true"
-            ),
+     success_url=request.build_absolute_uri(
+        f"/payment/one-off/success/?installation_id={installation_id}&payment_intent={{PAYMENT_INTENT}}"
+    ),
         )
 
         return JsonResponse({"url": checkout_session.url})
@@ -947,6 +947,7 @@ def handle_subscription_update(event: Event, **kwargs):
         logger.error(f"Error processing subscription webhook: {str(e)}", exc_info=True)
         return HttpResponse(status=400)
 
+
 @csrf_exempt
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
@@ -963,16 +964,18 @@ def billing_page(request):
         try:
             # First try to get active or trialing subscription
             active_subscription = Subscription.objects.filter(
-                metadata__subdomain=user.subdomain,
-                status__in=["active", "trialing"]
+                metadata__subdomain=user.subdomain, status__in=["active", "trialing"]
             ).first()
 
             # If no active/trialing subscription, get the most recent canceled one
             if not active_subscription:
-                active_subscription = Subscription.objects.filter(
-                    metadata__subdomain=user.subdomain,
-                    status="canceled"
-                ).order_by('-canceled_at').first()
+                active_subscription = (
+                    Subscription.objects.filter(
+                        metadata__subdomain=user.subdomain, status="canceled"
+                    )
+                    .order_by("-canceled_at")
+                    .first()
+                )
             # Get customer if there's an active subscription
             if active_subscription:
                 customer = active_subscription.customer
@@ -989,7 +992,6 @@ def billing_page(request):
                     "canceled_at": active_subscription.canceled_at,
                     "trial_start": active_subscription.trial_start,
                     "trial_end": active_subscription.trial_end,
-
                     # Plan details
                     "plan": {
                         "id": active_subscription.plan.id,
@@ -999,7 +1001,6 @@ def billing_page(request):
                         "product_name": active_subscription.plan.product.name,
                         "currency": active_subscription.plan.currency,
                     },
-
                     # Customer details
                     "customer": {
                         "name": customer.name,
@@ -1009,40 +1010,72 @@ def billing_page(request):
                         "balance": customer.balance,
                         "delinquent": customer.delinquent,
                         "default_payment_method": {
-                            "type": customer.default_payment_method.type if customer.default_payment_method else None,
-                            "card_brand": customer.default_payment_method.card.brand if customer.default_payment_method and hasattr(customer.default_payment_method, 'card') else None,
-                            "card_last4": customer.default_payment_method.card.last4 if customer.default_payment_method and hasattr(customer.default_payment_method, 'card') else None,
-                        } if customer.default_payment_method else None,
+                            "type": customer.default_payment_method.type
+                            if customer.default_payment_method
+                            else None,
+                            "card_brand": customer.default_payment_method.card.brand
+                            if customer.default_payment_method
+                            and hasattr(customer.default_payment_method, "card")
+                            else None,
+                            "card_last4": customer.default_payment_method.card.last4
+                            if customer.default_payment_method
+                            and hasattr(customer.default_payment_method, "card")
+                            else None,
+                        }
+                        if customer.default_payment_method
+                        else None,
                     },
-
                     # Invoice details
                     "latest_invoice": {
                         "number": latest_invoice.number if latest_invoice else None,
-                        "amount_due": latest_invoice.amount_due if latest_invoice else None,
-                        "amount_paid": latest_invoice.amount_paid if latest_invoice else None,
-                        "hosted_invoice_url": latest_invoice.hosted_invoice_url if latest_invoice else None,
-                        "pdf_url": latest_invoice.invoice_pdf if latest_invoice else None,
+                        "amount_due": latest_invoice.amount_due
+                        if latest_invoice
+                        else None,
+                        "amount_paid": latest_invoice.amount_paid
+                        if latest_invoice
+                        else None,
+                        "hosted_invoice_url": latest_invoice.hosted_invoice_url
+                        if latest_invoice
+                        else None,
+                        "pdf_url": latest_invoice.invoice_pdf
+                        if latest_invoice
+                        else None,
                         "status": latest_invoice.status if latest_invoice else None,
-                    } if latest_invoice else None,
-
+                    }
+                    if latest_invoice
+                    else None,
                     # Discount information
                     "discount": {
                         "coupon": {
-                            "amount_off": customer.coupon.amount_off if customer.coupon else None,
-                            "percent_off": customer.coupon.percent_off if customer.coupon else None,
-                            "duration": customer.coupon.duration if customer.coupon else None,
-                            "duration_in_months": customer.coupon.duration_in_months if customer.coupon else None,
-                        } if customer.coupon else None,
+                            "amount_off": customer.coupon.amount_off
+                            if customer.coupon
+                            else None,
+                            "percent_off": customer.coupon.percent_off
+                            if customer.coupon
+                            else None,
+                            "duration": customer.coupon.duration
+                            if customer.coupon
+                            else None,
+                            "duration_in_months": customer.coupon.duration_in_months
+                            if customer.coupon
+                            else None,
+                        }
+                        if customer.coupon
+                        else None,
                         "start": customer.coupon_start,
                         "end": customer.coupon_end,
-                    } if customer.coupon else None,
+                    }
+                    if customer.coupon
+                    else None,
                 }
 
                 # Update subscription status with detailed information
                 subscription_status.update(subscription_details)
 
             else:
-                logger.info(f"No active subscription found for subdomain: {user.subdomain}")
+                logger.info(
+                    f"No active subscription found for subdomain: {user.subdomain}"
+                )
 
         except Exception as e:
             logger.error(f"Error fetching subscription details: {str(e)}")
@@ -1122,8 +1155,8 @@ def create_checkout_session(request):
                 "user_id": user_id,
             },
             success_url=request.build_absolute_uri(
-                f"/billing/?installation_id={installation_id}&success=true"
-            ),
+        f"/payment/subscription/success/?installation_id={installation_id}&session_id={{CHECKOUT_SESSION_ID}}"
+    ),
             # cancel_url=request.build_absolute_uri(
             #     f"/billing/?installation_id={installation_id}&canceled=true"
             # ),

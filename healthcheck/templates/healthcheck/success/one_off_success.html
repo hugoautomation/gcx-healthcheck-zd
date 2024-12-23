@@ -1,0 +1,36 @@
+{% extends "healthcheck/base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card shadow-sm">
+        <div class="card-body text-center">
+            <div class="mb-4">
+              <a href="https://gravity.cx"> <img src="https://gravity.cx/hs-fs/hubfs/Gravity%20CX-logo%20-%20Color%20%20500x359%20-%20No%20Tag.png?width=222&height=160&name=Gravity%20CX-logo%20-%20Color%20%20500x359%20-%20No%20Tag.png" alt="Gravity CX Logo" style="height: 100px; width: auto;"></a>
+              <div class="m-auto" style="width: 50%;">
+              <div  style="padding:56.25% 0 0 0;position:relative;"><iframe src="https://player.vimeo.com/video/1041833954?h=c5b447901f&amp;badge=0&amp;autopause=0&amp;player_id=0&amp;app_id=58479" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write" style="position:absolute;top:0;left:0;width:100%;height:100%;" title="Thank you for upgrading - gravity.cx"></iframe></div><script src="https://player.vimeo.com/api/player.js"></script>
+            </div>
+        </div>
+            <h2 class="mb-4">You can use this coupon code to get 20% off your next healthcheck <br>
+                </h2>
+                <h2 class="mb-4">Coupon Code: <strong class="bg-primary-subtle p-1 rounded">2NDTIME</strong></h2>
+            <div class="payment-details mb-4">
+                <p class="mb-2">Your payment has been processed successfully</p>
+                <p class="mb-2">
+                    Amount: {{ payment.amount|floatformat:2 }} {{ payment.currency }}
+                </p>
+                <p class="mb-2">Status: {{ payment.status|title }}</p>
+                <p>Date: {{ payment.created|date:"F j, Y" }}</p>
+            </div>
+            {% if payment.receipt_email %}
+            <div class="receipt-info mb-4">
+                <p>Receipt sent to: {{ payment.receipt_email }}</p>
+            </div>
+            {% endif %}
+            <div class="mt-4"></div>
+                <a href="https://www.zendesk.com/au/marketplace/apps/support/1080781/automated-healthcheck#:~:text=what%20people%20are%20saying" 
+                   target="_blank" class="btn c-btn c-btn--primary">Leave us a review</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

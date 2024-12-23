@@ -1,7 +1,19 @@
 from django.urls import path
 from . import views
-
+from . import success_page
 urlpatterns = [
+
+    path(
+        "test/subscription-success/",
+        success_page.test_subscription_success,
+        name="test_subscription_success"
+    ),
+    path(
+        "test/one-off-success/",
+        success_page.test_one_off_success,
+        name="test_one_off_success"
+    ),
+    
     path("", views.app, name="app"),
     path("health_check/", views.health_check, name="health_check"),
     path(
@@ -9,6 +21,12 @@ urlpatterns = [
         views.download_report_csv,
         name="download_report_csv",
     ),
+    path(
+        "payment/subscription/success/",
+        success_page.subscription_success,
+        name="subscription_success",
+    ),
+    path("payment/one-off/success/", success_page.one_off_success, name="one_off_success"),
     path(
         "report/<int:report_id>/",
         views.get_historical_report,
