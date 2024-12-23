@@ -36,7 +36,7 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
 {% else %}
       <!-- Locked features for non-subscribers -->
       <button class="btn c-btn c-btn--sm c-btn--basic d-inline-block disabled" 
-      title="Requires active subscription">
+      title="Requires active subscription" data-bs-toggle="tooltip" data-bs-title="Subscription required" >
   🔒 Monitoring
 </button>
 {% endif %}
@@ -88,6 +88,10 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
     <!-- Add Bootstrap JS and dependencies at the end of the body -->
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+   <script>
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
+   </script>
     <script>
         window.ENVIRONMENT = "{{ environment }}";
     </script>
