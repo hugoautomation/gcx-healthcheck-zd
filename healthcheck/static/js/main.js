@@ -9,7 +9,7 @@ function initializeLoadingButtons() {
             const originalText = button.innerHTML;
             
             // Disable button and add spinner
-            button.disabled = true;
+            button.classList.add('disabled');
             button.innerHTML = `
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 ${originalText}
@@ -17,7 +17,7 @@ function initializeLoadingButtons() {
             
             // Re-enable after 3 seconds
             setTimeout(() => {
-                button.disabled = false;
+                button.classList.remove('disabled');
                 button.innerHTML = originalText;
             }, 3000);
         });
