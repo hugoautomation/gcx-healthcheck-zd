@@ -10,6 +10,11 @@
     <script src="{% static 'js/zaf-client.js' %}"></script>
 </head>
 <body>
+    {% if loading %}
+    <div id="results">
+        {% include "healthcheck/results.html" with loading=loading %}
+    </div>
+{% else %}
 
     <div class="container">
         <div class="sticky-header">
@@ -84,6 +89,7 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
             </div>
             {% endfor %}
         </div>
+        {% endif %}
         {% endif %}
     </div>
 

@@ -952,7 +952,6 @@ def handle_subscription_update(event: Event, **kwargs):
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
     user_id = request.GET.get("user_id")
-    app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
 
     try:
@@ -1094,8 +1093,6 @@ def billing_page(request):
         "subscription": subscription_status,
         "url_params": {
             "installation_id": installation_id,
-            "plan": request.GET.get("plan", "Free"),
-            "app_guid": app_guid,
             "origin": origin,
             "user_id": user_id,
         },
@@ -1155,7 +1152,7 @@ def create_checkout_session(request):
                 "user_id": user_id,
             },
             success_url=request.build_absolute_uri(
-        f"/payment/subscription/success/"
+        "/payment/subscription/success/"
     ),
             # cancel_url=request.build_absolute_uri(
             #     f"/billing/?installation_id={installation_id}&canceled=true"

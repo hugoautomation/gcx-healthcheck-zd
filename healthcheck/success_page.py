@@ -5,7 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 import logging
 from django.utils import timezone
 logger = logging.getLogger(__name__)
-from healthcheck.models import HealthCheckReport
+from models import HealthCheckReport
 
 @csrf_exempt
 def subscription_success(request):
