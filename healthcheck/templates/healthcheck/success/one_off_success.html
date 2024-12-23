@@ -15,17 +15,7 @@
                 <h2 class="mb-4">Coupon Code: <strong class="bg-primary-subtle p-1 rounded">2NDTIME</strong></h2>
             <div class="payment-details mb-4">
                 <p class="mb-2">Your payment has been processed successfully</p>
-                <p class="mb-2">
-                    Amount: {{ payment.amount|floatformat:2 }} {{ payment.currency }}
-                </p>
-                <p class="mb-2">Status: {{ payment.status|title }}</p>
-                <p>Date: {{ payment.created|date:"F j, Y" }}</p>
-            </div>
-            {% if payment.receipt_email %}
-            <div class="receipt-info mb-4">
-                <p>Receipt sent to: {{ payment.receipt_email }}</p>
-            </div>
-            {% endif %}
+            
             <div class="mt-4"></div>
                 <a href="https://www.zendesk.com/au/marketplace/apps/support/1080781/automated-healthcheck#:~:text=what%20people%20are%20saying" 
                    target="_blank" class="btn c-btn c-btn--primary">Leave us a review</a>

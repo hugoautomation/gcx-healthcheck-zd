@@ -208,7 +208,7 @@ def create_payment_intent(request):
                 "subdomain": user.subdomain,
             },
      success_url=request.build_absolute_uri(
-        f"/payment/one-off/success/?installation_id={installation_id}&payment_intent={{PAYMENT_INTENT}}"
+        f"/payment/one-off/success/"
     ),
         )
 
@@ -1155,7 +1155,7 @@ def create_checkout_session(request):
                 "user_id": user_id,
             },
             success_url=request.build_absolute_uri(
-        f"/payment/subscription/success/?installation_id={installation_id}&session_id={{CHECKOUT_SESSION_ID}}"
+        f"/payment/subscription/success/"
     ),
             # cancel_url=request.build_absolute_uri(
             #     f"/billing/?installation_id={installation_id}&canceled=true"

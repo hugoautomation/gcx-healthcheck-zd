@@ -13,17 +13,7 @@
             <h2 class="card-title mb-4">Subscription Activated!</h2>
             <div class="subscription-details mb-4">
                 <p class="mb-2">Thank you for subscribing to Premium Healthcheck</p>
-                <p class="mb-2">
-                    Amount: {{ subscription.amount|floatformat:2 }} {{ subscription.currency }}/{{ subscription.interval }}
-                </p>
-                <p class="mb-2">Start Date: {{ subscription.start_date|date:"F j, Y" }}</p>
-                <p>Next Billing Date: {{ subscription.current_period_end|date:"F j, Y" }}</p>
-            </div>
-            <div class="customer-info mb-4">
-                {% if customer.name %}
-                <p>Account Name: {{ customer.name }}</p>
-                {% endif %}
-            </div>
+            
             <div class="mt-4">
                 <a href="https://www.zendesk.com/au/marketplace/apps/support/1080781/automated-healthcheck#:~:text=what%20people%20are%20saying" 
                    target="_blank" class="btn c-btn c-btn--primary">Leave us a review</a>
