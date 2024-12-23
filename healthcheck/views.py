@@ -472,7 +472,7 @@ def health_check(request):
                     "last_healthcheck": report.created_at,
                 },
             )
-
+            logger.info(f"subscription_status: {subscription_status}")
             # Format response data with subscription status
             formatted_data = format_response_data(
                 response_data,
