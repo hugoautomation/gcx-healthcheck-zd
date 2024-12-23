@@ -78,7 +78,7 @@ def format_response_data(
         ),
         "hidden_issues_count": hidden_issues_count,
         "hidden_categories": hidden_categories,
-        "is_unlocked": is_unlocked,
+        "is_unlocked": True if subscription_active else is_unlocked,  # This is the key change
         "report_id": report_id,
         "issues": [
             {
