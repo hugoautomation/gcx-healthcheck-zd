@@ -954,6 +954,13 @@ def billing_page(request):
     user_id = request.GET.get("user_id")
     origin = request.GET.get("origin")
 
+        # Show loading state if no installation_id
+    if not installation_id:
+        return render(request, "healthcheck/billing.html", {
+            "loading": "Loading your workspace...",
+            "environment": settings.ENVIRONMENT
+        })
+
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)

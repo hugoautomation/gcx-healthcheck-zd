@@ -11,6 +11,17 @@
 </head>
 <body>
 <div class="container">
+    {% if loading %}
+    <!-- Loading State -->
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h4 class="text-muted">{{ loading }}</h4>
+        </div>
+    </div>
+{% else %}
     <div class="sticky-header">
         <div class="row align-items-center my-3">
             <div class="col">
@@ -197,8 +208,14 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
       </div>
 
     {% endif %}
+    {% endif %}
 
     <script src="{% static 'js/zaf-client.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+
+    <script>
+        window.ENVIRONMENT = "{{ environment }}";
+    </script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             await ZAFClientSingleton.init();
