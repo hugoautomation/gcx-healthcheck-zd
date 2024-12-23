@@ -47,6 +47,7 @@ def format_response_data(
             "admin_email": response_data.get("admin_email", "Unknown"),
             "created_at": response_data.get("created_at", "Unknown"),
         },
+        "report_created_at": last_check.strftime("%Y-%m-%d %H:%M:%S") if last_check else None,  # Add report creation date
         "last_check": last_check.strftime("%Y-%m-%d %H:%M:%S") if last_check else None,
         "time_since_check": timesince(last_check) if last_check else "Never",
         "total_issues": len(issues),
