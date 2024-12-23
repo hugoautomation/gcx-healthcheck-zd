@@ -970,8 +970,9 @@ def billing_page(request):
             logger.info(f"Subscriptions: {subscriptions}")
 
             # Get active subscription
-            active_subscription = subscriptions.active().first()
-
+            active_subscription = subscriptions.filter(
+                status__in=["active", "trialing"]
+            ).first()
             # Get customer if there's an active subscription
             if active_subscription:
                 customer = active_subscription.customer
