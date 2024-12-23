@@ -668,6 +668,20 @@ def download_report_csv(request, report_id):
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
 
+@csrf_exempt
+def check_unlock_status(request):
+    report_id = request.GET.get("report_id")
+    if not report_id:
+        return JsonResponse({"error": "No report ID provided"}, status=400)
+
+    try:
+        report = HealthCheckReport.objects.get(id=report_id)
+        return JsonResponse({
+            "is_unlocked": report.is_unlocked, 
+            "report_id": report.id
+        })
+    except HealthCheckReport.DoesNotExist:
+        return JsonResponse({"error": "Report not found"}, status=404)
 
 @webhooks.handler("customer.subscription.created")
 @webhooks.handler("customer.subscription.updated")

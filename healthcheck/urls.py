@@ -14,6 +14,7 @@ urlpatterns = [
         views.get_historical_report,
         name="get_historical_report",
     ),
+    path("check-unlock-status/", views.check_unlock_status, name="check_unlock_status"),
     path("monitoring-settings/", views.monitoring_settings, name="monitoring_settings"),
     path("monitoring/", views.monitoring, name="monitoring"),
     path(
