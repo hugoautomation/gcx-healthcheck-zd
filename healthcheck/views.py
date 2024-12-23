@@ -938,6 +938,8 @@ def monitoring_settings(request):
         return render(request, "healthcheck/monitoring.html", context)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
 @webhooks.handler("customer.subscription.created")
 @webhooks.handler("customer.subscription.updated")
 @webhooks.handler("customer.subscription.deleted")
@@ -976,21 +978,15 @@ def handle_subscription_update(event: Event, **kwargs):
                 logger.error(f"User not found for subdomain: {subdomain}")
                 return HttpResponse(status=404)
 
-            # Only unlock reports when subscription becomes active, never lock them
-            if is_active:
-                affected_reports = HealthCheckReport.objects.filter(
-                    subdomain=subdomain,
-                    is_unlocked=False  # Only target locked reports
-                ).update(is_unlocked=True)
+            # Only update reports that haven't been individually unlocked
+            affected_reports = HealthCheckReport.objects.filter(
+                subdomain=subdomain,
+                stripe_payment_id__isnull=True  # Only update subscription-based reports
+            ).update(is_unlocked=is_active)
 
-                logger.info(
-                    f"Unlocked {affected_reports} reports for {subdomain} due to active subscription"
-                )
-            else:
-                logger.info(
-                    f"Subscription inactive for {subdomain} - no reports will be locked"
-                )
-                affected_reports = 0
+            logger.info(
+                f"Updated {affected_reports} subscription-based reports for {subdomain} to is_unlocked={is_active}"
+            )
 
             # Update monitoring settings if subscription is inactive
             if not is_active and installation_id:
@@ -1008,7 +1004,7 @@ def handle_subscription_update(event: Event, **kwargs):
                         f"No monitoring settings found for installation {installation_id}"
                     )
 
-            # Track the event
+            # Track the event with additional info about affected reports
             analytics.track(
                 user_id,
                 "Subscription Status Updated",
@@ -1019,15 +1015,15 @@ def handle_subscription_update(event: Event, **kwargs):
                     "plan": plan_id,
                     "subdomain": subdomain,
                     "installation_id": installation_id,
-                    "newly_unlocked_reports": affected_reports,
-                    "action": "unlock_only" if is_active else "no_action"
+                    "affected_reports_count": affected_reports,
+                    "individually_unlocked_reports_preserved": True
                 },
             )
             
             logger.info(
-                f"Successfully processed subscription update for {subdomain}. "
-                f"Newly unlocked reports: {affected_reports if is_active else 0}. "
-                f"No reports were locked."
+                f"Successfully processed subscription update for subdomain {subdomain}. "
+                f"Updated {affected_reports} subscription-based reports. "
+                f"Individually unlocked reports were preserved."
             )
 
             return HttpResponse(status=200)
@@ -1137,9 +1133,10 @@ def create_checkout_session(request):
         data = json.loads(request.body)
         installation_id = data.get("installation_id")
         user_id = data.get("user_id")
+        plan_type = data.get("plan_type")
         price_id = data.get("price_id")
 
-        if not all([installation_id, user_id, price_id]):
+        if not all([installation_id, user_id, plan_type, price_id]):
             return JsonResponse({"error": "Missing required parameters"}, status=400)
 
         # Get user information
@@ -1171,12 +1168,14 @@ def create_checkout_session(request):
                     "subdomain": user.subdomain,
                     "installation_id": installation_id,
                     "user_id": user_id,
+                    "plan_type": plan_type,
                 }
             },
             metadata={
                 "installation_id": installation_id,
                 "subdomain": user.subdomain,
                 "user_id": user_id,
+                "plan_type": plan_type,
             },
             success_url=request.build_absolute_uri(
                 f"/billing/?installation_id={installation_id}&success=true"
