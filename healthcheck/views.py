@@ -954,7 +954,7 @@ def handle_subscription_update(event: Event, **kwargs):
 
         # Extract metadata
         user_id = metadata.get("user_id")
-        subdomain = metadata.get("subdomain")  # Get subdomain from metadata
+        subdomain = metadata.get("subdomain")
         installation_id = metadata.get("installation_id")
 
         if not all([user_id, subdomain]):
@@ -978,6 +978,16 @@ def handle_subscription_update(event: Event, **kwargs):
                 logger.error(f"User not found for subdomain: {subdomain}")
                 return HttpResponse(status=404)
 
+            # Only update reports that haven't been individually unlocked
+            affected_reports = HealthCheckReport.objects.filter(
+                subdomain=subdomain,
+                stripe_payment_id__isnull=True  # Only update subscription-based reports
+            ).update(is_unlocked=is_active)
+
+            logger.info(
+                f"Updated {affected_reports} subscription-based reports for {subdomain} to is_unlocked={is_active}"
+            )
+
             # Update monitoring settings if subscription is inactive
             if not is_active and installation_id:
                 try:
@@ -994,7 +1004,7 @@ def handle_subscription_update(event: Event, **kwargs):
                         f"No monitoring settings found for installation {installation_id}"
                     )
 
-            # Track the event
+            # Track the event with additional info about affected reports
             analytics.track(
                 user_id,
                 "Subscription Status Updated",
@@ -1005,10 +1015,15 @@ def handle_subscription_update(event: Event, **kwargs):
                     "plan": plan_id,
                     "subdomain": subdomain,
                     "installation_id": installation_id,
+                    "affected_reports_count": affected_reports,
+                    "individually_unlocked_reports_preserved": True
                 },
             )
+            
             logger.info(
-                f"Successfully tracked subscription update for subdomain {subdomain}"
+                f"Successfully processed subscription update for subdomain {subdomain}. "
+                f"Updated {affected_reports} subscription-based reports. "
+                f"Individually unlocked reports were preserved."
             )
 
             return HttpResponse(status=200)
@@ -1020,7 +1035,6 @@ def handle_subscription_update(event: Event, **kwargs):
     except Exception as e:
         logger.error(f"Error processing subscription webhook: {str(e)}", exc_info=True)
         return HttpResponse(status=400)
-
 
 @csrf_exempt
 def billing_page(request):
