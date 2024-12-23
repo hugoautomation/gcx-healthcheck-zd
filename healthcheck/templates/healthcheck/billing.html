@@ -227,7 +227,6 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                             data: JSON.stringify({  // Stringify the data
                                 installation_id: '{{ url_params.installation_id }}',
                                 user_id: '{{ url_params.user_id }}',
-                                plan_type: planType,
                                 price_id: button.dataset.priceId  // Add price_id from button attribute
                             }),
                             headers: {

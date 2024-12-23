@@ -954,9 +954,6 @@ def billing_page(request):
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
 
-    if not installation_id:
-        return JsonResponse({"error": "Installation ID required"}, status=400)
-
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
@@ -1080,10 +1077,9 @@ def create_checkout_session(request):
         data = json.loads(request.body)
         installation_id = data.get("installation_id")
         user_id = data.get("user_id")
-        plan_type = data.get("plan_type")
         price_id = data.get("price_id")
 
-        if not all([installation_id, user_id, plan_type, price_id]):
+        if not all([installation_id, user_id, price_id]):
             return JsonResponse({"error": "Missing required parameters"}, status=400)
 
         # Get user information
@@ -1115,14 +1111,12 @@ def create_checkout_session(request):
                     "subdomain": user.subdomain,
                     "installation_id": installation_id,
                     "user_id": user_id,
-                    "plan_type": plan_type,
                 }
             },
             metadata={
                 "installation_id": installation_id,
                 "subdomain": user.subdomain,
                 "user_id": user_id,
-                "plan_type": plan_type,
             },
             success_url=request.build_absolute_uri(
                 f"/billing/?installation_id={installation_id}&success=true"
