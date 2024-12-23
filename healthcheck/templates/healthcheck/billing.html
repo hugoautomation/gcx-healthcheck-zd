@@ -29,6 +29,7 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                 <h4 class="my-0 fw-normal">Current Subscription</h4>
             </div>
             <div class="card-body">
+                <p>{{ subscription }}</p>
                 <p class="mb-2"><strong>Status:</strong> <span class="badge bg-success">{{ subscription.status|title }}</span></p>
                 
                 {% if subscription.customer_name or subscription.customer_email %}
