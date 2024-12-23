@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@zendeskgarden/css-buttons@9.0.0/dist/index.min.css">
     <link href="{% static 'css/main.css' %}" rel="stylesheet">
     <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+    <script src="{% static 'js/zaf-client.js' %}"></script>
 </head>
 <body>
 
@@ -98,7 +99,6 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
     <script>
         window.ENVIRONMENT = "{{ environment }}";
     </script>
-    <script src="{% static 'js/zaf-client.js' %}"></script>
     <script src="{% static 'js/main.js' %}"></script>
 </body>
 </html>
