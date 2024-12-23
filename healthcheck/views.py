@@ -977,15 +977,6 @@ def billing_page(request):
                 metadata__subdomain=user.subdomain, status__in=["active", "trialing"]
             ).first()
 
-            # If no active/trialing subscription, get the most recent canceled one
-            if not active_subscription:
-                active_subscription = (
-                    Subscription.objects.filter(
-                        metadata__subdomain=user.subdomain, status="canceled"
-                    )
-                    .order_by("-canceled_at")
-                    .first()
-                )
             # Get customer if there's an active subscription
             if active_subscription:
                 customer = active_subscription.customer

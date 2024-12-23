@@ -59,7 +59,7 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                 <p class="mb-1">
                     <strong>Started:</strong> {{ subscription.current_period_start|date:"F j, Y" }}
                 </p>
-                {% if subscription.status == "canceled" %}
+                {% if subscription.at_period_end %}
                     <p class="mb-1"><strong>Will Cancel On:</strong> {{ subscription.cancel_at|date:"F j, Y" }}</p>
                 {% else %}
                     <p class="mb-1"><strong>Renews On:</strong> {{ subscription.current_period_end|date:"F j, Y" }}</p>
