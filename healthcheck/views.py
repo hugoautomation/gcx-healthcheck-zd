@@ -965,7 +965,7 @@ def billing_page(request):
         try:
             # Get all subscriptions for the subdomain
             subscriptions = Subscription.objects.filter(
-                metadata__subdomain=user.subdomain
+                subscription_id=subscription_status["subscription_id"]
             ).select_related(
                 'customer',
                 'plan',
