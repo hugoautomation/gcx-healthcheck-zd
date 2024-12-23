@@ -965,14 +965,9 @@ def billing_page(request):
         try:
             # Get all subscriptions for the subdomain
             subscriptions = Subscription.objects.filter(
-                subscription_id=subscription_status["subscription_id"]
-            ).select_related(
-                'customer',
-                'plan',
-                'plan__product',
-                'default_payment_method',
-                'latest_invoice'
+                metadata__subdomain=user.subdomain
             )
+            logger.info(f"Subscriptions: {subscriptions}")
 
             # Get active subscription
             active_subscription = subscriptions.active().first()
