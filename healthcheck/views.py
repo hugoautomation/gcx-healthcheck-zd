@@ -1057,8 +1057,8 @@ def billing_page(request):
 
     # Define your price IDs
     PRICE_IDS = {
-        "monthly": "price_1QXYqCBq13Pgax7DTxg73NeW",
-        "yearly": "price_1QXYqCBq13Pgax7DTxg73NeW",
+        "monthly": settings.STRIPE_PRICE_MONTHLY,
+        "yearly": settings.STRIPE_PRICE_YEARLY,
     }
 
     context = {
