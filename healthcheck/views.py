@@ -168,54 +168,7 @@ def handle_checkout_completed(event: Event, **kwargs):
         return HttpResponse(status=400)
 
 
-@csrf_exempt
-def create_payment_intent(request):
-    try:
-        data = json.loads(request.body)
-        report_id = data.get("report_id")
-        installation_id = data.get("installation_id")
-        user_id = data.get("user_id")
 
-        if not all([report_id, installation_id, user_id]):
-            return JsonResponse({"error": "Missing required parameters"}, status=400)
-
-        # Get user information
-        user = ZendeskUser.objects.get(user_id=user_id)
-
-        # Create Stripe checkout session for one-time payment
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
-            mode="payment",
-            allow_promotion_codes=True,
-            billing_address_collection="required",
-            automatic_tax={"enabled": True},
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": "usd",
-                        "product_data": {
-                            "name": "Health Check Report Unlock",
-                        },
-                        "unit_amount": 24900,  # $249.00
-                    },
-                    "quantity": 1,
-                }
-            ],
-            metadata={
-                "report_id": report_id,
-                "installation_id": installation_id,
-                "user_id": user_id,
-                "subdomain": user.subdomain,
-            },
-            success_url=request.build_absolute_uri(
-                f"/payment/one-off/success/?installation_id={installation_id}&report_id={report_id}"
-            ),
-        )
-
-        return JsonResponse({"url": checkout_session.url})
-
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
 
 
 # Update the app view to remove monitoring context
@@ -952,15 +905,15 @@ def handle_subscription_update(event: Event, **kwargs):
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
     user_id = request.GET.get("user_id")
+    app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
 
-        # Show loading state if no installation_id
+    # Show loading state if no installation_id
     if not installation_id:
         return render(request, "healthcheck/billing.html", {
             "loading": "Loading your workspace...",
             "environment": settings.ENVIRONMENT
         })
-
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
@@ -1100,6 +1053,8 @@ def billing_page(request):
         "subscription": subscription_status,
         "url_params": {
             "installation_id": installation_id,
+            "plan": request.GET.get("plan", "Free"),
+            "app_guid": app_guid,
             "origin": origin,
             "user_id": user_id,
         },
@@ -1158,7 +1113,9 @@ def create_checkout_session(request):
                 "subdomain": user.subdomain,
                 "user_id": user_id,
             },
-            success_url=request.build_absolute_uri("/payment/subscription/success/"),
+            success_url=request.build_absolute_uri(
+        f"/payment/subscription/success/"
+    ),
             # cancel_url=request.build_absolute_uri(
             #     f"/billing/?installation_id={installation_id}&canceled=true"
             # ),
