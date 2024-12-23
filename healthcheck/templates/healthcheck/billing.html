@@ -23,12 +23,11 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
         </div>
     </div>
     {% if subscription.active %}
-    {{ subscription }}
-        <!-- Show current subscription info -->
         <!-- Show current subscription info -->
     <div class="card mb-4 rounded-3 shadow-sm">
-        <div class="card-header py-3">
-            <h4 class="my-0 fw-normal">Current Subscription</h4>
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h4 class="my-0 fw-normal d-inline-block">Current Subscription</h4>
+            <a href="https://billing.stripe.com/p/login/test_4gwaHHgWTeitgsUfYY" target="_blank" class="btn c-btn c-btn--primary c-btn--sm d-inline-block">Manage Subscription</a>
         </div>
         <div class="card-body">
             <!-- Subscription Status -->

@@ -971,7 +971,7 @@ def billing_page(request):
 
             # Get active subscription
             active_subscription = subscriptions.filter(
-                status__in=["active", "trialing"]
+                status__in=["active", "trialing", "canceled"]
             ).first()
             # Get customer if there's an active subscription
             if active_subscription:
