@@ -947,6 +947,7 @@ def create_payment_intent(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
+
 @csrf_exempt
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
