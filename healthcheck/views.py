@@ -988,6 +988,7 @@ def billing_page(request):
                     "current_period_start": active_subscription.current_period_start,
                     "current_period_end": active_subscription.current_period_end,
                     "start_date": active_subscription.start_date,
+                    "cancel_at_period_end": active_subscription.cancel_at_period_end,
                     "ended_at": active_subscription.ended_at,
                     "cancel_at": active_subscription.cancel_at,
                     "canceled_at": active_subscription.canceled_at,
