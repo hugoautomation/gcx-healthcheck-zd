@@ -10,6 +10,13 @@
     <script src="{% static 'js/zaf-client.js' %}"></script>
 </head>
 <body>
+    <style>
+        .scrollable-menu {
+            height: auto;
+            max-height: 200px;
+            overflow-x: hidden;
+        }
+    </style>
     {% if loading %}
     <div id="results">
         {% include "healthcheck/results.html" with loading=loading %}
@@ -22,13 +29,13 @@
                 <div class="col-auto">
                     {% if subscription.is_active %}
                    <h2 class="rounded bg-primary-subtle text-primary font-semibold p-1 d-inline-block">Premium Plan</h2>
-                    <a class="c-btn c-btn--pill c-btn--sm d-inline-block loading-button" 
+                    <a class="c-btn  c-btn--sm d-inline-block loading-button" 
        href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">
         Billing
     </a>
                     {% else %}
                     <h2 class="rounded bg-body-secondary font-semibold d-inline-block me-2 p-1">Free Plan</h2>
-                    <a class="c-btn c-btn--pill c-btn--sm d-inline-block"href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">Upgrade</a>
+                    <a class="c-btn  c-btn--sm d-inline-block"href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">Upgrade</a>
                     
                     {% endif %}
                 </div>
@@ -52,7 +59,7 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
                         <button class="btn c-btn c-btn--sm c-btn--secondary dropdown-toggle d-inline-block" type="button" id="historyDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             Historical Reports
                         </button>
-                        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="historyDropdown">
+                        <div class="dropdown-menu dropdown-menu-right scrollable-menu" aria-labelledby="historyDropdown">
                             {% for report in historical_reports %}
                             <a class="dropdown-item historical-report" 
                                href="#"
