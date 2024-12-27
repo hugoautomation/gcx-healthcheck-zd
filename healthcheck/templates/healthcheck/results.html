@@ -57,7 +57,7 @@
             <ul class="mt-2">
                 
                 {% for category, count in data.hidden_categories.items %}
-                <li>{{ category }}: {{ count }} issue{{ count|pluralize }}</li>
+                <li>{{ category|split_camel_case }}: {{ count }} issue{{ count|pluralize }}</li>
             {% endfor %}
             </ul>
         </div>
@@ -81,7 +81,7 @@
         <div class="card-body">
             <div class="row align-items-center">
                 <div class="col-md-4">
-                    <h5 class="text-danger m-0">Critical Issues: {{ data.critical_issues }}</h5>
+                    <h5 class="text-danger m-0">Errors: {{ data.critical_issues }}</h5>
                 </div>
                 <div class="col-md-4">
                     <h5 class="text-warning m-0">Warnings: {{ data.warning_issues }}</h5>
