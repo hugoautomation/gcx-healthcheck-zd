@@ -1,3 +1,5 @@
+{% load custom_filters %}
+
 <div class="results-container">
     {% if loading %}
     <div class="text-center my-5">
@@ -62,7 +64,7 @@
         <!-- Buttons -->
         <div class="d-flex gap-2">
             <button class="btn c-btn c-btn--sm c-btn--primary unlock-report" data-report-id="{{ data.report_id }}">
-                $249 Unlock Full Report
+                $249 Unlock This Report
             </button>
             <a class="c-btn  c-btn--sm d-inline-block loading-button" 
        href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">
@@ -105,7 +107,7 @@
                     <select id="category-filter" class="form-select">
                         <option value="all">All Categories</option>
                         {% for category in data.categories %}
-                            <option value="{{ category }}">{{ category }}</option>
+                            <option value="{{ category }}">{{ category|split_camel_case }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -127,7 +129,7 @@
                         <tr class="issue-row" 
                             data-severity="{{ issue.severity }}"
                             data-category="{{ issue.category }}">
-                            <td>{{ issue.category }}</td>
+                            <td>{{ issue.category|split_camel_case }}</td>
                             <td>
                                 <span class="badge {% if issue.severity == 'error' %}bg-danger{% else %}bg-warning{% endif %}">
                                     {{ issue.severity|title }}
