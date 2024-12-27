@@ -19,7 +19,6 @@
 <div class="row my-3">
     <div class="col">
         <div class="text-muted small mb-3 d-inline-block">Time since report: {{ data.time_since_check }} ago {% if data.report_created_at %}<br>Report Date: {{ data.report_created_at }}{% endif %}</div>
-
 </div>
     <div class="col text-right">
         {% if subscription.is_active or data.is_unlocked %}
@@ -70,7 +69,7 @@
     </div>
 </div>
 
-
+            {% endif %}
     {% endif %}
 
     <div class="card mb-4">
