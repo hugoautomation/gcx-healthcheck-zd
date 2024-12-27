@@ -10,6 +10,7 @@
     <script src="{% static 'js/zaf-client.js' %}"></script>
 </head>
 <body>
+    
     <style>
         .scrollable-menu {
             height: auto;
@@ -83,6 +84,7 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
 
         <div class="scrollable-container">
             <div id="results">
+               
                 {% include "healthcheck/results.html" with data=data user_id=url_params.user_id %}
             </div>
         </div>

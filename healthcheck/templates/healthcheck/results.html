@@ -39,18 +39,38 @@
 </div>
 </div>
 {% if not subscription.is_active and not data.is_unlocked %}
-<div class="alert alert-info mb-4">
-            <p>You're viewing the free version of the report which only shows Ticket Forms and Ticket Fields issues, without the ability to download the full report.</p>
-            
-            {% if data.hidden_issues_count > 0 %}
-                <div class="mb-3">
-                    <strong>We found {{ data.hidden_issues_count }} additional issues in other areas:</strong>
-                    <ul class="mt-2">
-                        {% for category, count in data.hidden_categories.items %}
-                            <li>{{ category }}: {{ count }} issue{{ count|pluralize }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
+<div class="card shadow-sm">
+    <div class="card-body">
+        <!-- Title with pill background -->
+        <div class="d-flex align-items-center mb-3">
+            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fs-6">Unlock Report</span>
+        </div>
+        
+        <!-- Paragraph text -->
+        <p class="card-text mb-4">
+        You're viewing the free version of this report which only shows <b>Ticket Forms</b> and <b>Ticket Fields</b> issues, without the ability to download the full report.
+        </p>
+        {% if data.hidden_issues_count > 0 %}
+        <div class="mb-3">
+            We found <b class="bg-danger-subtle text-danger rounded-pill p-1 fs-6">{{ data.hidden_issues_count }}</b> additional issues in other areas:
+            <ul class="mt-2">
+                
+                {% for category, count in data.hidden_categories.items %}
+                <li>{{ category }}: {{ count }} issue{{ count|pluralize }}</li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        <!-- Buttons -->
+        <div class="d-flex gap-2">
+            <button class="btn c-btn c-btn--sm unlock-report" data-report-id="{{ data.report_id }}">
+                $249 One off Unlock Full Report
+            </button>
+            <a class="c-btn c-btn c-btn--sm d-inline-block"href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">Subscribe</a>
+        </div>
+    </div>
+</div>
+
             {% endif %}
             
             <button class="btn c-btn c-btn--sm unlock-report" data-report-id="{{ data.report_id }}">
