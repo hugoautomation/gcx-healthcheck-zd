@@ -23,8 +23,8 @@ import logging
 import stripe
 import os
 from djstripe.event_handlers import djstripe_receiver
-from djstripe.models import Event, Subscription
 from django.db import transaction
+from djstripe.models import Event, Subscription
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
