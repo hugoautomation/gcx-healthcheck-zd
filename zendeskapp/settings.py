@@ -104,7 +104,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "corsheaders",  # Add this
-    "healthcheck",
+    "healthcheck.apps.HealthcheckConfig",
     "djstripe",
     "django_extensions",
 ]
