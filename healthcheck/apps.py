@@ -1,6 +1,9 @@
 from django.apps import AppConfig
 import segment.analytics as analytics
 from zendeskapp import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class HealthcheckConfig(AppConfig):
@@ -13,6 +16,10 @@ class HealthcheckConfig(AppConfig):
 
         # Import signal handlers
         try:
-            import healthcheck.signals  # noqa
-        except ImportError:
+            # Import the views module where webhook handlers are defined
+            from healthcheck import views  # noqa
+
+            logger.info("Successfully loaded webhook handlers")
+        except ImportError as e:
+            logger.error(f"Failed to load webhook handlers: {str(e)}")
             pass
