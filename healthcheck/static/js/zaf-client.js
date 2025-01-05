@@ -9,14 +9,23 @@ const ZAFClientSingleton = {
 
         try {
             await this.initializeClient(retryCount, delay);
-            await this.loadData();
-            await this.trackAnalytics(); // New separate method for analytics
+            // Load data in parallel
+            await Promise.all([
+                this.loadData(),
+                this.trackAnalytics()
+            ]);
             return this.client;
         } catch (error) {
             console.error('Failed to initialize:', error);
             throw error;
         }
     },
+        // Initialize client without waiting for data
+        async quickInit() {
+            if (this.client) return this.client;
+            await this.initializeClient(3, 100);
+            return this.client;
+        },
 
     async initializeClient(retryCount, delay) {
         const urlParams = new URLSearchParams(window.location.search);
