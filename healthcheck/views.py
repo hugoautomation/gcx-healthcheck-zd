@@ -22,9 +22,9 @@ from django.utils import timezone
 import logging
 import stripe
 import os
-from djstripe import webhooks
-from django.db import transaction
+from djstripe.event_handlers import djstripe_receiver
 from djstripe.models import Event, Subscription
+from django.db import transaction
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -74,7 +74,7 @@ def validate_jwt_token(f):
     return decorated_function
 
 
-@webhooks.handler("checkout.session.completed")
+@djstripe_receiver("checkout.session.completed")
 def handle_checkout_completed(event: Event, **kwargs):
     """Handle successful checkout session completion"""
     try:
@@ -802,9 +802,9 @@ def monitoring_settings(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-@webhooks.handler("customer.subscription.created")
-@webhooks.handler("customer.subscription.updated")
-@webhooks.handler("customer.subscription.deleted")
+@djstripe_receiver("customer.subscription.created")
+@djstripe_receiver("customer.subscription.updated")
+@djstripe_receiver("customer.subscription.deleted")
 def handle_subscription_update(event: Event, **kwargs):
     """Handle subscription updates from Stripe"""
     try:
