@@ -189,7 +189,7 @@ def app(request):
 
     try:
         # Get all cached data in parallel
-        url_params = HealthCheckCache.get_url_params(installation_id, app_guid, origin, user_id)
+        # url_params = HealthCheckCache.get_url_params(installation_id, app_guid, origin, user_id)
         user = HealthCheckCache.get_user_info(user_id)
         subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
         latest_report = HealthCheckCache.get_latest_report(installation_id)
@@ -473,13 +473,13 @@ def health_check(request):
             )
             logger.info(f"subscription_status: {subscription_status}")
             # Format response data with subscription status
-            formatted_data = format_response_data(
-                response_data,
-                subscription_active=subscription_status["active"],
-                report_id=report.id,
-                last_check=report.created_at,
-                is_unlocked=report.is_unlocked,
-            )
+            # formatted_data = format_response_data(
+            #     response_data,
+            #     subscription_active=subscription_status["active"],
+            #     report_id=report.id,
+            #     last_check=report.created_at,
+            #     is_unlocked=report.is_unlocked,
+            # )
 
             # Render results using utility function
             results_html = HealthCheckCache.get_report_results(
@@ -523,9 +523,6 @@ def health_check(request):
 @csrf_exempt
 def monitoring(request):
     installation_id = request.GET.get("installation_id")
-    client_plan = request.GET.get("plan", "Free")
-    app_guid = request.GET.get("app_guid")
-    origin = request.GET.get("origin")
     user_id = request.GET.get("user_id")
 
     try:
@@ -819,7 +816,6 @@ def handle_subscription_update(event: Event, **kwargs):
     try:
         logger.info(f"Received subscription webhook event: {event.type}")
         logger.info(f"Full event data: {event.data}")
-        invalidate_app_cache(installation_id)
 
         subscription = event.data["object"]
         metadata = subscription.get("metadata", {})
@@ -828,6 +824,8 @@ def handle_subscription_update(event: Event, **kwargs):
         user_id = metadata.get("user_id")
         subdomain = metadata.get("subdomain")
         installation_id = metadata.get("installation_id")
+        invalidate_app_cache(installation_id)
+
                 # Invalidate subscription cache
         HealthCheckCache.invalidate_subscription_data(user_id, subdomain)
         
@@ -1118,7 +1116,6 @@ def billing_page(request):
         "stripe_publishable_key": settings.STRIPE_PUBLIC_KEY,
         "price_ids": PRICE_IDS,
     }
-    billing_info = HealthCheckCache.get_billing_info(user_id, user.subdomain)
 
     return render(request, "healthcheck/billing.html", context)
 

@@ -3,7 +3,6 @@ from .models import HealthCheckMonitoring
 from django.utils.timesince import timesince
 from zendeskapp import settings
 from djstripe.models import WebhookEndpoint
-from django.urls import reverse
 
 def create_webhook_endpoint(request):
     """Create or get a webhook endpoint"""
