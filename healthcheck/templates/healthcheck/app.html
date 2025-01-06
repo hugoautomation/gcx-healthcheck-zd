@@ -1,27 +1,5 @@
-{% load static %}
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@zendeskgarden/css-buttons@9.0.0/dist/index.min.css">
-    <link href="{% static 'css/main.css' %}" rel="stylesheet">
-    <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
-    <script src="{% static 'js/zaf-client.js' %}"></script>
-    <script src="{% static 'js/url-params.js' %}"></script>
-    <script>
-        // Initialize URL params as soon as possible
-        document.addEventListener('DOMContentLoaded', () => {
-            // Update all links with cached params
-            document.querySelectorAll('a[data-preserve-params]').forEach(link => {
-                const baseUrl = link.getAttribute('href');
-                link.href = URLParamManager.getUrlWithParams(baseUrl);
-            });
-        });
-    </script>
-</head>
-<body>
-    
+{% extends "base.html" %}
+    {% block content %}
     <style>
         .scrollable-menu {
             height: auto;
@@ -112,19 +90,11 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
         {% endif %}
         {% endif %}
     </div>
-
-    <!-- Add Bootstrap JS and dependencies at the end of the body -->
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    <script>
+<script>
         document.addEventListener('DOMContentLoaded', function() {
             const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
             const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
         });
     </script>
-    <script>
-        window.ENVIRONMENT = "{{ environment }}";
-    </script>
-    <script src="{% static 'js/main.js' %}"></script>
-</body>
-</html>
+  
+    {% endblock %}
