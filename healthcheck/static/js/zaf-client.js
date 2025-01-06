@@ -101,7 +101,7 @@ const ZAFClientSingleton = {
             // Don't throw error as this is non-critical
         }
     },
-    
+
     async init(retryCount = 3, delay = 100) {
         if (this.client) return this.client;
 
@@ -239,60 +239,82 @@ const ZAFClientSingleton = {
         }
     },
 
-    async ensureUrlParams() {
-        if (!this.metadata) return false;
+   async ensureUrlParams() {
+    if (!this.metadata) return false;
 
-        const currentUrl = new URL(window.location.href);
-        const urlInstallationId = currentUrl.searchParams.get('installation_id');
-        const urlPlan = currentUrl.searchParams.get('plan');
-        const origin = currentUrl.searchParams.get('origin');
-        const appGuid = currentUrl.searchParams.get('app_guid');
-        const userId = currentUrl.searchParams.get('user_id');
+    const currentUrl = new URL(window.location.href);
+    const cachedParams = this._getCachedUrlParams();
+    let needsRedirect = false;
 
-
-        let needsRedirect = false;
-
-        if (!urlInstallationId || !urlPlan) {
-            currentUrl.searchParams.set('installation_id', this.metadata.installationId);
-            currentUrl.searchParams.set('plan', this.metadata.plan?.name || 'Free');
-            needsRedirect = true;
+    // Check each parameter, using cached values first, then ZAF data
+    const paramsToCheck = {
+        'installation_id': {
+            current: currentUrl.searchParams.get('installation_id'),
+            cached: cachedParams?.installation_id,
+            zaf: this.metadata.installationId
+        },
+        'plan': {
+            current: currentUrl.searchParams.get('plan'),
+            cached: cachedParams?.plan,
+            zaf: this.metadata.plan?.name || 'Free'
+        },
+        'user_id': {
+            current: currentUrl.searchParams.get('user_id'),
+            cached: cachedParams?.user_id,
+            zaf: this.userInfo?.id
+        },
+        'origin': {
+            current: currentUrl.searchParams.get('origin'),
+            cached: cachedParams?.origin,
+            zaf: this.context?.account?.subdomain ? `https://${this.context.account.subdomain}.zendesk.com` : null
+        },
+        'app_guid': {
+            current: currentUrl.searchParams.get('app_guid'),
+            cached: cachedParams?.app_guid,
+            zaf: this.metadata?.appGuid
         }
-            // Add user_id to URL params
-        if (!userId && this.userInfo?.id) {
-        currentUrl.searchParams.set('user_id', this.userInfo.id);
-        needsRedirect = true;
+    };
+
+    // Update missing parameters
+    Object.entries(paramsToCheck).forEach(([param, values]) => {
+        if (!values.current) {
+            const newValue = values.cached || values.zaf;
+            if (newValue) {
+                currentUrl.searchParams.set(param, newValue);
+                needsRedirect = true;
+            }
+        }
+    });
+
+    if (needsRedirect) {
+        // Cache the new params before redirecting
+        this._cacheUrlParams(Object.fromEntries(currentUrl.searchParams));
+        window.location.href = currentUrl.toString();
+        return false;
     }
 
-        // Preserve origin and app_guid when navigating
-        if (!origin && this.context?.account?.subdomain) {
-            currentUrl.searchParams.set('origin', `https://${this.context.account.subdomain}.zendesk.com`);
-            needsRedirect = true;
+    // Cache current params if we're not redirecting
+    this._cacheUrlParams(Object.fromEntries(currentUrl.searchParams));
+    return true;
+},
+
+getUrlWithParams(baseUrl) {
+    const url = new URL(baseUrl, window.location.origin);
+    const cachedParams = this._getCachedUrlParams() || {};
+    const currentParams = Object.fromEntries(new URLSearchParams(window.location.search));
+    
+    // Combine current and cached params, with current taking precedence
+    const params = { ...cachedParams, ...currentParams };
+
+    // Add all available parameters
+    ['installation_id', 'plan', 'origin', 'app_guid', 'user_id'].forEach(param => {
+        if (params[param]) {
+            url.searchParams.set(param, params[param]);
         }
+    });
 
-        if (!appGuid && this.metadata?.appGuid) {
-            currentUrl.searchParams.set('app_guid', this.metadata.appGuid);
-            needsRedirect = true;
-        }
-
-        if (needsRedirect) {
-            window.location.href = currentUrl.toString();
-            return false;
-        }
-        return true;
-    },
-
-    getUrlWithParams(baseUrl) {
-        const url = new URL(baseUrl, window.location.origin);
-        const currentParams = new URLSearchParams(window.location.search);
-
-        // Preserve all necessary parameters
-        ['installation_id', 'plan', 'origin', 'app_guid', 'user_id'].forEach(param => {
-            const value = currentParams.get(param);
-            if (value) url.searchParams.set(param, value);
-        });
-
-        return url.toString();
-    }
+    return url.toString();
+}
 };
 
 !function () {
