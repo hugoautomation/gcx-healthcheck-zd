@@ -17,9 +17,13 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from djstripe import webhooks
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("healthcheck.urls")),
     path("stripe/", include("djstripe.urls", namespace="djstripe")),
+        # Add a simple webhook endpoint without UUID
+    path('stripe/webhook/', webhooks.ProcessWebhookView.as_view(), name='stripe_webhook'),
+    
 ]
