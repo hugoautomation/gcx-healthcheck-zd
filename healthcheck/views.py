@@ -25,6 +25,7 @@ import os
 from djstripe.event_handlers import djstripe_receiver
 from django.db import transaction
 from djstripe.models import Event, Subscription
+from .cache_utils import HealthCheckCache
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -185,15 +186,12 @@ def app(request):
         return render(request, "healthcheck/app.html", initial_data)
 
     try:
-        user = ZendeskUser.objects.get(user_id=user_id)
-        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
-        historical_reports = HealthCheckReport.objects.filter(
-            installation_id=installation_id
-        ).order_by("-created_at")[:10]
-        # Get real subscription status
-        subscription_status = subscription_status = ZendeskUser.get_subscription_status(
-            user.subdomain
-        )
+        url_params = HealthCheckCache.get_url_params(installation_id, app_guid, origin, user_id)
+        user = HealthCheckCache.get_user_info(user_id)
+        subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+        latest_report = HealthCheckCache.get_latest_report(installation_id)
+        historical_reports = HealthCheckCache.get_historical_reports(installation_id)
+
 
         # Identify user with Segment
         analytics.identify(
