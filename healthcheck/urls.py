@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import success_page
 from . import cache_views
+
 urlpatterns = [
     path(
         "test/subscription-success/",
@@ -53,5 +54,9 @@ urlpatterns = [
         name="create_payment_intent",
     ),
     path("api/cache/zaf-data/", cache_views.cache_zaf_data, name="cache_zaf_data"),
-    path("api/cache/zaf-data/", cache_views.get_cached_zaf_data, name="get_cached_zaf_data"),
+    path(
+        "api/cache/zaf-data/",
+        cache_views.get_cached_zaf_data,
+        name="get_cached_zaf_data",
+    ),
 ]

@@ -162,7 +162,6 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": os.environ.get("REDIS_URL", ""),
         "TIMEOUT": 300,
-      
     }
 }
 CACHE_ENABLED = True

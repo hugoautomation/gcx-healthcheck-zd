@@ -22,5 +22,4 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("healthcheck.urls")),
     path("stripe/", include("djstripe.urls", namespace="djstripe")),
-
 ]

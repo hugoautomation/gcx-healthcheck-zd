@@ -191,7 +191,16 @@ def app(request):
         # Get all cached data in parallel
         # url_params = HealthCheckCache.get_url_params(installation_id, app_guid, origin, user_id)
         user = HealthCheckCache.get_user_info(user_id)
-        subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+        try:
+            subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+        except Exception as e:
+            logger.warning(f"No subscription found for subdomain {user.subdomain}: {str(e)}")
+            subscription_status = {
+                "status": "inactive",
+                "active": False,
+                "plan": "Free",
+                "current_period_end": None
+            }
         latest_report = HealthCheckCache.get_latest_report(installation_id)
         historical_reports = HealthCheckCache.get_historical_reports(installation_id)
         monitoring_settings = HealthCheckCache.get_monitoring_settings(installation_id)
@@ -244,15 +253,16 @@ def app(request):
         if latest_report:
             # Use cached formatted report data
             report_data = HealthCheckCache.get_formatted_report(
-                latest_report, 
-                subscription_status["active"]
+                latest_report, subscription_status["active"]
             )
-            
-            initial_data.update({
-                "historical_reports": format_historical_reports(historical_reports),
-                "data": report_data,
-                "monitoring": monitoring_settings
-            })
+
+            initial_data.update(
+                {
+                    "historical_reports": format_historical_reports(historical_reports),
+                    "data": report_data,
+                    "monitoring": monitoring_settings,
+                }
+            )
         else:
             initial_data.update(
                 {
@@ -364,7 +374,6 @@ def health_check(request):
             installation_id = data.get("installation_id")
             user_id = data.get("user_id")
             invalidate_app_cache(installation_id)
-
 
             logger.info(
                 "Health check details",
@@ -483,8 +492,7 @@ def health_check(request):
 
             # Render results using utility function
             results_html = HealthCheckCache.get_report_results(
-                report.id,
-                subscription_active=subscription_status["active"]
+                report.id, subscription_active=subscription_status["active"]
             )
             analytics.track(
                 user_id,
@@ -529,7 +537,6 @@ def monitoring(request):
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
         monitoring_settings = HealthCheckCache.get_monitoring_settings(installation_id)
-        
 
         if not subscription_status["active"]:
             messages.error(request, "Monitoring requires an active subscription")
@@ -558,8 +565,9 @@ def monitoring(request):
         )
     except HealthCheckMonitoring.DoesNotExist:
         # Handle case where monitoring settings don't exist yet
-       context = {
-            "monitoring_settings": monitoring_settings or {
+        context = {
+            "monitoring_settings": monitoring_settings
+            or {
                 "is_active": False,
                 "frequency": "weekly",
                 "notification_emails": [],
@@ -569,17 +577,18 @@ def monitoring(request):
     # Add URL parameters and environment to context
     context.update(
         {
-           "url_params": HealthCheckCache.get_url_params(
-                installation_id, 
+            "url_params": HealthCheckCache.get_url_params(
+                installation_id,
                 request.GET.get("app_guid"),
                 request.GET.get("origin"),
-                user_id
+                user_id,
             ),
             "environment": settings.ENVIRONMENT,
         }
     )
 
     return render(request, "healthcheck/monitoring.html", context)
+
 
 @csrf_exempt
 def download_report_csv(request, report_id):
@@ -592,13 +601,15 @@ def download_report_csv(request, report_id):
             report = HealthCheckReport.objects.get(id=report_id)
             csv_data = []
             for issue in report.raw_response.get("issues", []):
-                csv_data.append([
-                    issue.get("item_type", ""),
-                    issue.get("type", ""),
-                    issue.get("item_type", ""),
-                    issue.get("message", ""),
-                    issue.get("zendesk_url", ""),
-                ])
+                csv_data.append(
+                    [
+                        issue.get("item_type", ""),
+                        issue.get("type", ""),
+                        issue.get("item_type", ""),
+                        issue.get("message", ""),
+                        issue.get("zendesk_url", ""),
+                    ]
+                )
 
         # Create the HttpResponse object with CSV header
         response = HttpResponse(content_type="text/csv")
@@ -610,9 +621,9 @@ def download_report_csv(request, report_id):
         writer = csv.writer(response)
 
         # Write header row
-        writer.writerow([
-            "Type", "Severity", "Object Type", "Description", "Zendesk URL"
-        ])
+        writer.writerow(
+            ["Type", "Severity", "Object Type", "Description", "Zendesk URL"]
+        )
 
         # Write data rows from cache or database
         writer.writerows(csv_data)
@@ -826,9 +837,8 @@ def handle_subscription_update(event: Event, **kwargs):
         installation_id = metadata.get("installation_id")
         invalidate_app_cache(installation_id)
 
-                # Invalidate subscription cache
+        # Invalidate subscription cache
         HealthCheckCache.invalidate_subscription_data(user_id, subdomain)
-        
 
         if not all([user_id, subdomain]):
             logger.error(
@@ -957,6 +967,7 @@ def create_payment_intent(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
 
 @csrf_exempt
 def billing_page(request):

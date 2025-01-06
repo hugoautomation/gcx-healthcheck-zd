@@ -9,6 +9,7 @@ from djstripe.models import Subscription
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+
 class HealthCheckReport(models.Model):
     """Stores health check reports with raw response data"""
 
@@ -215,4 +216,5 @@ class ZendeskUser(models.Model):
 def invalidate_report_cache(sender, instance, **kwargs):
     """Invalidate report cache when report is updated"""
     from .cache_utils import HealthCheckCache
+
     HealthCheckCache.invalidate_report_data(instance.id)
