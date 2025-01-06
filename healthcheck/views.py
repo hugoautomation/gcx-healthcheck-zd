@@ -12,7 +12,6 @@ from .utils import (
     get_monitoring_context,
     format_historical_reports,
     render_report_components,
-    get_default_subscription_status
 )
 import csv
 import jwt
@@ -193,7 +192,6 @@ def app(request):
         # url_params = HealthCheckCache.get_url_params(installation_id, app_guid, origin, user_id)
         user = HealthCheckCache.get_user_info(user_id)
         subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
- 
 
         latest_report = HealthCheckCache.get_latest_report(installation_id)
         historical_reports = HealthCheckCache.get_historical_reports(installation_id)
@@ -384,7 +382,9 @@ def health_check(request):
 
             # Get user and subscription status
             user = ZendeskUser.objects.get(user_id=user_id)
-            subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+            subscription_status = HealthCheckCache.get_subscription_status(
+                user.subdomain
+            )
 
             analytics.track(
                 user_id,
@@ -531,7 +531,6 @@ def monitoring(request):
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
 
-
         monitoring_settings = HealthCheckCache.get_monitoring_settings(installation_id)
 
         if not subscription_status["active"]:
@@ -654,9 +653,8 @@ def get_historical_report(request, report_id):
         report = HealthCheckReport.objects.get(id=report_id)
 
         # Get subscription status for the report's subdomain
-        
-        subscription_status = HealthCheckCache.get_subscription_status(report.subdomain)
 
+        subscription_status = HealthCheckCache.get_subscription_status(report.subdomain)
 
         # Format the report data
         report_data = format_response_data(
@@ -804,7 +802,6 @@ def monitoring_settings(request):
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
         subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
-
 
         context = get_monitoring_context(
             installation_id,

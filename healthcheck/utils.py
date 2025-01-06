@@ -12,8 +12,9 @@ def get_default_subscription_status():
         "active": False,
         "plan": "Free",
         "current_period_end": None,
-        "subscription_id": None
+        "subscription_id": None,
     }
+
 
 def create_webhook_endpoint(request):
     """Create or get a webhook endpoint"""

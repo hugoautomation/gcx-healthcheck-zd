@@ -1,7 +1,11 @@
 from django.core.cache import cache
 from django.conf import settings
 from .models import ZendeskUser, HealthCheckReport, HealthCheckMonitoring
-from .utils import format_response_data, render_report_components, get_default_subscription_status
+from .utils import (
+    format_response_data,
+    render_report_components,
+    get_default_subscription_status,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -157,7 +161,7 @@ class HealthCheckCache:
             logger.error(f"User not found: {user_id}")
             return None
 
-     @classmethod
+    @classmethod
     def get_subscription_status(cls, subdomain):
         """Cache and retrieve subscription status"""
         if not subdomain:
@@ -165,7 +169,7 @@ class HealthCheckCache:
 
         cache_key = cls.get_cache_key("subscription", subdomain)
         cached_status = cache.get(cache_key)
-        
+
         if cached_status:
             return cached_status
 
@@ -177,7 +181,7 @@ class HealthCheckCache:
 
         cache.set(cache_key, status, cls.TIMEOUTS["subscription"])
         return status
-    
+
     @classmethod
     def get_latest_report(cls, installation_id):
         """Cache and retrieve latest health check report"""
