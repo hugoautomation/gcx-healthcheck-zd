@@ -631,11 +631,12 @@ def check_unlock_status(request):
     if not report_id:
         return JsonResponse({"error": "No report ID provided"}, status=400)
 
-    try:
-        report = HealthCheckReport.objects.get(id=report_id)
-        return JsonResponse({"is_unlocked": report.is_unlocked, "report_id": report.id})
-    except HealthCheckReport.DoesNotExist:
+    # Get cached unlock status
+    is_unlocked = HealthCheckCache.get_report_unlock_status(report_id)
+    if is_unlocked is None:
         return JsonResponse({"error": "Report not found"}, status=404)
+
+    return JsonResponse({"is_unlocked": is_unlocked, "report_id": report_id})
 
 
 @csrf_exempt

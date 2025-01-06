@@ -21,6 +21,8 @@ class HealthCheckCache:
         'report_details': 300,    # 5 minutes
         'monitoring': 300,        # 5 minutes
         'formatted_report': 300,  # 5 minutes
+        'report_unlock_status': 60 # 1 minute for unlock status
+
     }
 
     @staticmethod
@@ -97,6 +99,24 @@ class HealthCheckCache:
             return csv_data
         except HealthCheckReport.DoesNotExist:
             return None
+    
+    @classmethod
+    def get_report_unlock_status(cls, report_id):
+        """Cache and retrieve report unlock status"""
+        cache_key = cls.get_cache_key('report_unlock_status', report_id)
+        
+        cached_status = cache.get(cache_key)
+        if cached_status is not None:  # Check for None specifically as False is valid
+            return cached_status
+
+        try:
+            report = HealthCheckReport.objects.get(id=report_id)
+            status = report.is_unlocked
+            cache.set(cache_key, status, cls.TIMEOUTS['report_unlock_status'])
+            return status
+        except HealthCheckReport.DoesNotExist:
+            return None
+
 
     @classmethod
     def get_user_info(cls, user_id):
@@ -318,10 +338,10 @@ class HealthCheckCache:
         keys_to_delete = [
             cls.get_cache_key('report_results', f"{report_id}:{subscription_active}"),
             cls.get_cache_key('report_csv', report_id),
+            cls.get_cache_key('report_unlock_status', report_id),
         ]
         cache.delete_many(keys_to_delete)
         logger.info(f"Invalidated all caches for report: {report_id}")
-        
     @classmethod
     def invalidate_monitoring_cache(cls, installation_id):
         """Invalidate monitoring settings cache"""
