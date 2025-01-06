@@ -159,21 +159,13 @@ DATABASES = {
 
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": os.environ.get("REDIS_URL", ""),
-        "TIMEOUT": 60,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "SOCKET_CONNECT_TIMEOUT": 5,
-            "SOCKET_TIMEOUT": 5,
-            "RETRY_ON_TIMEOUT": True,
-            "MAX_CONNECTIONS": 1000,
-            "CONNECTION_POOL_KWARGS": {"max_connections": 100},
-        },
+        "TIMEOUT": 300,
+      
     }
 }
 CACHE_ENABLED = True
-CACHE_TIMEOUT = 300  # 5 minutes default
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
