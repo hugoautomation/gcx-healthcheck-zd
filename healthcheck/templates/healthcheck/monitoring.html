@@ -26,7 +26,7 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
 
         <div class="card">
             <div class="card-body">
-                <form method="POST" action="{{ settings.BASE_URL }}{% url 'monitoring_settings' %}" id="monitoring-form" data-is-free-plan="{{ is_free_plan|lower }}">                    
+                <form method="POST" action="{{ settings.BASE_URL }}{% url 'monitoring_settings' %}" id="monitoring-form">                    
                     <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
                     <input type="hidden" name="user_id" value="{{ request.GET.user_id }}">  <!-- Add user_id -->
                     <input type="hidden" name="redirect_url" value="{{ settings.BASE_URL }}{{ request.path }}?{{ request.GET.urlencode }}">
@@ -39,7 +39,7 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                             <div class="form-check form-switch">
                                 <input type="checkbox" class="form-check-input" id="is_active" name="is_active" 
                                        {% if monitoring_settings.is_active %}checked{% endif %} 
-                                       {% if is_free_plan %}disabled{% endif %}>
+                                       >
                                 <label class="form-check-label" for="is_active">Active</label>
                             </div>
                         </div>
@@ -48,7 +48,7 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                         <div class="mb-3 col-md-6">
                             <label for="frequency" class="form-label">Check Frequency</label>
                             <select class="form-select" id="frequency" name="frequency" 
-                                    {% if is_free_plan %}disabled{% endif %}>
+                                    >
                                 <option value="daily" {% if monitoring_settings.frequency == 'daily' %}selected{% endif %}>Daily</option>
                                 <option value="weekly" {% if monitoring_settings.frequency == 'weekly' %}selected{% endif %}>Weekly</option>
                                 <option value="monthly" {% if monitoring_settings.frequency == 'monthly' %}selected{% endif %}>Monthly</option>
@@ -62,27 +62,25 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                                 {% for email in monitoring_settings.notification_emails %}
                                 <div class="input-group mb-2">
                                     <input type="email" class="form-control notification-email" name="notification_emails[]" 
-                                           value="{{ email }}" {% if is_free_plan %}disabled{% endif %}>
+                                           value="{{ email }}">
                                     <button type="button" class="btn c-btn c-btn--danger remove-email">-</button>
                                 </div>
                                 {% endfor %}
                                 <div class="input-group mb-2">
                                     <input type="email" class="form-control notification-email" name="notification_emails[]" 
-                                           {% if is_free_plan %}disabled{% endif %}>
+                                          >
                                     <button type="button" class="btn c-btn c-btn--success add-email">+</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {% if is_free_plan %}
-                    <a href="https://help.gravity.cx/hc/en-au/articles/39628933601689-How-to-Upgrade-your-plan" target="_blank" class="btn c-btn c-btn--primary">Subscribe to Unlock</a>
-                    {% else %}
+           
                     <button type="submit" class="btn c-btn c-btn--primary loading-button" id="save-settings-btn">
                         <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                         <span class="btn-text">Save Settings</span>
                     </button>
-                    {% endif %}
+               
                 </form>
             </div>
         </div>

@@ -6,6 +6,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
+def invalidate_app_cache(installation_id):
+    """Simple function to invalidate app-related caches"""
+    cache_key = f'app_header:{installation_id}'
+    cache.delete(cache_key)
+    logger.info(f"Invalidated app cache for installation: {installation_id}")
+
+
 class HealthCheckCache:
     # Cache timeouts (in seconds)
     TIMEOUTS = {

@@ -25,7 +25,7 @@ import os
 from djstripe.event_handlers import djstripe_receiver
 from django.db import transaction
 from djstripe.models import Event, Subscription
-from .cache_utils import HealthCheckCache
+from .cache_utils import HealthCheckCache, invalidate_app_cache
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -101,6 +101,8 @@ def handle_checkout_completed(event: Event, **kwargs):
         report_id = metadata.get("report_id")
         subdomain = metadata.get("subdomain")
         user_id = metadata.get("user_id")
+        installation_id = metadata.get("installation_id")
+        invalidate_app_cache(installation_id)
 
         logger.info(
             f"Extracted data - Report ID: {report_id}, Subdomain: {subdomain}, User ID: {user_id}"
@@ -361,6 +363,8 @@ def health_check(request):
             data = json.loads(request.body) if request.body else {}
             installation_id = data.get("installation_id")
             user_id = data.get("user_id")
+            invalidate_app_cache(installation_id)
+
 
             logger.info(
                 "Health check details",
@@ -815,6 +819,7 @@ def handle_subscription_update(event: Event, **kwargs):
     try:
         logger.info(f"Received subscription webhook event: {event.type}")
         logger.info(f"Full event data: {event.data}")
+        invalidate_app_cache(installation_id)
 
         subscription = event.data["object"]
         metadata = subscription.get("metadata", {})
