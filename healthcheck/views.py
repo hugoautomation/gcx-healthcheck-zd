@@ -26,6 +26,7 @@ from djstripe.event_handlers import djstripe_receiver
 from django.db import transaction
 from djstripe.models import Event, Subscription
 from .cache_utils import HealthCheckCache
+from django.views.decorators.cache import cache_page
 
 stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
@@ -170,6 +171,7 @@ def handle_checkout_completed(event: Event, **kwargs):
 
 
 # Update the app view to remove monitoring context
+@cache_page(60 * 15)
 @csrf_exempt
 @validate_jwt_token
 def app(request):
@@ -946,7 +948,7 @@ def create_payment_intent(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
-
+@cache_page(60 * 15)
 @csrf_exempt
 def billing_page(request):
     installation_id = request.GET.get("installation_id")
