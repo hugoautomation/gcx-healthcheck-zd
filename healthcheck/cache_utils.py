@@ -1,6 +1,7 @@
 from django.core.cache import cache
 from django.conf import settings
-from .models import ZendeskUser, HealthCheckReport
+from .models import ZendeskUser, HealthCheckReport, HealthCheckMonitoring
+from .utils import format_response_data
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,8 +15,10 @@ class HealthCheckCache:
         'latest_report': 300,     # 5 minutes
         'historical_reports': 300, # 5 minutes
         'billing_info': 300,      # 5 minutes
-        'price_info': 3600,       # 1 hour (prices don't change often)
+        'price_info': 3600,       # 1 hour
         'report_details': 300,    # 5 minutes
+        'monitoring': 300,        # 5 minutes
+        'formatted_report': 300,  # 5 minutes
     }
 
     @staticmethod
@@ -155,6 +158,47 @@ class HealthCheckCache:
         except HealthCheckReport.DoesNotExist:
             logger.error(f"Report not found: {report_id}")
             return None
+    
+    @classmethod
+    def get_formatted_report(cls, report, subscription_active):
+        """Cache and retrieve formatted report data"""
+        cache_key = cls.get_cache_key('formatted_report', f"{report.id}:{subscription_active}")
+        
+        cached_format = cache.get(cache_key)
+        if cached_format:
+            return cached_format
+
+        formatted_data = format_response_data(
+            report.raw_response,
+            subscription_active=subscription_active,
+            report_id=report.id,
+            last_check=report.created_at,
+            is_unlocked=report.is_unlocked,
+        )
+        cache.set(cache_key, formatted_data, cls.TIMEOUTS['report_details'])
+        return formatted_data
+        
+    @classmethod
+    def get_monitoring_settings(cls, installation_id):
+        """Cache and retrieve monitoring settings"""
+        cache_key = cls.get_cache_key('monitoring_settings', installation_id)
+        
+        cached_settings = cache.get(cache_key)
+        if cached_settings:
+            return cached_settings
+
+        try:
+            settings = HealthCheckMonitoring.objects.get(installation_id=installation_id)
+            monitoring_data = {
+                'is_active': settings.is_active,
+                'frequency': settings.frequency,
+                'notification_emails': settings.notification_emails,
+                'last_check': settings.last_check,
+            }
+            cache.set(cache_key, monitoring_data, cls.TIMEOUTS['monitoring'])
+            return monitoring_data
+        except HealthCheckMonitoring.DoesNotExist:
+            return None
 
     # Cache invalidation methods
     @classmethod
@@ -212,6 +256,15 @@ class HealthCheckCache:
         cls.get_price_info()
         
         logger.info(f"Refreshed all cache for installation: {installation_id}")
+    
+    @classmethod
+    def invalidate_monitoring_cache(cls, installation_id):
+        """Invalidate monitoring settings cache"""
+        keys_to_delete = [
+            cls.get_cache_key('monitoring_settings', installation_id),
+        ]
+        cache.delete_many(keys_to_delete)
+        logger.info(f"Invalidated monitoring cache for installation: {installation_id}")
 
     @classmethod
     def clear_all_cache(cls):

@@ -186,12 +186,13 @@ def app(request):
         return render(request, "healthcheck/app.html", initial_data)
 
     try:
+        # Get all cached data in parallel
         url_params = HealthCheckCache.get_url_params(installation_id, app_guid, origin, user_id)
         user = HealthCheckCache.get_user_info(user_id)
         subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
         latest_report = HealthCheckCache.get_latest_report(installation_id)
         historical_reports = HealthCheckCache.get_historical_reports(installation_id)
-
+        monitoring_settings = HealthCheckCache.get_monitoring_settings(installation_id)
 
         # Identify user with Segment
         analytics.identify(
@@ -239,21 +240,17 @@ def app(request):
         )
 
         if latest_report:
-            # Format the report data
-            report_data = format_response_data(
-                latest_report.raw_response,
-                subscription_active=subscription_status["active"],  # Changed
-                report_id=latest_report.id,
-                last_check=latest_report.created_at,
-                is_unlocked=latest_report.is_unlocked,  # Added
+            # Use cached formatted report data
+            report_data = HealthCheckCache.get_formatted_report(
+                latest_report, 
+                subscription_status["active"]
             )
-
-            initial_data.update(
-                {
-                    "historical_reports": format_historical_reports(historical_reports),
-                    "data": report_data,
-                }
-            )
+            
+            initial_data.update({
+                "historical_reports": format_historical_reports(historical_reports),
+                "data": report_data,
+                "monitoring": monitoring_settings
+            })
         else:
             initial_data.update(
                 {
@@ -527,7 +524,9 @@ def monitoring(request):
 
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
-        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+        subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+        monitoring_settings = HealthCheckCache.get_monitoring_settings(installation_id)
+        
 
         if not subscription_status["active"]:
             messages.error(request, "Monitoring requires an active subscription")
@@ -556,9 +555,8 @@ def monitoring(request):
         )
     except HealthCheckMonitoring.DoesNotExist:
         # Handle case where monitoring settings don't exist yet
-        context = {
-            "is_free_plan": client_plan == "Free",
-            "monitoring_settings": {
+       context = {
+            "monitoring_settings": monitoring_settings or {
                 "is_active": False,
                 "frequency": "weekly",
                 "notification_emails": [],
@@ -568,13 +566,12 @@ def monitoring(request):
     # Add URL parameters and environment to context
     context.update(
         {
-            "url_params": {
-                "installation_id": installation_id,
-                "plan": client_plan,
-                "app_guid": app_guid,
-                "origin": origin,
-                "user_id": user_id,
-            },
+           "url_params": HealthCheckCache.get_url_params(
+                installation_id, 
+                request.GET.get("app_guid"),
+                request.GET.get("origin"),
+                user_id
+            ),
             "environment": settings.ENVIRONMENT,
         }
     )
