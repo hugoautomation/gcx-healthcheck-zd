@@ -87,35 +87,67 @@ const ZAFClientSingleton = {
     },
 
 
+
     async trackAnalytics() {
         try {
-            if (!this.metadata || !this.context || !this.userInfo) {
-                console.warn('Missing data for analytics tracking');
+            await new Promise(resolve => {
+                if (window.analytics && window.analytics.initialized) {
+                    resolve();
+                } else {
+                    analytics.ready(resolve);
+                }
+            });
+    
+            if (!this.userInfo || !this.metadata) {
+                console.warn('Missing user info or metadata for analytics tracking');
                 return;
             }
-
+    
             const baseUrl = window.ENVIRONMENT === 'production'
                 ? 'https://gcx-healthcheck-zd-production.up.railway.app'
                 : 'https://gcx-healthcheck-zd-development.up.railway.app';
+    
+            try {
+                const options = {
+                    url: `${baseUrl}/api/users/create-or-update/`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    headers: {
+                        'X-Subsequent-Request': 'true'
+                    },
+                    data: JSON.stringify({
+                        user_id: this.userInfo.id,
+                        name: this.userInfo.name || '',
+                        email: this.userInfo.email || '',
+                        role: this.userInfo.role || '',
+                        locale: this.userInfo.locale || '',
+                        time_zone: this.userInfo.timeZone?.ianaName || null,
+                        avatar_url: this.userInfo.avatarUrl || null,
+                        subdomain: this.context?.account?.subdomain || '',
+                        plan: this.metadata.plan?.name || 'Free'
+                    }),
+                    secure: true
+                };
+    
+                console.log('Making request with options:', {
+                    ...options
+                });
+    
+                const response = await this.client.request(options);
+                console.log('User created/updated:', response);
+    
 
-            await this.client.request({
-                url: `${baseUrl}/track/app_viewed/`,
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({
-                    installation_id: this.metadata.installationId,
-                    user_id: this.userInfo.id,
-                    subdomain: this.context.account.subdomain,
-                    plan: this.metadata.plan?.name || 'Free'
-                }),
-                secure: true
-            });
+    
+            } catch (error) {
+                console.error('Failed to create/update user:', error);
+                // Don't throw the error to prevent app initialization from failing
+            }
+    
         } catch (error) {
-            console.warn('Failed to track analytics:', error);
-            // Don't throw error as analytics is non-critical
+            console.error('Analytics tracking error:', error);
+            // Don't throw the error to prevent app initialization from failing
         }
     },
-
     async loadData() {
         // Try to get cached data first
         const cachedData = this._getCachedData();
