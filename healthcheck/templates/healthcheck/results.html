@@ -44,7 +44,7 @@
     <div class="card-body">
         <!-- Title with pill background -->
         <div class="d-flex align-items-center mb-3">
-            <span class="badge bg-primary-subtle text-primary rounded-pill px-3 py-2 fs-6">Unlock Report</span>
+            <h2 class="fs-6 text-decoration-underline">Unlock This Report</h2>
         </div>
         
         <!-- Paragraph text -->
@@ -67,7 +67,7 @@
                 $249 Unlock This Report
             </button>
             <a class="c-btn  c-btn--sm d-inline-block loading-button" 
-       href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">
+            href="{% url 'billing' %}" data-preserve-params>
         Subscribe
     </a>
         </div>
