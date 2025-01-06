@@ -12,6 +12,7 @@ from .utils import (
     get_monitoring_context,
     format_historical_reports,
     render_report_components,
+    get_default_subscription_status
 )
 import csv
 import jwt
@@ -189,9 +190,15 @@ def app(request):
 
     try:
         # Get all cached data in parallel
+               # Initialize subscription_status with default values
+        subscription_status = get_default_subscription_status()
+        
         # url_params = HealthCheckCache.get_url_params(installation_id, app_guid, origin, user_id)
         user = HealthCheckCache.get_user_info(user_id)
-        subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+        if user:
+            # Only try to get subscription status if we have a user
+            subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+
 
         latest_report = HealthCheckCache.get_latest_report(installation_id)
         historical_reports = HealthCheckCache.get_historical_reports(installation_id)
