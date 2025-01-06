@@ -21,9 +21,21 @@ class HealthCheckCache:
         'report_details': 300,    # 5 minutes
         'monitoring': 300,        # 5 minutes
         'formatted_report': 300,  # 5 minutes
-        'report_unlock_status': 60 # 1 minute for unlock status
+        'report_unlock_status': 60, # 1 minute for unlock status
+        'zaf_data': 300, # 5 minutes
 
     }
+    @classmethod
+    def get_zaf_data(cls, user_id):
+        """Get cached ZAF client data"""
+        cache_key = cls.get_cache_key('zaf_data', user_id)
+        return cache.get(cache_key)
+
+    @classmethod
+    def set_zaf_data(cls, user_id, data):
+        """Cache ZAF client data"""
+        cache_key = cls.get_cache_key('zaf_data', user_id)
+        cache.set(cache_key, data, cls.TIMEOUTS['zaf_data'])
 
     @staticmethod
     def get_cache_key(key_type, identifier):

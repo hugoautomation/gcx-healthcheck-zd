@@ -3,7 +3,105 @@ const ZAFClientSingleton = {
     metadata: null,
     context: null,
     userInfo: null,
+    CACHE_DURATION: 5 * 60 * 1000, // 5 minutes in milliseconds
 
+    // Add cache helper methods
+    _getCachedData(key) {
+        try {
+            const item = localStorage.getItem(`zaf_${key}`);
+            if (!item) return null;
+
+            const data = JSON.parse(item);
+            if (Date.now() > data.expiry) {
+                localStorage.removeItem(`zaf_${key}`);
+                return null;
+            }
+            return data.value;
+        } catch (e) {
+            console.warn('Cache read error:', e);
+            return null;
+        }
+    },
+
+    _setCachedData(key, value) {
+        try {
+            const item = {
+                value: value,
+                expiry: Date.now() + this.CACHE_DURATION
+            };
+            localStorage.setItem(`zaf_${key}`, JSON.stringify(item));
+        } catch (e) {
+            console.warn('Cache write error:', e);
+        }
+    },
+
+    async loadData() {
+        // Try to get cached data first
+        this.metadata = this._getCachedData('metadata');
+        this.context = this._getCachedData('context');
+        this.userInfo = this._getCachedData('userInfo');
+
+        // If any data is missing, load it all fresh
+        if (!this.metadata || !this.context || !this.userInfo) {
+            try {
+                // Load fresh data
+                [this.context, this.metadata] = await Promise.all([
+                    this.client.context(),
+                    this.client.metadata(),
+                ]);
+
+                const userResponse = await this.client.get('currentUser');
+                this.userInfo = userResponse.currentUser;
+
+                // Cache the fresh data
+                this._setCachedData('metadata', this.metadata);
+                this._setCachedData('context', this.context);
+                this._setCachedData('userInfo', this.userInfo);
+
+                // Also cache on server
+                await this._cacheOnServer();
+
+            } catch (error) {
+                console.error('Error loading fresh data:', error);
+                throw error;
+            }
+        }
+
+        console.log('Data loaded:', {
+            context: this.context,
+            metadata: this.metadata,
+            userInfo: this.userInfo
+        });
+    },
+
+    async _cacheOnServer() {
+        // Cache data on server
+        const baseUrl = window.ENVIRONMENT === 'production'
+            ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+            : 'https://gcx-healthcheck-zd-development.up.railway.app';
+
+        try {
+            await this.client.request({
+                url: `${baseUrl}/api/cache/zaf-data/`,
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'X-Subsequent-Request': 'true'
+                },
+                data: JSON.stringify({
+                    user_id: this.userInfo.id,
+                    metadata: this.metadata,
+                    context: this.context,
+                    user_info: this.userInfo
+                }),
+                secure: true
+            });
+        } catch (error) {
+            console.warn('Failed to cache data on server:', error);
+            // Don't throw error as this is non-critical
+        }
+    },
+    
     async init(retryCount = 3, delay = 100) {
         if (this.client) return this.client;
 
