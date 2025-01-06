@@ -478,8 +478,10 @@ def health_check(request):
             )
 
             # Render results using utility function
-            results_html = render_report_components(formatted_data)
-
+            results_html = HealthCheckCache.get_report_results(
+                report.id,
+                subscription_active=subscription_status["active"]
+            )
             analytics.track(
                 user_id,
                 "Health Check Completed",
@@ -578,12 +580,24 @@ def monitoring(request):
 
     return render(request, "healthcheck/monitoring.html", context)
 
-
 @csrf_exempt
 def download_report_csv(request, report_id):
     """Download health check report as CSV"""
     try:
-        report = HealthCheckReport.objects.get(id=report_id)
+        # Get cached CSV data
+        csv_data = HealthCheckCache.get_report_csv_data(report_id)
+        if not csv_data:
+            # If not in cache, get from database
+            report = HealthCheckReport.objects.get(id=report_id)
+            csv_data = []
+            for issue in report.raw_response.get("issues", []):
+                csv_data.append([
+                    issue.get("item_type", ""),
+                    issue.get("type", ""),
+                    issue.get("item_type", ""),
+                    issue.get("message", ""),
+                    issue.get("zendesk_url", ""),
+                ])
 
         # Create the HttpResponse object with CSV header
         response = HttpResponse(content_type="text/csv")
@@ -595,26 +609,20 @@ def download_report_csv(request, report_id):
         writer = csv.writer(response)
 
         # Write header row
-        writer.writerow(
-            ["Type", "Severity", "Object Type", "Description", "Zendesk URL"]
-        )
+        writer.writerow([
+            "Type", "Severity", "Object Type", "Description", "Zendesk URL"
+        ])
 
-        # Write data rows
-        for issue in report.raw_response.get("issues", []):
-            writer.writerow(
-                [
-                    issue.get("item_type", ""),
-                    issue.get("type", ""),
-                    issue.get("item_type", ""),
-                    issue.get("message", ""),
-                    issue.get("zendesk_url", ""),
-                ]
-            )
+        # Write data rows from cache or database
+        writer.writerows(csv_data)
 
         return response
 
     except HealthCheckReport.DoesNotExist:
         return JsonResponse({"error": "Report not found"}, status=404)
+    except Exception as e:
+        logger.error(f"Error generating CSV for report {report_id}: {str(e)}")
+        return JsonResponse({"error": "Error generating CSV"}, status=500)
 
 
 @csrf_exempt

@@ -1,7 +1,7 @@
 from django.core.cache import cache
 from django.conf import settings
 from .models import ZendeskUser, HealthCheckReport, HealthCheckMonitoring
-from .utils import format_response_data
+from .utils import format_response_data, render_report_components
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,9 @@ class HealthCheckCache:
         'subscription': 300,       # 5 minutes
         'latest_report': 300,     # 5 minutes
         'historical_reports': 300, # 5 minutes
-        'billing_info': 300,      # 5 minutes
+        'billing_info': 300,  # 5 minutes
+        'report_results': 300,    # 5 minutes
+        'report_csv': 3600,      # 1 hour
         'price_info': 3600,       # 1 hour
         'report_details': 300,    # 5 minutes
         'monitoring': 300,        # 5 minutes
@@ -43,6 +45,58 @@ class HealthCheckCache:
         }
         cache.set(cache_key, params, cls.TIMEOUTS['url_params'])
         return params
+
+
+    @classmethod
+    def get_report_results(cls, report_id, subscription_active=False):
+        """Cache and retrieve formatted report results"""
+        cache_key = cls.get_cache_key('report_results', f"{report_id}:{subscription_active}")
+        
+        cached_results = cache.get(cache_key)
+        if cached_results:
+            return cached_results
+
+        try:
+            report = HealthCheckReport.objects.get(id=report_id)
+            formatted_data = format_response_data(
+                report.raw_response,
+                subscription_active=subscription_active,
+                report_id=report.id,
+                last_check=report.created_at,
+                is_unlocked=report.is_unlocked,
+            )
+            results_html = render_report_components(formatted_data)
+            
+            cache.set(cache_key, results_html, cls.TIMEOUTS['report_results'])
+            return results_html
+        except HealthCheckReport.DoesNotExist:
+            return None
+
+    @classmethod
+    def get_report_csv_data(cls, report_id):
+        """Cache and retrieve CSV export data"""
+        cache_key = cls.get_cache_key('report_csv', report_id)
+        
+        cached_csv = cache.get(cache_key)
+        if cached_csv:
+            return cached_csv
+
+        try:
+            report = HealthCheckReport.objects.get(id=report_id)
+            csv_data = []
+            for issue in report.raw_response.get("issues", []):
+                csv_data.append([
+                    issue.get("item_type", ""),
+                    issue.get("type", ""),
+                    issue.get("item_type", ""),
+                    issue.get("message", ""),
+                    issue.get("zendesk_url", ""),
+                ])
+            
+            cache.set(cache_key, csv_data, cls.TIMEOUTS['report_csv'])
+            return csv_data
+        except HealthCheckReport.DoesNotExist:
+            return None
 
     @classmethod
     def get_user_info(cls, user_id):
@@ -257,6 +311,17 @@ class HealthCheckCache:
         
         logger.info(f"Refreshed all cache for installation: {installation_id}")
     
+
+    @classmethod
+    def invalidate_report_data(cls, report_id, subscription_active=False):
+        """Invalidate all caches related to a report"""
+        keys_to_delete = [
+            cls.get_cache_key('report_results', f"{report_id}:{subscription_active}"),
+            cls.get_cache_key('report_csv', report_id),
+        ]
+        cache.delete_many(keys_to_delete)
+        logger.info(f"Invalidated all caches for report: {report_id}")
+        
     @classmethod
     def invalidate_monitoring_cache(cls, installation_id):
         """Invalidate monitoring settings cache"""
