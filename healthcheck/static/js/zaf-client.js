@@ -86,6 +86,36 @@ const ZAFClientSingleton = {
         }
     },
 
+
+    async trackAnalytics() {
+        try {
+            if (!this.metadata || !this.context || !this.userInfo) {
+                console.warn('Missing data for analytics tracking');
+                return;
+            }
+
+            const baseUrl = window.ENVIRONMENT === 'production'
+                ? 'https://gcx-healthcheck-zd-production.up.railway.app'
+                : 'https://gcx-healthcheck-zd-development.up.railway.app';
+
+            await this.client.request({
+                url: `${baseUrl}/track/app_viewed/`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    installation_id: this.metadata.installationId,
+                    user_id: this.userInfo.id,
+                    subdomain: this.context.account.subdomain,
+                    plan: this.metadata.plan?.name || 'Free'
+                }),
+                secure: true
+            });
+        } catch (error) {
+            console.warn('Failed to track analytics:', error);
+            // Don't throw error as analytics is non-critical
+        }
+    },
+
     async loadData() {
         // Try to get cached data first
         const cachedData = this._getCachedData();
