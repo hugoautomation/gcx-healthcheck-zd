@@ -8,6 +8,19 @@
     <link href="{% static 'css/main.css' %}" rel="stylesheet">
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+    <script src="{% static 'js/zaf-client.js' %}"></script>
+
+    <script src="{% static 'js/url-params.js' %}"></script>
+    <script>
+        // Initialize URL params as soon as possible
+        document.addEventListener('DOMContentLoaded', () => {
+            // Update all links with cached params
+            document.querySelectorAll('a[data-preserve-params]').forEach(link => {
+                const baseUrl = link.getAttribute('href');
+                link.href = URLParamManager.getUrlWithParams(baseUrl);
+            });
+        });
+    </script>
 </head>
 <body>
 <div class="container">
@@ -28,7 +41,7 @@
                 <h2 class="text-2xl font-semibold">Billing</h2>
             </div>
             <div class="col-auto">
-                <a href="{% url 'app' %}?installation_id={{ url_params.installation_id }}&origin={{ url_params.origin|urlencode }}&user_id={{ url_params.user_id }}&app_guid={{ url_params.app_guid }}" 
+                <a href="{% url 'app' %}" data-preserve-params 
 class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
             </div>
         </div>
@@ -210,7 +223,6 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
     {% endif %}
     {% endif %}
 
-    <script src="{% static 'js/zaf-client.js' %}"></script>
     <script src="{% static 'js/main.js' %}"></script>
 
     <script>

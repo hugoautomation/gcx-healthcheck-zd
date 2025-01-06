@@ -8,6 +8,17 @@
     <link href="{% static 'css/main.css' %}" rel="stylesheet">
     <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
     <script src="{% static 'js/zaf-client.js' %}"></script>
+    <script src="{% static 'js/url-params.js' %}"></script>
+    <script>
+        // Initialize URL params as soon as possible
+        document.addEventListener('DOMContentLoaded', () => {
+            // Update all links with cached params
+            document.querySelectorAll('a[data-preserve-params]').forEach(link => {
+                const baseUrl = link.getAttribute('href');
+                link.href = URLParamManager.getUrlWithParams(baseUrl);
+            });
+        });
+    </script>
 </head>
 <body>
     
@@ -36,7 +47,7 @@
     </a>
                     {% else %}
                     <h2 class="rounded bg-body-secondary font-semibold d-inline-block me-2 p-1">Free Plan</h2>
-                    <a class="c-btn  c-btn--sm d-inline-block" href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">Upgrade</a>
+                    <a class="c-btn  c-btn--sm d-inline-block" href="{% url 'billing' %}" data-preserve-params>Upgrade</a>
                     
                     {% endif %}
                 </div>
