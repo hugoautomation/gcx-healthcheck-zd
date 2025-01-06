@@ -504,6 +504,7 @@ def health_check(request):
                     "subscription_active": subscription_status["active"],
                 },
             )
+            HealthCheckCache.invalidate_report_cache(report.id, installation_id)
 
             return JsonResponse({"error": False, "results_html": results_html})
 
@@ -816,6 +817,9 @@ def handle_subscription_update(event: Event, **kwargs):
         user_id = metadata.get("user_id")
         subdomain = metadata.get("subdomain")
         installation_id = metadata.get("installation_id")
+                # Invalidate subscription cache
+        HealthCheckCache.invalidate_subscription_data(user_id, subdomain)
+        
 
         if not all([user_id, subdomain]):
             logger.error(
@@ -1104,6 +1108,8 @@ def billing_page(request):
         "stripe_publishable_key": settings.STRIPE_PUBLIC_KEY,
         "price_ids": PRICE_IDS,
     }
+    billing_info = HealthCheckCache.get_billing_info(user_id, user.subdomain)
+
     return render(request, "healthcheck/billing.html", context)
 
 
