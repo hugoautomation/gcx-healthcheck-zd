@@ -1,5 +1,14 @@
 {% load custom_filters %}
-
+<script>
+    // Initialize URL params as soon as possible
+    document.addEventListener('DOMContentLoaded', () => {
+        // Update all links with cached params
+        document.querySelectorAll('a[data-preserve-params]').forEach(link => {
+            const baseUrl = link.getAttribute('href');
+            link.href = URLParamManager.getUrlWithParams(baseUrl);
+        });
+    });
+</script>
 <div class="results-container">
     {% if loading %}
     <div class="text-center my-5">
