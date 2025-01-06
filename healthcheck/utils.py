@@ -5,6 +5,16 @@ from zendeskapp import settings
 from djstripe.models import WebhookEndpoint
 
 
+def get_default_subscription_status():
+    """Helper function to return default subscription status"""
+    return {
+        "status": "inactive",
+        "active": False,
+        "plan": "Free",
+        "current_period_end": None,
+        "subscription_id": None
+    }
+
 def create_webhook_endpoint(request):
     """Create or get a webhook endpoint"""
     webhook_url = request.build_absolute_uri("/stripe/webhook/")

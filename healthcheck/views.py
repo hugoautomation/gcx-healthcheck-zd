@@ -12,6 +12,7 @@ from .utils import (
     get_monitoring_context,
     format_historical_reports,
     render_report_components,
+    get_default_subscription_status
 )
 import csv
 import jwt
@@ -195,12 +196,8 @@ def app(request):
             subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
         except Exception as e:
             logger.warning(f"No subscription found for subdomain {user.subdomain}: {str(e)}")
-            subscription_status = {
-                "status": "inactive",
-                "active": False,
-                "plan": "Free",
-                "current_period_end": None
-            }
+            subscription_status = get_default_subscription_status()
+
         latest_report = HealthCheckCache.get_latest_report(installation_id)
         historical_reports = HealthCheckCache.get_historical_reports(installation_id)
         monitoring_settings = HealthCheckCache.get_monitoring_settings(installation_id)
@@ -390,7 +387,10 @@ def health_check(request):
 
             # Get user and subscription status
             user = ZendeskUser.objects.get(user_id=user_id)
-            subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+            try:
+                subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+            except Exception as e:
+                subscription_status = get_default_subscription_status()
 
             analytics.track(
                 user_id,
@@ -535,7 +535,11 @@ def monitoring(request):
 
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
-        subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+        try:
+            subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+        except Exception as e:
+            subscription_status = get_default_subscription_status()
+
         monitoring_settings = HealthCheckCache.get_monitoring_settings(installation_id)
 
         if not subscription_status["active"]:
@@ -658,7 +662,10 @@ def get_historical_report(request, report_id):
         report = HealthCheckReport.objects.get(id=report_id)
 
         # Get subscription status for the report's subdomain
-        subscription_status = ZendeskUser.get_subscription_status(report.subdomain)
+        try:
+            subscription_status = ZendeskUser.get_subscription_status(report.subdomain)
+        except Exception as e:
+            subscription_status = get_default_subscription_status()
 
         # Format the report data
         report_data = format_response_data(
@@ -805,7 +812,10 @@ def monitoring_settings(request):
 
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
-        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+        try:
+            subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+        except Exception as e:
+            subscription_status = get_default_subscription_status()
 
         context = get_monitoring_context(
             installation_id,
@@ -988,7 +998,10 @@ def billing_page(request):
         )
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
-        subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+        try:
+            subscription_status = ZendeskUser.get_subscription_status(user.subdomain)
+        except Exception as e:
+            subscription_status = get_default_subscription_status()
 
         # Get detailed subscription information
         # Get detailed subscription information
