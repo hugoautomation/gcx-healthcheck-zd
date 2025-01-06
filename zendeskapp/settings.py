@@ -110,7 +110,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-      "django.middleware.cache.UpdateCacheMiddleware",
     "corsheaders.middleware.CorsMiddleware",  # Add this at the top
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # Add this after SecurityMiddleware
@@ -121,8 +120,6 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "healthcheck.middleware.AllowIframeMiddleware",  # Add this line
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-        "django.middleware.cache.FetchFromCacheMiddleware",
-
 ]
 
 ROOT_URLCONF = "zendeskapp.urls"
