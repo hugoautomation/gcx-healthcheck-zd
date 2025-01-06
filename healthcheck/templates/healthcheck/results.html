@@ -1,14 +1,4 @@
 {% load custom_filters %}
-<script>
-    // Initialize URL params as soon as possible
-    document.addEventListener('DOMContentLoaded', () => {
-        // Update all links with cached params
-        document.querySelectorAll('a[data-preserve-params]').forEach(link => {
-            const baseUrl = link.getAttribute('href');
-            link.href = URLParamManager.getUrlWithParams(baseUrl);
-        });
-    });
-</script>
 <div class="results-container">
     {% if loading %}
     <div class="text-center my-5">
@@ -63,10 +53,10 @@
         {% if data.hidden_issues_count > 0 %}
         <div class="mb-3">
             We found <b class="bg-danger-subtle text-danger rounded-pill p-1 fs-6">{{ data.hidden_issues_count }}</b> additional issues in other areas:
-            <ul class="mt-2">
+            <ul class="mt-2 list-group list-group-flush">
                 
                 {% for category, count in data.hidden_categories.items %}
-                <li>{{ category|split_camel_case }}: {{ count }} issue{{ count|pluralize }}</li>
+                <li class="list-group-item">{{ category|split_camel_case }}: {{ count }} issue{{ count|pluralize }}</li>
             {% endfor %}
             </ul>
         </div>
@@ -75,10 +65,7 @@
             <button class="btn c-btn c-btn--sm c-btn--primary unlock-report" data-report-id="{{ data.report_id }}">
                 $249 Unlock This Report
             </button>
-            <a class="c-btn  c-btn--sm d-inline-block loading-button" 
-            href="{% url 'billing' %}" data-preserve-params>
-        Subscribe
-    </a>
+           
         </div>
     </div>
 </div>
