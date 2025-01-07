@@ -28,7 +28,7 @@ from django.db import transaction
 from djstripe.models import Event, Subscription
 from .cache_utils import HealthCheckCache, invalidate_app_cache
 
-stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
+stripe.api_key = os.environ.get("STRIPE_LIVE_SECRET_KEY", "")
 
 logger = logging.getLogger(__name__)
 
