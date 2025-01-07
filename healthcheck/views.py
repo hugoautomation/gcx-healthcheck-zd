@@ -918,7 +918,7 @@ def create_payment_intent(request):
             allow_promotion_codes=True,
             billing_address_collection="required",
             automatic_tax={"enabled": True},
-              line_items=[{"price": "price_1QeiiPBq13Pgax7DKNntcEtf", "quantity": 1}],
+            line_items=[{"price": settings.ONE_OFF_UNLOCK_PRICE, "quantity": 1}],
             metadata={
                 "report_id": report_id,
                 "installation_id": installation_id,
