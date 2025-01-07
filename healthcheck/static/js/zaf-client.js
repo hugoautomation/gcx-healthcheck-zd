@@ -44,11 +44,13 @@ const ZAFClientSingleton = {
 
         try {
             await this.initializeClient(retryCount, delay);
-            // Load data in parallel
-            await Promise.all([
-                this.loadData(),
-                this.trackAnalytics()
-            ]);
+            // Load data first
+            await this.loadData();
+            // Then create/update user
+            await this.trackAnalytics();
+            // Cache on server after user is created
+            await this._cacheOnServer();
+            
             return this.client;
         } catch (error) {
             console.error('Failed to initialize:', error);
