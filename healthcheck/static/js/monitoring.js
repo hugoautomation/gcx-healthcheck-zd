@@ -3,16 +3,17 @@ let metadata = null;
 let context = null;
 
 // Initialize ZAF client
+// Initialize ZAF client
 async function initializeApp() {
     try {
         await ZAFClientSingleton.init();
-        client = ZAFClientSingleton.client;
-        metadata = ZAFClientSingleton.metadata;
-        context = ZAFClientSingleton.context;
+        monitoringClient = ZAFClientSingleton.client;
+        monitoringMetadata = ZAFClientSingleton.metadata;
+        monitoringContext = ZAFClientSingleton.context;
 
         if (!await ZAFClientSingleton.ensureUrlParams()) return;
 
-        await client.invoke('resize', { width: '100%', height: '800px' });
+        await monitoringClient.invoke('resize', { width: '100%', height: '800px' });
         
         initializeForm();
 
@@ -161,7 +162,7 @@ function initializeForm() {
                     secure: true
                 };
 
-                const response = await client.request(options);
+                const response = await monitoringClient.request(options); // Update this line
                 console.log('Response:', response);
 
                 // Show success message with emoji
