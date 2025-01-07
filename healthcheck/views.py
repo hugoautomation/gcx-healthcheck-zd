@@ -918,18 +918,7 @@ def create_payment_intent(request):
             allow_promotion_codes=True,
             billing_address_collection="required",
             automatic_tax={"enabled": True},
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": "usd",
-                        "product_data": {
-                            "name": "Health Check Report Unlock",
-                        },
-                        "unit_amount": 24900,  # $249.00
-                    },
-                    "quantity": 1,
-                }
-            ],
+              line_items=[{"price": "price_1QeiiPBq13Pgax7DKNntcEtf", "quantity": 1}],
             metadata={
                 "report_id": report_id,
                 "installation_id": installation_id,
