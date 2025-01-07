@@ -12,6 +12,8 @@ const ZAFClientSingleton = {
         },
 
     async _cacheOnServer() {
+        console.log('ZAF Client - Current ENVIRONMENT:', window.ENVIRONMENT);
+
         // Cache data on server
         const baseUrl = window.ENVIRONMENT === 'production'
             ? 'https://gcx-healthcheck-zd-production.up.railway.app'
