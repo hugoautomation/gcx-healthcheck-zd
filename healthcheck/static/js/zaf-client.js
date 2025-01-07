@@ -12,12 +12,20 @@ const ZAFClientSingleton = {
         },
 
     async _cacheOnServer() {
-        console.log('ZAF Client - Current ENVIRONMENT:', window.ENVIRONMENT);
-
-        // Cache data on server
-        const baseUrl = window.ENVIRONMENT === 'production'
+        // Get current URL
+        const currentUrl = window.location.href;
+        console.log('Current URL:', currentUrl);  // Debug line
+        
+        // Check if we're in production
+        const isProduction = currentUrl.includes('gcx-healthcheck-zd-production');
+        console.log('Is Production:', isProduction);  // Debug line
+        
+        // Set base URL based on environment
+        const baseUrl = isProduction
             ? 'https://gcx-healthcheck-zd-production.up.railway.app'
             : 'https://gcx-healthcheck-zd-development.up.railway.app';
+
+        console.log('Using baseUrl:', baseUrl);  // Debug line
 
         try {
             await this.client.request({
