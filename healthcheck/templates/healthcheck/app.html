@@ -61,9 +61,9 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
                                href="#"
                                data-report-id="{{ report.id }}">
                                 {{ report.created_at }}
-                                <span class="badge {% if report.is_unlocked %}text-bg-success{% else %}text-bg-secondary{% endif %} ml-2">
+                                <span class="badge bg-danger-subtle text-danger ml-2">
                                     {{ report.total_issues }} issues
-                                    {% if not report.is_unlocked %}🔒{% endif %}
+                                  
                                 </span>
                             </a>
                             {% endfor %}

@@ -720,16 +720,8 @@ def monitoring_settings(request):
 
     # Get the latest report to check plan status
     latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
-    is_free_plan = latest_report.plan == "Free" if latest_report else True
 
     if request.method == "POST":
-        if is_free_plan:
-            error_msg = "Monitoring not available for free plan"
-            if request.content_type == "application/json":
-                return JsonResponse({"error": error_msg}, status=400)
-            messages.error(request, error_msg)
-            return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
-
         try:
             # Get data based on content type
             if request.content_type == "application/json":
