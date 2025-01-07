@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const newEmailInput = document.getElementById('new_email');
     const currentEmails = document.getElementById('current-emails');
     const addEmailBtn = document.getElementById('add-email-btn');
+    const frequencySelect = document.getElementById('frequency');
+    const isActiveSwitch = document.getElementById('is_active');
 
     // Initialize ZAF Client
     ZAFClientSingleton.init().then(client => {
@@ -25,7 +27,33 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Form Submit Handler
+        // Frequency Change Handler
+        frequencySelect.addEventListener('change', async () => {
+            try {
+                await saveSettings(client);
+                showMessage('success', '✅ Frequency updated successfully');
+            } catch (error) {
+                showMessage('danger', '❌ Failed to update frequency');
+                // Revert to previous value if save failed
+                frequencySelect.value = frequencySelect.dataset.lastValue || 'daily';
+            }
+            // Store current value for potential rollback
+            frequencySelect.dataset.lastValue = frequencySelect.value;
+        });
+
+        // Active Status Change Handler
+        isActiveSwitch.addEventListener('change', async () => {
+            try {
+                await saveSettings(client);
+                showMessage('success', '✅ Monitoring status updated successfully');
+            } catch (error) {
+                showMessage('danger', '❌ Failed to update monitoring status');
+                // Revert to previous state if save failed
+                isActiveSwitch.checked = !isActiveSwitch.checked;
+            }
+        });
+
+        // Form Submit Handler (for adding new email)
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
