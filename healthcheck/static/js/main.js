@@ -135,7 +135,7 @@ function initializeUnlockButtons() {
                 try {
                     const baseUrl = window.ENVIRONMENT === 'production' 
                         ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                        : 'https://gcx-healthcheck-zd-development.up.railway.app';
+                        : 'https://gcx-healthcheck-zd-production.up.railway.app';
 
                     // Create a payment intent with report metadata
                     const response = await client.request({
@@ -232,7 +232,7 @@ function initializeRunCheck() {
             // Determine base URL based on environment
             const baseUrl = window.ENVIRONMENT === 'production'
                 ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                : 'https://gcx-healthcheck-zd-development.up.railway.app';
+                : 'https://gcx-healthcheck-zd-production.up.railway.app';
 
             // Prepare request data
             const requestData = {
@@ -298,7 +298,7 @@ function initializeHistoricalReports() {
             try {
                 const baseUrl = window.ENVIRONMENT === 'production' 
                     ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                    : 'https://gcx-healthcheck-zd-development.up.railway.app';
+                    : 'https://gcx-healthcheck-zd-production.up.railway.app';
 
                 const options = {
                     url: `${baseUrl}/report/${this.dataset.reportId}/?installation_id=${metadata.installationId}&user_id=${ZAFClientSingleton.userInfo?.id}`,

@@ -210,7 +210,7 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                         // Get base URL based on environment
                         const baseUrl = window.ENVIRONMENT === 'production' 
                             ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                            : 'https://gcx-healthcheck-zd-development.up.railway.app';
+                            : 'https://gcx-healthcheck-zd-production.up.railway.app';
     
                         const response = await ZAFClientSingleton.client.request({
                             url: `${baseUrl}/create-checkout-session/`,

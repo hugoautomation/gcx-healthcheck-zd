@@ -12,7 +12,7 @@
       "nav_bar": {
         "signed": true,
         // "url": "https://gcx-healthcheck-zd-production.up.railway.app/"
-        "url": "https://gcx-healthcheck-zd-development.up.railway.app/"
+        "url": "https://gcx-healthcheck-zd-production.up.railway.app/"
       }
     }
   },
@@ -35,7 +35,7 @@
   ],
   "defaultLocale": "en",
   "private": false,
-  "domainWhitelist": ["gcx-healthcheck-zd-production.up.railway.app", "app.configly.io", "gcx-healthcheck-zd-development.up.railway.app"],
+  "domainWhitelist": ["gcx-healthcheck-zd-production.up.railway.app", "app.configly.io", "gcx-healthcheck-zd-production.up.railway.app"],
   "termsOfService": "https://gravity.cx/terms-and-conditions-professional-services",
   "privacyPolicy": "https://gravity.cx/privacy",
   "marketingUrl": "https://gravity.cx/",
