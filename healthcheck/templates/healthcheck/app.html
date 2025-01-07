@@ -1,5 +1,4 @@
 {% extends "healthcheck/base.html" %}
-{% load cache %}
     {% block content %}
 
     <style>
@@ -16,8 +15,6 @@
 {% else %}
 
     <div class="container">
-                    {# Cache the entire header section #}
-                    {% cache 300 'app_header' url_params.installation_id %}
         <div class="sticky-header">
             <div class="row align-items-center my-3 justify-content-between">
                 <div class="col-auto">
@@ -48,7 +45,6 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
   🔒 Monitoring
 </button>
 {% endif %}
-{% endcache %}
 
                     {% if historical_reports %}
                     <div class="dropdown d-inline">
