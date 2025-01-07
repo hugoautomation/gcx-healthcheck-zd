@@ -136,13 +136,25 @@ def get_monitoring_context(installation_id, subscription_active, latest_report=N
     """Helper function to get monitoring settings context"""
     try:
         monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
-        monitoring_data = {
-            "is_active": monitoring.is_active and subscription_active,  # Only active if both subscription and monitoring are active
-            "frequency": monitoring.frequency,
-            "notification_emails": monitoring.notification_emails or [],
-            "instance_guid": monitoring.instance_guid,
-            "subdomain": monitoring.subdomain,
-        }
+        
+        # First check if subscription is active, if not, monitoring should be disabled
+        if not subscription_active:
+            monitoring_data = {
+                "is_active": False,  # Force inactive if no subscription
+                "frequency": monitoring.frequency,
+                "notification_emails": monitoring.notification_emails or [],
+                "instance_guid": monitoring.instance_guid,
+                "subdomain": monitoring.subdomain,
+            }
+        else:
+            monitoring_data = {
+                "is_active": monitoring.is_active,  # Only use monitoring setting if subscription is active
+                "frequency": monitoring.frequency,
+                "notification_emails": monitoring.notification_emails or [],
+                "instance_guid": monitoring.instance_guid,
+                "subdomain": monitoring.subdomain,
+            }
+            
     except HealthCheckMonitoring.DoesNotExist:
         monitoring_data = {
             "is_active": False,
@@ -152,10 +164,9 @@ def get_monitoring_context(installation_id, subscription_active, latest_report=N
             "subdomain": latest_report.subdomain if latest_report else "",
         }
 
-    # Return monitoring settings and subscription status
     return {
         "monitoring_settings": monitoring_data,
-        "subscription_active": subscription_active,  # Add subscription status to context
+        "subscription_active": subscription_active,
     }
 
 
