@@ -181,10 +181,10 @@ def app(request):
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
     user_id = request.GET.get("user_id")
-    if not installation_id:
-        initial_data["loading"] = (
-            "Loading your workspace..."  #
-        )
+
+    
+    if not all([installation_id, user_id]):
+        initial_data["loading"] = "Loading your workspace..."
         return render(request, "healthcheck/app.html", initial_data)
 
     try:
@@ -208,19 +208,21 @@ def app(request):
         analytics.identify(
             user_id,
             {
-                "name": getattr(user, 'name', ''),
-                "email": getattr(user, 'email', ''),
-                "role": getattr(user, 'role', ''),
-                "locale": getattr(user, 'locale', ''),
-                "timezone": getattr(user, 'time_zone', ''),
-                "avatar": getattr(user, 'avatar_url', ''),
-                "subdomain": getattr(user, 'subdomain', ''),
-                "subscription_status": subscription_status.get("status", 'inactive'),
-                "subscription_plan": subscription_status.get("plan", 'Free'),
-                "subscription_active": subscription_status.get("active", False),
+                "name": user.name,
+                "email": user.email,
+                "role": user.role,
+                "locale": user.locale,
+                "timezone": user.time_zone,
+                "avatar": user.avatar_url,
+                "subdomain": user.subdomain,
+                "subscription_status": subscription_status["status"],
+                "subscription_plan": subscription_status["plan"],
+                "subscription_active": subscription_status["active"],
                 "installation_id": installation_id,
                 "last_healthcheck": latest_report.created_at if latest_report else None,
-                "last_healthcheck_unlocked": latest_report.is_unlocked if latest_report else False,
+                "last_healthcheck_unlocked": latest_report.is_unlocked
+                if latest_report
+                else False,
             },
         )
 
