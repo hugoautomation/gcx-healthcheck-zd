@@ -41,7 +41,7 @@
                 </div>
             </div>
 
-            <!-- Add Email Form -->
+            <!-- Settings Form -->
             <form method="POST" id="monitoring-form">
                 <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
                 <input type="hidden" name="user_id" value="{{ request.GET.user_id }}">
@@ -71,16 +71,14 @@
                     <div class="mb-3 col-12">
                         <label for="new_email" class="form-label">Add Notification Email</label>
                         <div class="input-group">
-                            <input type="email" class="form-control" id="new_email" placeholder="Enter email address">
-                            <button type="button" class="btn c-btn c-btn--primary" id="add-email-btn">Add Email</button>
+                            <input type="email" class="form-control" id="new_email" name="new_email" placeholder="Enter email address">
+                            <button type="submit" class="btn c-btn c-btn--primary" id="add-email-btn">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <span class="btn-text">Add Email</span>
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                <button type="submit" class="btn c-btn c-btn--primary" id="save-settings-btn">
-                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                    <span class="btn-text">Save Settings</span>
-                </button>
             </form>
         </div>
     </div>

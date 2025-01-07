@@ -753,11 +753,6 @@ def monitoring_settings(request):
                 monitoring.next_check = timezone.now()
                 monitoring.save()
 
-                try:
-                    call_command("run_scheduled_checks")
-                except Exception as e:
-                    logger.error(f"Error running scheduled check: {str(e)}")
-
             # Track the event
             analytics.track(
                 user_id,
