@@ -693,7 +693,6 @@ def get_historical_report(request, report_id):
         logger.error(f"Error fetching historical report: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
 
-
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
@@ -704,12 +703,12 @@ def monitoring_settings(request):
         try:
             data = json.loads(request.body)
             installation_id = data.get("installation_id")
-            user_id = data.get("user_id")  # Get user_id from JSON
+            user_id = data.get("user_id")
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON data"}, status=400)
     else:
         installation_id = request.POST.get("installation_id")
-        user_id = request.POST.get("user_id")  # Get user_id from POST
+        user_id = request.POST.get("user_id")
 
     if not installation_id:
         error_msg = "Installation ID required"
@@ -718,7 +717,7 @@ def monitoring_settings(request):
         messages.error(request, error_msg)
         return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
 
-    # Get the latest report to check plan status
+    # Get the latest report
     latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
 
     if request.method == "POST":
@@ -728,7 +727,6 @@ def monitoring_settings(request):
                 is_active = data.get("is_active", False)
                 frequency = data.get("frequency", "weekly")
                 notification_emails = data.get("notification_emails", [])
-
             else:
                 is_active = request.POST.get("is_active") == "on"
                 frequency = request.POST.get("frequency", "weekly")
@@ -739,35 +737,26 @@ def monitoring_settings(request):
                 email for email in notification_emails if email and email.strip()
             ]
 
-            print(
-                f"Processing settings: active={is_active}, frequency={
-                    frequency}, emails={notification_emails}"
-            )  # Debug log
-
             # Update or create monitoring settings
             monitoring, created = HealthCheckMonitoring.objects.update_or_create(
                 installation_id=installation_id,
                 defaults={
-                    "instance_guid": latest_report.instance_guid
-                    if latest_report
-                    else "",
+                    "instance_guid": latest_report.instance_guid if latest_report else "",
                     "subdomain": latest_report.subdomain if latest_report else "",
                     "is_active": is_active,
                     "frequency": frequency,
                     "notification_emails": notification_emails,
                 },
             )
+
             if is_active and notification_emails:
                 monitoring.next_check = timezone.now()
                 monitoring.save()
 
-                # Run the scheduled checks command
                 try:
                     call_command("run_scheduled_checks")
-                    print(f"Scheduled check triggered for {
-                          monitoring.subdomain}")
                 except Exception as e:
-                    print(f"Error running scheduled check: {str(e)}")
+                    logger.error(f"Error running scheduled check: {str(e)}")
 
             # Track the event
             analytics.track(
@@ -779,6 +768,7 @@ def monitoring_settings(request):
                     "notification_emails_count": len(notification_emails),
                     "subdomain": latest_report.subdomain if latest_report else None,
                     "created": created,
+                    "subscription_active": subscription_status["active"]
                 },
             )
 
@@ -800,7 +790,7 @@ def monitoring_settings(request):
 
         except Exception as e:
             error_msg = f"Error saving settings: {str(e)}"
-            print(f"Error: {error_msg}")  # Debug log
+            logger.error(error_msg)
             if request.content_type == "application/json":
                 return JsonResponse({"error": error_msg}, status=500)
             messages.error(request, error_msg)
@@ -814,10 +804,15 @@ def monitoring_settings(request):
 
         context = get_monitoring_context(
             installation_id,
-            subscription_status["active"],  # Changed from plan
+            subscription_status["active"],
             latest_report,
         )
-        context["url_params"] = {"installation_id": installation_id, "user_id": user_id}
+        context["url_params"] = {
+            "installation_id": installation_id,
+            "user_id": user_id,
+            "origin": request.GET.get("origin"),
+            "app_guid": request.GET.get("app_guid")
+        }
 
         return render(request, "healthcheck/monitoring.html", context)
     except Exception as e:
