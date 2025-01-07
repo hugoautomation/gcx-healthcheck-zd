@@ -26,22 +26,68 @@ async function initializeApp() {
 function addEmailField(e) {
     e.preventDefault();
     const emailInputs = document.getElementById('email-inputs');
-    const isFreePlan = document.getElementById('monitoring-form').dataset.isFreePlan === 'true';
     
-    const template = `
-        <div class="input-group mb-2">
-            <input type="email" class="form-control notification-email" name="notification_emails[]" 
-                   ${isFreePlan ? 'disabled' : ''}>
-            <button type="button" class="btn c-btn c-btn--danger remove-email">-</button>
-        </div>`;
+    // Create new input group
+    const newInputGroup = document.createElement('div');
+    newInputGroup.className = 'input-group mb-2';
+    newInputGroup.innerHTML = `
+        <input type="email" class="form-control notification-email" name="notification_emails[]" required>
+        <button type="button" class="btn c-btn c-btn--danger remove-email">-</button>
+    `;
     
+    // Insert before the last input group (which contains the + button)
     const lastInputGroup = emailInputs.lastElementChild;
-    lastInputGroup.insertAdjacentHTML('beforebegin', template);
+    emailInputs.insertBefore(newInputGroup, lastInputGroup);
+
+    // Focus the new input
+    const newInput = newInputGroup.querySelector('input');
+    newInput.focus();
 }
 
 function removeEmailField(e) {
     e.preventDefault();
-    e.target.closest('.input-group').remove();
+    const inputGroup = e.target.closest('.input-group');
+    if (inputGroup) {
+        // Animate removal
+        inputGroup.style.transition = 'opacity 0.15s ease-out';
+        inputGroup.style.opacity = '0';
+        setTimeout(() => inputGroup.remove(), 150);
+    }
+}
+
+function showMessage(type, message) {
+    // Remove any existing messages
+    const existingMessages = document.querySelectorAll('.alert');
+    existingMessages.forEach(msg => msg.remove());
+
+    // Create new message
+    const alertHtml = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>`;
+    
+    const messagesDiv = document.querySelector('.messages');
+    if (messagesDiv) {
+        messagesDiv.innerHTML = alertHtml;
+        
+        // Scroll to message
+        messagesDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            const alert = messagesDiv.querySelector('.alert');
+            if (alert) {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 150);
+            }
+        }, 5000);
+    }
+}
+
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
 }
 
 function initializeForm() {
@@ -71,6 +117,7 @@ function initializeForm() {
             const btnText = saveButton.querySelector('.btn-text');
             
             try {
+                // Show loading state
                 spinner.classList.remove('d-none');
                 btnText.textContent = 'Saving...';
                 saveButton.disabled = true;
@@ -78,8 +125,14 @@ function initializeForm() {
                 // Get all valid emails
                 const emailInputs = form.querySelectorAll('.notification-email');
                 const validEmails = Array.from(emailInputs)
-                    .filter(input => input.value.trim() !== '')
-                    .map(input => input.value.trim());
+                    .map(input => input.value.trim())
+                    .filter(email => email !== '' && validateEmail(email));
+
+                // Validate at least one email if monitoring is active
+                const isActive = form.querySelector('#is_active').checked;
+                if (isActive && validEmails.length === 0) {
+                    throw new Error('Please add at least one valid email address when monitoring is active');
+                }
 
                 // Get base URL based on environment
                 const baseUrl = window.ENVIRONMENT === 'production' 
@@ -90,7 +143,7 @@ function initializeForm() {
                 const formData = new FormData(form);
                 const data = {
                     installation_id: formData.get('installation_id'),
-                    user_id: ZAFClientSingleton.userInfo?.id,  // Add user_id
+                    user_id: ZAFClientSingleton.userInfo?.id,
                     is_active: formData.get('is_active') === 'on',
                     frequency: formData.get('frequency'),
                     notification_emails: validEmails,
@@ -99,7 +152,7 @@ function initializeForm() {
 
                 console.log('Sending data:', data);
 
-                // Submit form using client.request with environment-aware URL
+                // Submit form using client.request
                 const options = {
                     url: `${baseUrl}/monitoring-settings/`,
                     type: 'POST',
@@ -111,32 +164,17 @@ function initializeForm() {
                 const response = await client.request(options);
                 console.log('Response:', response);
 
-                // Show success message
-                const alertHtml = `
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        Settings saved successfully
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>`;
-                const messagesDiv = document.querySelector('.messages');
-                if (messagesDiv) {
-                    messagesDiv.innerHTML = alertHtml;
-                }
+                // Show success message with emoji
+                showMessage('success', '✅ Settings saved successfully!');
 
             } catch (error) {
                 console.error('Error saving settings:', error);
                 
-                // Show detailed error message
+                // Show error message
                 const errorMessage = error.responseJSON?.error || error.message || 'Failed to save settings';
-                const alertHtml = `
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        ${errorMessage}. Please try again.
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>`;
-                const messagesDiv = document.querySelector('.messages');
-                if (messagesDiv) {
-                    messagesDiv.innerHTML = alertHtml;
-                }
+                showMessage('danger', `❌ ${errorMessage}. Please try again.`);
             } finally {
+                // Reset button state
                 spinner.classList.add('d-none');
                 btnText.textContent = 'Save Settings';
                 saveButton.disabled = false;
