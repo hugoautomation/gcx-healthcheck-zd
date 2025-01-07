@@ -3,18 +3,19 @@ const URLParamManager = {
     CACHE_DURATION: 30 * 60 * 1000, // 30 minutes
 
     getParams() {
-        // Try to get from cache first
-        const cached = this._getCachedParams();
-        if (cached) return cached;
-
-        // Get from current URL
-        const params = this._getCurrentParams();
-        if (Object.keys(params).length > 0) {
-            this._cacheParams(params);
-            return params;
+        // Combine current and cached params
+        const current = this._getCurrentParams();
+        const cached = this._getCachedParams() || {};
+        
+        // Current params take precedence over cached
+        const combined = { ...cached, ...current };
+        
+        // Only cache if we have new params
+        if (Object.keys(current).length > 0) {
+            this._cacheParams(combined);
         }
-
-        return {};
+        
+        return combined;
     },
 
     _getCurrentParams() {

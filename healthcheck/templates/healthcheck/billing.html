@@ -203,7 +203,7 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
 
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            await ZAFClientSingleton.init();
+            await ZAFClientSingleton.quickInit();
             
             // Add click handlers to subscribe buttons
             document.querySelectorAll('.subscribe-button').forEach(button => {

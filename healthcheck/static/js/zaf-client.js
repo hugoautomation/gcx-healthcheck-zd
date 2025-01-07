@@ -40,15 +40,30 @@ const ZAFClientSingleton = {
     },
 
     async init(retryCount = 3, delay = 100) {
-        if (this.client) return this.client;
+        if (this.client) {
+            // If we already have data, just ensure URL params and return
+            if (this.metadata && this.context && this.userInfo) {
+                await this.ensureUrlParams();
+                return this.client;
+            }
+        }
 
         try {
             await this.initializeClient(retryCount, delay);
-            // Load data first
+            
+            // Try to get cached data first
+            const cachedData = this._getCachedData();
+            if (cachedData) {
+                this.context = cachedData.context;
+                this.metadata = cachedData.metadata;
+                this.userInfo = cachedData.userInfo;
+                await this.ensureUrlParams();
+                return this.client;
+            }
+
+            // Only load fresh data if cache miss
             await this.loadData();
-            // Then create/update user
             await this.trackAnalytics();
-            // Cache on server after user is created
             await this._cacheOnServer();
             
             return this.client;
