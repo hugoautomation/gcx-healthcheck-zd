@@ -9,6 +9,9 @@ from datetime import timedelta
 from dateutil.relativedelta import relativedelta
 from healthcheck.models import ZendeskUser
 from healthcheck.cache_utils import HealthCheckCache
+
+
+
 class Command(BaseCommand):
     help = "Run scheduled health checks"
 
@@ -18,6 +21,8 @@ class Command(BaseCommand):
             is_active=True, next_check__lte=now
         )
 
+        self.stdout.write(f"Found {due_checks.count()} checks due for processing")
+
         for monitoring in due_checks:
             try:
                 # Get latest report to get metadata
@@ -25,19 +30,39 @@ class Command(BaseCommand):
                     monitoring.installation_id
                 )
                 if not latest_report:
+                    self.stdout.write(f"No latest report found for {monitoring.installation_id}")
                     continue
 
                 # Check subscription status
                 try:
                     user = ZendeskUser.objects.get(subdomain=monitoring.subdomain)
                     subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+                    
+                    self.stdout.write(f"Subscription status for {monitoring.subdomain}: {subscription_status}")
+                    
                     if not subscription_status.get('active', False):
-                        # Disable monitoring if subscription is not active
+                        self.stdout.write(f"Inactive subscription for {monitoring.subdomain}")
                         monitoring.is_active = False
                         monitoring.save()
                         continue
                 except ZendeskUser.DoesNotExist:
+                    self.stdout.write(f"No user found for subdomain {monitoring.subdomain}")
                     continue
+
+                # Update last_check and calculate next_check before making the API call
+                monitoring.last_check = now
+                
+                # Calculate next check based on frequency
+                if monitoring.frequency == "daily":
+                    monitoring.next_check = now + timedelta(days=1)
+                elif monitoring.frequency == "weekly":
+                    monitoring.next_check = now + timedelta(weeks=1)
+                else:  # monthly
+                    monitoring.next_check = now + relativedelta(months=1)
+                
+                monitoring.save()
+                
+                self.stdout.write(f"Updated next check for {monitoring.subdomain} to {monitoring.next_check}")
 
                 # Prepare API request
                 url = f"https://{monitoring.subdomain}.zendesk.com"
@@ -99,21 +124,7 @@ class Command(BaseCommand):
                             recipient_list=monitoring.notification_emails,
                             html_message=html_content,
                         )
-                        print(f"Email sent to {monitoring.notification_emails}")
-
-                    # Update monitoring schedule
-                    monitoring.last_check = now
-                    monitoring.save()
-
-                    # Calculate next check based on frequency
-                    if monitoring.frequency == "daily":
-                        monitoring.next_check = now + timedelta(days=1)
-                    elif monitoring.frequency == "weekly":
-                        monitoring.next_check = now + timedelta(weeks=1)
-                    else:  # monthly
-                        monitoring.next_check = now + relativedelta(months=1)
-
-                    monitoring.save()
+                        self.stdout.write(f"Email sent to {monitoring.notification_emails}")
 
                     self.stdout.write(
                         self.style.SUCCESS(
