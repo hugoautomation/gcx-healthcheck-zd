@@ -1126,7 +1126,7 @@ def create_checkout_session(request):
             return JsonResponse({"error": "User not found"}, status=404)
 
         # Create Stripe checkout session
-        stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
+        stripe.api_key = settings.STRIPE_LIVE_SECRET_KEY
         stripe.api_version = "2020-03-02"
 
         checkout_session = stripe.checkout.Session.create(
