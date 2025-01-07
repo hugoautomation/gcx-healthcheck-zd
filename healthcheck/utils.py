@@ -132,15 +132,12 @@ def render_report_components(formatted_data):
     # Otherwise, wrap it in 'data' as before
     return render_to_string("healthcheck/results.html", {"data": formatted_data})
 
-
-def get_monitoring_context(installation_id, client_plan, latest_report=None):
+def get_monitoring_context(installation_id, subscription_active, latest_report=None):
     """Helper function to get monitoring settings context"""
-    is_free_plan = client_plan == "Free"
-
     try:
         monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
         monitoring_data = {
-            "is_active": monitoring.is_active and not is_free_plan,
+            "is_active": monitoring.is_active and subscription_active,  # Only active if both subscription and monitoring are active
             "frequency": monitoring.frequency,
             "notification_emails": monitoring.notification_emails or [],
             "instance_guid": monitoring.instance_guid,
@@ -155,10 +152,10 @@ def get_monitoring_context(installation_id, client_plan, latest_report=None):
             "subdomain": latest_report.subdomain if latest_report else "",
         }
 
-    # Return monitoring settings separately from report data
+    # Return monitoring settings and subscription status
     return {
         "monitoring_settings": monitoring_data,
-        "is_free_plan": is_free_plan,
+        "subscription_active": subscription_active,  # Add subscription status to context
     }
 
 
