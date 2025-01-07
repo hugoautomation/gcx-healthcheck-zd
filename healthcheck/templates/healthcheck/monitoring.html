@@ -1,101 +1,88 @@
 {% extends "healthcheck/base.html" %}
 {% load static %}
-    {% block content %}
-    <script src="{% static 'js/monitoring.js' %}"></script>
+{% block content %}
+<script src="{% static 'js/monitoring.js' %}"></script>
 
-    <div class="container">
-        <div class="sticky-header">
-            <div class="row align-items-center my-3">
-                <div class="col">
-                    <h2 class="text-2xl font-semibold">Monitoring Settings</h2>
-                </div>
-                <div class="col-auto">
-                    <a href="{% url 'app' %}" data-preserve-params 
-class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
-                </div>
+<div class="container">
+    <div class="sticky-header">
+        <div class="row align-items-center my-3">
+            <div class="col">
+                <h2 class="text-2xl font-semibold">Monitoring Settings</h2>
+            </div>
+            <div class="col-auto">
+                <a href="{% url 'app' %}" data-preserve-params class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
             </div>
         </div>
+    </div>
 
-        <div class="messages mb-4">
-            {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                {% endfor %}
-            {% endif %}
-        </div>
-
+    <div class="messages mb-4">
         {% if messages %}
-        <div class="messages mb-4">
             {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             {% endfor %}
-        </div>
         {% endif %}
+    </div>
 
-        <div class="card">
-            <div class="card-body">
-                <form method="POST" action="{{ settings.BASE_URL }}{% url 'monitoring_settings' %}" id="monitoring-form">                    
-                    <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
-                    <input type="hidden" name="user_id" value="{{ request.GET.user_id }}">  <!-- Add user_id -->
-                    <input type="hidden" name="redirect_url" value="{{ settings.BASE_URL }}{{ request.path }}?{{ request.GET.urlencode }}">
+    <div class="card">
+        <div class="card-body">
+            <!-- Current Email List -->
+            <div class="mb-4">
+                <h6 class="mb-3">Current Notification Emails</h6>
+                <div id="current-emails">
+                    {% for email in monitoring_settings.notification_emails %}
+                    <div class="badge bg-light text-dark border mb-2 me-2 p-2">
+                        {{ email }}
+                        <button type="button" class="btn-close ms-2" data-email="{{ email }}" aria-label="Remove"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Add Email Form -->
+            <form method="POST" id="monitoring-form">
+                <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
+                <input type="hidden" name="user_id" value="{{ request.GET.user_id }}">
                 
-                    <!-- Your existing form fields here -->
-                    <div class="row">
-                        <!-- Monitoring Status -->
-                        <div class="mb-3 col-md-6">
-                            <label class="form-label">Monitoring Status</label>
-                            <div class="form-check form-switch">
-                                <input type="checkbox" class="form-check-input" id="is_active" name="is_active" 
-                                       {% if monitoring_settings.is_active %}checked{% endif %} 
-                                       >
-                                <label class="form-check-label" for="is_active">Active</label>
-                            </div>
-                        </div>
-                        
-                        <!-- Check Frequency -->
-                        <div class="mb-3 col-md-6">
-                            <label for="frequency" class="form-label">Check Frequency</label>
-                            <select class="form-select" id="frequency" name="frequency" 
-                                    >
-                                <option value="daily" {% if monitoring_settings.frequency == 'daily' %}selected{% endif %}>Daily</option>
-                                <option value="weekly" {% if monitoring_settings.frequency == 'weekly' %}selected{% endif %}>Weekly</option>
-                                <option value="monthly" {% if monitoring_settings.frequency == 'monthly' %}selected{% endif %}>Monthly</option>
-                            </select>
-                        </div>
-                        
-                        <!-- Notification Emails -->
-                        <div class="mb-3 col-12">
-                            <label for="notification_emails" class="form-label">Notification Emails</label>
-                            <div id="email-inputs">
-                                {% for email in monitoring_settings.notification_emails %}
-                                <div class="input-group mb-2">
-                                    <input type="email" class="form-control notification-email rounded" name="notification_emails[]" 
-                                           value="{{ email }}" required>
-                                    <button type="button" class="btn c-btn c-btn--danger remove-email rounded ms-1">-</button>
-                                </div>
-                                {% endfor %}
-                                <div class="input-group mb-2">
-                                    <input type="email" class="form-control notification-email rounded" name="notification_emails[]">
-                                    <button type="button" class="btn c-btn c-btn--success add-email rounded ms-1">+</button>
-                                </div>
-                            </div>
+                <div class="row">
+                    <!-- Monitoring Status -->
+                    <div class="mb-3 col-md-6">
+                        <label class="form-label">Monitoring Status</label>
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" 
+                                   {% if monitoring_settings.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">Active</label>
                         </div>
                     </div>
+                    
+                    <!-- Check Frequency -->
+                    <div class="mb-3 col-md-6">
+                        <label for="frequency" class="form-label">Check Frequency</label>
+                        <select class="form-select" id="frequency" name="frequency">
+                            <option value="daily" {% if monitoring_settings.frequency == 'daily' %}selected{% endif %}>Daily</option>
+                            <option value="weekly" {% if monitoring_settings.frequency == 'weekly' %}selected{% endif %}>Weekly</option>
+                            <option value="monthly" {% if monitoring_settings.frequency == 'monthly' %}selected{% endif %}>Monthly</option>
+                        </select>
+                    </div>
 
-           
-                    <button type="submit" class="btn c-btn c-btn--primary loading-button" id="save-settings-btn">
-                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                        <span class="btn-text">Save Settings</span>
-                    </button>
-               
-                </form>
-            </div>
+                    <!-- Add Email Input -->
+                    <div class="mb-3 col-12">
+                        <label for="new_email" class="form-label">Add Notification Email</label>
+                        <div class="input-group">
+                            <input type="email" class="form-control" id="new_email" placeholder="Enter email address">
+                            <button type="button" class="btn c-btn c-btn--primary" id="add-email-btn">Add Email</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn c-btn c-btn--primary" id="save-settings-btn">
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    <span class="btn-text">Save Settings</span>
+                </button>
+            </form>
         </div>
     </div>
+</div>
 {% endblock %}
