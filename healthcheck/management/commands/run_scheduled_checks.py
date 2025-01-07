@@ -7,7 +7,8 @@ import requests
 from zendeskapp import settings
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-
+from healthcheck.cache import HealthCheckCache
+from healthcheck.models import ZendeskUser
 
 class Command(BaseCommand):
     help = "Run scheduled health checks"
@@ -27,17 +28,26 @@ class Command(BaseCommand):
                 if not latest_report:
                     continue
 
+                # Check subscription status
+                try:
+                    user = ZendeskUser.objects.get(subdomain=monitoring.subdomain)
+                    subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+                    if not subscription_status.get('active', False):
+                        # Disable monitoring if subscription is not active
+                        monitoring.is_active = False
+                        monitoring.save()
+                        continue
+                except ZendeskUser.DoesNotExist:
+                    continue
+
                 # Prepare API request
                 url = f"https://{monitoring.subdomain}.zendesk.com"
                 api_payload = {
                     "url": url,
-                    "email": latest_report.admin_email,  # Use credentials from latest report
+                    "email": latest_report.admin_email,
                     "api_token": latest_report.api_token,
                     "status": "active",
                 }
-                # Skip configuration settings for Free plan
-                if latest_report.plan != "Free":
-                    api_payload["check_configuration"] = True
 
                 # Make API request
                 response = requests.post(
@@ -52,20 +62,19 @@ class Command(BaseCommand):
                 if response.status_code == 200:
                     response_data = response.json()
 
-                    # 1. Create new report first
+                    # Create new report
                     report = HealthCheckReport.objects.create(
                         installation_id=monitoring.installation_id,
                         instance_guid=monitoring.instance_guid,
                         subdomain=monitoring.subdomain,
-                        admin_email=latest_report.admin_email,  # Copy credentials
-                        api_token=latest_report.api_token,  # from latest report
-                        plan=latest_report.plan,
+                        admin_email=latest_report.admin_email,
+                        api_token=latest_report.api_token,
                         app_guid=latest_report.app_guid,
                         version=latest_report.version,
                         raw_response=response_data,
                     )
 
-                    # 2. Send email notification if emails are configured
+                    # Send email notification if configured
                     if monitoring.notification_emails:
                         issues = response_data.get("issues", [])
                         context = {
@@ -80,7 +89,6 @@ class Command(BaseCommand):
                             "report_url": f"{settings.APP_URL}/report/{report.id}/",
                         }
 
-                        # Render and send email
                         html_content = render_to_string(
                             "healthcheck/email/monitoring_report.html", context
                         )
@@ -94,9 +102,9 @@ class Command(BaseCommand):
                         )
                         print(f"Email sent to {monitoring.notification_emails}")
 
-                        # 3. Update monitoring schedule
-                        monitoring.last_check = now
-                    monitoring.save()  # Save to ensure last_check is persisted
+                    # Update monitoring schedule
+                    monitoring.last_check = now
+                    monitoring.save()
 
                     # Calculate next check based on frequency
                     if monitoring.frequency == "daily":
