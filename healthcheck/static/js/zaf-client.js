@@ -90,20 +90,41 @@ const ZAFClientSingleton = {
 
 
 
-    async trackAnalytics() {
-        try {
-            await new Promise(resolve => {
-                if (window.analytics && window.analytics.initialized) {
-                    resolve();
-                } else {
-                    analytics.ready(resolve);
-                }
-            });
-    
-            if (!this.userInfo || !this.metadata) {
-                console.warn('Missing user info or metadata for analytics tracking');
+   
+async trackAnalytics() {
+    try {
+        console.log('Starting trackAnalytics...');
+        console.log('Current userInfo:', this.userInfo);
+        console.log('Current metadata:', this.metadata);
+
+        // Check if window.analytics exists
+        console.log('Analytics object available:', !!window.analytics);
+        
+        // Wait for analytics to be ready
+        await new Promise(resolve => {
+            if (!window.analytics) {
+                console.warn('Analytics object not found');
+                resolve(); // Resolve anyway to prevent hanging
                 return;
             }
+
+            if (window.analytics.initialized) {
+                console.log('Analytics already initialized');
+                resolve();
+            } else {
+                console.log('Waiting for analytics to initialize...');
+                window.analytics.ready(resolve);
+            }
+        });
+
+        if (!this.userInfo || !this.metadata) {
+            console.warn('Missing required data:', {
+                userInfo: !!this.userInfo,
+                metadata: !!this.metadata
+            });
+            return;
+        }
+
     
             const baseUrl = window.ENVIRONMENT === 'production'
                 ? 'https://gcx-healthcheck-zd-production.up.railway.app'
@@ -147,12 +168,23 @@ const ZAFClientSingleton = {
     
         } catch (error) {
             console.error('Analytics tracking error:', error);
+            console.error('Error details:', {
+                hasAnalytics: !!window.analytics,
+                analyticsInitialized: window.analytics?.initialized,
+                userInfo: this.userInfo,
+                metadata: this.metadata
+            });
             // Don't throw the error to prevent app initialization from failing
         }
     },
     async loadData() {
         // Try to get cached data first
+        console.log('Starting loadData...');
+        
+        // Try to get cached data first
         const cachedData = this._getCachedData();
+        console.log('Cached data:', cachedData);
+
         if (cachedData) {
             this.context = cachedData.context;
             this.metadata = cachedData.metadata;
