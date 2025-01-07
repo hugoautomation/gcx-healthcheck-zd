@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     if (!document.getElementById('monitoring-form')) return;
 
     const form = document.getElementById('monitoring-form');
@@ -8,8 +8,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const frequencySelect = document.getElementById('frequency');
     const isActiveSwitch = document.getElementById('is_active');
 
-    // Initialize ZAF Client
-    ZAFClientSingleton.init().then(client => {
+    try {
+        // Initialize ZAF client and wait for it to be ready
+        await ZAFClientSingleton.init();
+        const client = ZAFClientSingleton.client;
+
+        if (!await ZAFClientSingleton.ensureUrlParams()) return;
+
+        // Resize the app
+        await client.invoke('resize', { width: '100%', height: '800px' });
+
         // Remove Email Handler
         currentEmails.addEventListener('click', async (e) => {
             if (e.target.classList.contains('btn-close')) {
@@ -17,7 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const email = e.target.dataset.email;
                 
                 try {
-                    // Save settings without this email
                     await saveSettings(client, emailBadge);
                     emailBadge.remove();
                     showMessage('success', '✅ Email removed successfully');
@@ -27,70 +34,38 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Frequency Change Handler
-        frequencySelect.addEventListener('change', async () => {
-            try {
-                await saveSettings(client);
-                showMessage('success', '✅ Frequency updated successfully');
-            } catch (error) {
-                showMessage('danger', '❌ Failed to update frequency');
-                // Revert to previous value if save failed
-                frequencySelect.value = frequencySelect.dataset.lastValue || 'daily';
-            }
-            // Store current value for potential rollback
-            frequencySelect.dataset.lastValue = frequencySelect.value;
-        });
-
-        // Active Status Change Handler
-        isActiveSwitch.addEventListener('change', async () => {
-            try {
-                await saveSettings(client);
-                showMessage('success', '✅ Monitoring status updated successfully');
-            } catch (error) {
-                showMessage('danger', '❌ Failed to update monitoring status');
-                // Revert to previous state if save failed
-                isActiveSwitch.checked = !isActiveSwitch.checked;
-            }
-        });
-
         // Form Submit Handler (for adding new email)
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const spinner = addEmailBtn.querySelector('.spinner-border');
-            const btnText = addEmailBtn.querySelector('.btn-text');
             const email = newEmailInput.value.trim();
-
-            // Validate email
             if (!validateEmail(email)) {
                 showMessage('danger', 'Please enter a valid email address');
                 return;
             }
 
-            // Check if email already exists
             if (currentEmails.innerHTML.includes(email)) {
                 showMessage('warning', 'This email is already added');
                 return;
             }
 
+            const spinner = addEmailBtn.querySelector('.spinner-border');
+            const btnText = addEmailBtn.querySelector('.btn-text');
+
             try {
-                // Show loading state
                 spinner.classList.remove('d-none');
                 btnText.textContent = 'Adding...';
                 addEmailBtn.disabled = true;
 
-                // Create new badge
+                await saveSettings(client, null, email);
+                
                 const badge = document.createElement('div');
                 badge.className = 'badge bg-light text-dark border mb-2 me-2 p-2';
                 badge.innerHTML = `
                     ${email}
                     <button type="button" class="btn-close ms-2" data-email="${email}" aria-label="Remove"></button>
                 `;
-
-                // Save settings with new email
-                await saveSettings(client, null, email);
                 
-                // Add badge and clear input
                 currentEmails.appendChild(badge);
                 newEmailInput.value = '';
                 showMessage('success', '✅ Email added successfully');
@@ -104,14 +79,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 addEmailBtn.disabled = false;
             }
         });
-    });
+
+        // Auto-save handlers for frequency and active status
+        frequencySelect.addEventListener('change', async () => {
+            try {
+                await saveSettings(client);
+                showMessage('success', '✅ Frequency updated successfully');
+            } catch (error) {
+                showMessage('danger', '❌ Failed to update frequency');
+                frequencySelect.value = frequencySelect.dataset.lastValue || 'daily';
+            }
+            frequencySelect.dataset.lastValue = frequencySelect.value;
+        });
+
+        isActiveSwitch.addEventListener('change', async () => {
+            try {
+                await saveSettings(client);
+                showMessage('success', '✅ Monitoring status updated successfully');
+            } catch (error) {
+                showMessage('danger', '❌ Failed to update monitoring status');
+                isActiveSwitch.checked = !isActiveSwitch.checked;
+            }
+        });
+
+    } catch (error) {
+        console.error('Error initializing monitoring:', error);
+        showMessage('danger', '❌ Failed to initialize monitoring settings');
+    }
 });
 
 async function saveSettings(client, removedBadge = null, newEmail = null) {
+    const form = document.getElementById('monitoring-form');
+    const currentEmails = document.getElementById('current-emails');
+    
     // Get current emails
-    const currentEmailBadges = Array.from(document.getElementById('current-emails').children);
-    let emails = currentEmailBadges
-        .filter(badge => badge !== removedBadge) // Exclude removed badge if any
+    let emails = Array.from(currentEmails.children)
+        .filter(badge => badge !== removedBadge)
         .map(badge => badge.textContent.trim());
     
     // Add new email if provided
@@ -119,7 +122,6 @@ async function saveSettings(client, removedBadge = null, newEmail = null) {
         emails.push(newEmail);
     }
 
-    const form = document.getElementById('monitoring-form');
     const data = {
         installation_id: form.querySelector('[name="installation_id"]').value,
         user_id: ZAFClientSingleton.userInfo?.id,
@@ -155,10 +157,8 @@ function showMessage(type, message) {
     const messagesDiv = document.querySelector('.messages');
     if (!messagesDiv) return;
 
-    // Remove existing messages
     messagesDiv.querySelectorAll('.alert').forEach(alert => alert.remove());
 
-    // Add new message
     const alert = document.createElement('div');
     alert.className = `alert alert-${type} alert-dismissible fade show`;
     alert.innerHTML = `
@@ -169,7 +169,6 @@ function showMessage(type, message) {
     messagesDiv.appendChild(alert);
     messagesDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-    // Auto-dismiss after 5 seconds
     setTimeout(() => {
         alert.classList.remove('show');
         setTimeout(() => alert.remove(), 150);
