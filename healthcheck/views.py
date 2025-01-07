@@ -181,7 +181,6 @@ def app(request):
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
     user_id = request.GET.get("user_id")
-
     if not installation_id:
         initial_data["loading"] = (
             "Loading your workspace..."  # Changed from error to loading
@@ -368,6 +367,7 @@ def create_or_update_user(request):
 def health_check(request):
     if request.method == "POST":
         try:
+            subscription_status = get_default_subscription_status()
             # Extract data from request
             data = json.loads(request.body) if request.body else {}
             installation_id = data.get("installation_id")
@@ -389,9 +389,9 @@ def health_check(request):
 
             # Get user and subscription status
             user = ZendeskUser.objects.get(user_id=user_id)
-            subscription_status = HealthCheckCache.get_subscription_status(
-                user.subdomain
-            )
+            if user:
+                subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+
 
             analytics.track(
                 user_id,
@@ -533,10 +533,12 @@ def health_check(request):
 def monitoring(request):
     installation_id = request.GET.get("installation_id")
     user_id = request.GET.get("user_id")
+    subscription_status = get_default_subscription_status()
 
     try:
         user = ZendeskUser.objects.get(user_id=user_id)
-        subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+        if user:
+            subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
 
         monitoring_settings = HealthCheckCache.get_monitoring_settings(installation_id)
 
@@ -657,11 +659,12 @@ def check_unlock_status(request):
 def get_historical_report(request, report_id):
     """Fetch a historical report by ID"""
     try:
+        subscription_status = get_default_subscription_status()
         report = HealthCheckReport.objects.get(id=report_id)
 
         # Get subscription status for the report's subdomain
-
-        subscription_status = HealthCheckCache.get_subscription_status(report.subdomain)
+        if report:
+            subscription_status = HealthCheckCache.get_subscription_status(report.subdomain)
 
         # Format the report data
         report_data = format_response_data(
@@ -688,6 +691,7 @@ def get_historical_report(request, report_id):
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
+    subscription_status = get_default_subscription_status()
 
     # Handle both JSON and form data for installation_id
     if request.content_type == "application/json":
@@ -978,6 +982,7 @@ def billing_page(request):
     user_id = request.GET.get("user_id")
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
+    subscription_status = get_default_subscription_status()
 
     # Show loading state if no installation_id
     if not installation_id:
