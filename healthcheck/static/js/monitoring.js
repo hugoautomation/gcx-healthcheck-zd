@@ -53,12 +53,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 spinner.classList.remove('d-none');
                 btnText.textContent = 'Saving...';
                 saveButton.disabled = true;
-
+        
                 // Get all current emails
                 const emails = Array.from(currentEmails.children).map(badge => 
                     badge.textContent.trim()
                 );
-
                 // Validate at least one email if monitoring is active
                 const isActive = form.querySelector('#is_active').checked;
                 if (isActive && emails.length === 0) {
@@ -80,25 +79,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? 'https://gcx-healthcheck-zd-production.up.railway.app'
                     : 'https://gcx-healthcheck-zd-development.up.railway.app';
 
-                const response = await client.request({
-                    url: `${baseUrl}/monitoring-settings/`,
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(data),
-                    secure: true
-                });
-
-                showMessage('success', '✅ Settings saved successfully!');
-
-            } catch (error) {
-                console.error('Error saving settings:', error);
-                showMessage('danger', `❌ ${error.message || 'Failed to save settings'}. Please try again.`);
-            } finally {
-                spinner.classList.add('d-none');
-                btnText.textContent = 'Save Settings';
-                saveButton.disabled = false;
-            }
-        });
+                    const response = await client.request({
+                        url: `${baseUrl}/monitoring-settings/`,
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(data),
+                        secure: true
+                    });
+            
+                    // Instead of showing message, reload the page
+                    window.location.reload();
+            
+                } catch (error) {
+                    console.error('Error saving settings:', error);
+                    showMessage('danger', `❌ ${error.message || 'Failed to save settings'}. Please try again.`);
+                    
+                    // Reset button state on error
+                    spinner.classList.add('d-none');
+                    btnText.textContent = 'Save Settings';
+                    saveButton.disabled = false;
+                }
+            });
     });
 });
 
