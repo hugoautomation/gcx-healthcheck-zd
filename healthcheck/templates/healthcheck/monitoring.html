@@ -15,16 +15,6 @@
         </div>
     </div>
 
-    <div class="messages mb-4">
-        {% if messages %}
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            {% endfor %}
-        {% endif %}
-    </div>
 
     <div class="card">
         <div class="card-body">
@@ -35,12 +25,21 @@
                     {% for email in monitoring_settings.notification_emails %}
                     <div class="badge bg-light text-dark border mb-2 me-2 p-2">
                         {{ email }}
-                        <button type="button" class="btn-close ms-2" aria-label="Remove"></button>
+                        <button type="button" class="btn-close ms-2" data-email="{{ email }}" aria-label="Remove"></button>
                     </div>
                     {% endfor %}
                 </div>
             </div>
-
+            <div class="messages mb-4">
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
             <!-- Add Email Form -->
             <form method="POST" id="monitoring-form">
                 <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
