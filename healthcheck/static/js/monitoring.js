@@ -1,15 +1,11 @@
-let client = null;
-let metadata = null;
-let context = null;
 
 // Initialize ZAF client
-// Initialize ZAF client
-async function initializeApp() {
+async function initializeMonitoringApp() {  // Renamed to be more specific
     try {
         await ZAFClientSingleton.init();
-        monitoringClient = ZAFClientSingleton.client;
-        monitoringMetadata = ZAFClientSingleton.metadata;
-        monitoringContext = ZAFClientSingleton.context;
+        const monitoringClient = ZAFClientSingleton.client;
+        const monitoringMetadata = ZAFClientSingleton.metadata;
+        const monitoringContext = ZAFClientSingleton.context;
 
         if (!await ZAFClientSingleton.ensureUrlParams()) return;
 
@@ -18,8 +14,7 @@ async function initializeApp() {
         initializeForm();
 
     } catch (error) {
-        console.error('Error initializing:', error);
-        // Initialize form even if ZAF client fails
+        console.error('Error initializing monitoring:', error);
         initializeForm();
     }
 }
@@ -185,4 +180,9 @@ function initializeForm() {
 }
 
 // Initialize on DOM load
-document.addEventListener('DOMContentLoaded', initializeApp);
+document.addEventListener('DOMContentLoaded', () => {
+    // Only initialize if we're on the monitoring page
+    if (document.getElementById('monitoring-form')) {
+        initializeMonitoringApp();
+    }
+});

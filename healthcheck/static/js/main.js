@@ -318,6 +318,8 @@ function initializeHistoricalReports() {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
-    // initializeLoadingButtons();
-    initializeApp();
+    // Only initialize if we're not on the monitoring page
+    if (!document.getElementById('monitoring-form')) {
+        initializeApp();
+    }
 });
