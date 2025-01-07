@@ -21,6 +21,10 @@
             });
         });
     </script>
+    <script>
+        window.ENVIRONMENT = "{{ environment }}";
+    </script>
+    <script src="{% static 'js/main.js' %}"></script>
 </head>
 <body>
     {% block content %}
@@ -35,9 +39,6 @@
             const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
         });
     </script>
-    <script>
-        window.ENVIRONMENT = "{{ environment }}";
-    </script>
-    <script src="{% static 'js/main.js' %}"></script>
+
 </body>
 </html>
