@@ -117,14 +117,13 @@ async function saveSettings(client, removedBadge = null, newEmail = null) {
         .filter(badge => badge !== removedBadge)
         .map(badge => badge.textContent.trim());
     
-    // Add new email if provided
     if (newEmail) {
         emails.push(newEmail);
     }
 
-    const data = {
+    const formData = {
         installation_id: form.querySelector('[name="installation_id"]').value,
-        user_id: ZAFClientSingleton.userInfo?.id,
+        user_id: form.querySelector('[name="user_id"]').value,  // Get from form instead of ZAFClient
         is_active: form.querySelector('#is_active').checked,
         frequency: form.querySelector('#frequency').value,
         notification_emails: emails,
@@ -132,7 +131,7 @@ async function saveSettings(client, removedBadge = null, newEmail = null) {
     };
 
     // Validate at least one email if monitoring is active
-    if (data.is_active && emails.length === 0) {
+    if (formData.is_active && emails.length === 0) {
         throw new Error('Please add at least one email address when monitoring is active');
     }
 
@@ -140,13 +139,24 @@ async function saveSettings(client, removedBadge = null, newEmail = null) {
         ? 'https://gcx-healthcheck-zd-production.up.railway.app'
         : 'https://gcx-healthcheck-zd-development.up.railway.app';
 
-    return client.request({
-        url: `${baseUrl}/monitoring-settings/`,
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(data),
-        secure: true
-    });
+    try {
+        const response = await client.request({
+            url: `${baseUrl}/monitoring-settings/`,
+            type: 'POST',
+            contentType: 'application/json',
+            headers: {
+                'X-Subsequent-Request': 'true'
+            },
+            data: JSON.stringify(formData),
+            secure: true
+        });
+
+        console.log('Settings saved:', response);
+        return response;
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        throw error;
+    }
 }
 
 function validateEmail(email) {

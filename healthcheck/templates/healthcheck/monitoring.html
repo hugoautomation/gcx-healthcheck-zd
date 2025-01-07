@@ -43,6 +43,7 @@
 
             <!-- Settings Form -->
             <form method="POST" id="monitoring-form">
+                {% csrf_token %}
                 <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
                 <input type="hidden" name="user_id" value="{{ request.GET.user_id }}">
                 

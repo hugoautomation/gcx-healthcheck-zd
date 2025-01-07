@@ -692,68 +692,77 @@ def get_historical_report(request, report_id):
     except Exception as e:
         logger.error(f"Error fetching historical report: {str(e)}")
         return JsonResponse({"error": str(e)}, status=500)
-
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
     subscription_status = get_default_subscription_status()
 
-    # Handle both JSON and form data for installation_id
-    if request.content_type == "application/json":
-        try:
-            data = json.loads(request.body)
-            installation_id = data.get("installation_id")
-            user_id = data.get("user_id")
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Invalid JSON data"}, status=400)
-    else:
-        installation_id = request.POST.get("installation_id")
-        user_id = request.POST.get("user_id")
-
-    if not installation_id:
-        error_msg = "Installation ID required"
+    try:
+        # Parse data based on content type
         if request.content_type == "application/json":
-            return JsonResponse({"error": error_msg}, status=400)
-        messages.error(request, error_msg)
-        return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
-
-    # Get the latest report
-    latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
-
-    if request.method == "POST":
-        try:
-            # Get data based on content type
-            if request.content_type == "application/json":
+            try:
+                data = json.loads(request.body)
+                installation_id = data.get("installation_id")
+                user_id = data.get("user_id")
                 is_active = data.get("is_active", False)
                 frequency = data.get("frequency", "weekly")
                 notification_emails = data.get("notification_emails", [])
-            else:
-                is_active = request.POST.get("is_active") == "on"
-                frequency = request.POST.get("frequency", "weekly")
-                notification_emails = request.POST.getlist("notification_emails[]")
+            except json.JSONDecodeError:
+                return JsonResponse({"error": "Invalid JSON data"}, status=400)
+        else:
+            installation_id = request.POST.get("installation_id")
+            user_id = request.POST.get("user_id")
+            is_active = request.POST.get("is_active") == "on"
+            frequency = request.POST.get("frequency", "weekly")
+            notification_emails = request.POST.getlist("notification_emails[]")
 
-            # Filter out empty email fields
-            notification_emails = [
-                email for email in notification_emails if email and email.strip()
-            ]
+        # Validate required fields
+        if not installation_id:
+            return JsonResponse({"error": "Installation ID required"}, status=400)
+        if not user_id:
+            return JsonResponse({"error": "User ID required"}, status=400)
 
-            # Update or create monitoring settings
-            monitoring, created = HealthCheckMonitoring.objects.update_or_create(
-                installation_id=installation_id,
-                defaults={
-                    "instance_guid": latest_report.instance_guid if latest_report else "",
-                    "subdomain": latest_report.subdomain if latest_report else "",
-                    "is_active": is_active,
-                    "frequency": frequency,
-                    "notification_emails": notification_emails,
-                },
+        # Validate subscription status
+        try:
+            user = ZendeskUser.objects.get(user_id=user_id)
+            subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
+            if not subscription_status.get("active"):
+                return JsonResponse({"error": "Active subscription required"}, status=403)
+        except ZendeskUser.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
+
+        # Get the latest report
+        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
+
+        # Filter out empty email fields
+        notification_emails = [
+            email for email in notification_emails if email and email.strip()
+        ]
+
+        # Validate emails if monitoring is active
+        if is_active and not notification_emails:
+            return JsonResponse(
+                {"error": "At least one email is required when monitoring is active"},
+                status=400
             )
 
-            if is_active and notification_emails:
-                monitoring.next_check = timezone.now()
-                monitoring.save()
+        # Update or create monitoring settings
+        monitoring, created = HealthCheckMonitoring.objects.update_or_create(
+            installation_id=installation_id,
+            defaults={
+                "instance_guid": latest_report.instance_guid if latest_report else "",
+                "subdomain": latest_report.subdomain if latest_report else "",
+                "is_active": is_active,
+                "frequency": frequency,
+                "notification_emails": notification_emails,
+            },
+        )
 
-            # Track the event
+        # Track the event
+        try:
             analytics.track(
                 user_id,
                 "Monitoring Settings Updated",
@@ -766,52 +775,26 @@ def monitoring_settings(request):
                     "subscription_active": subscription_status["active"]
                 },
             )
-
-            success_msg = "Settings saved successfully"
-            if request.content_type == "application/json":
-                return JsonResponse(
-                    {
-                        "status": "success",
-                        "message": success_msg,
-                        "data": {
-                            "is_active": is_active,
-                            "frequency": frequency,
-                            "notification_emails": notification_emails,
-                        },
-                    }
-                )
-
-            messages.success(request, success_msg)
-
         except Exception as e:
-            error_msg = f"Error saving settings: {str(e)}"
-            logger.error(error_msg)
-            if request.content_type == "application/json":
-                return JsonResponse({"error": error_msg}, status=500)
-            messages.error(request, error_msg)
+            logger.warning(f"Analytics tracking failed: {str(e)}")
 
-        if request.content_type != "application/json":
-            return HttpResponseRedirect(request.POST.get("redirect_url", "/"))
+        # Return success response
+        return JsonResponse({
+            "status": "success",
+            "message": "Settings saved successfully",
+            "data": {
+                "is_active": monitoring.is_active,
+                "frequency": monitoring.frequency,
+                "notification_emails": monitoring.notification_emails,
+            }
+        })
 
-    try:
-        user = ZendeskUser.objects.get(user_id=user_id)
-        subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
-
-        context = get_monitoring_context(
-            installation_id,
-            subscription_status["active"],
-            latest_report,
-        )
-        context["url_params"] = {
-            "installation_id": installation_id,
-            "user_id": user_id,
-            "origin": request.GET.get("origin"),
-            "app_guid": request.GET.get("app_guid")
-        }
-
-        return render(request, "healthcheck/monitoring.html", context)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        logger.error(f"Error saving monitoring settings: {str(e)}")
+        return JsonResponse(
+            {"error": "Failed to save monitoring settings", "details": str(e)},
+            status=500
+        )
 
 
 @djstripe_receiver("customer.subscription.created")
