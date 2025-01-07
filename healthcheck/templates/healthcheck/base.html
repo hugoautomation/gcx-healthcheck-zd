@@ -8,6 +8,9 @@
     <link href="{% static 'css/main.css' %}" rel="stylesheet">
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://static.zdassets.com/zendesk_app_framework_sdk/2.0/zaf_sdk.min.js"></script>
+    <script>
+        window.ENVIRONMENT = "{{ environment }}";
+    </script>
     <script src="{% static 'js/zaf-client.js' %}"></script>
     <script src="{% static 'js/url-params.js' %}"></script>
     <script>
@@ -20,9 +23,7 @@
             });
         });
     </script>
-    <script>
-        window.ENVIRONMENT = "{{ environment }}";
-    </script>
+   
     <script src="{% static 'js/main.js' %}"></script>
 </head>
 <body>
