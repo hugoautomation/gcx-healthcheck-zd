@@ -10,8 +10,6 @@ from dateutil.relativedelta import relativedelta
 from healthcheck.models import ZendeskUser
 from healthcheck.cache_utils import HealthCheckCache
 
-
-
 class Command(BaseCommand):
     help = "Run scheduled health checks"
 
@@ -30,28 +28,14 @@ class Command(BaseCommand):
                     monitoring.installation_id
                 )
                 if not latest_report:
-                    self.stdout.write(f"No latest report found for {monitoring.installation_id}")
-                    continue
-
-                # Check subscription status
-                try:
-                    user = ZendeskUser.objects.get(subdomain=monitoring.subdomain)
-                    subscription_status = HealthCheckCache.get_subscription_status(user.subdomain)
-                    
-                    self.stdout.write(f"Subscription status for {monitoring.subdomain}: {subscription_status}")
-                    
-                    if not subscription_status.get('active', False):
-                        self.stdout.write(f"Inactive subscription for {monitoring.subdomain}")
-                        monitoring.is_active = False
-                        monitoring.save()
-                        continue
-                except ZendeskUser.DoesNotExist:
-                    self.stdout.write(f"No user found for subdomain {monitoring.subdomain}")
+                    self.stdout.write(
+                        f"No latest report found for {monitoring.installation_id}"
+                    )
                     continue
 
                 # Update last_check and calculate next_check before making the API call
                 monitoring.last_check = now
-                
+
                 # Calculate next check based on frequency
                 if monitoring.frequency == "daily":
                     monitoring.next_check = now + timedelta(days=1)
@@ -59,19 +43,12 @@ class Command(BaseCommand):
                     monitoring.next_check = now + timedelta(weeks=1)
                 else:  # monthly
                     monitoring.next_check = now + relativedelta(months=1)
-                
-                monitoring.save()
-                
-                self.stdout.write(f"Updated next check for {monitoring.subdomain} to {monitoring.next_check}")
 
-                # Prepare API request
-                url = f"https://{monitoring.subdomain}.zendesk.com"
-                api_payload = {
-                    "url": url,
-                    "email": latest_report.admin_email,
-                    "api_token": latest_report.api_token,
-                    "status": "active",
-                }
+                monitoring.save()
+
+                self.stdout.write(
+                    f"Updated next check for {monitoring.subdomain} to {monitoring.next_check}"
+                )
 
                 # Make API request
                 response = requests.post(
@@ -80,7 +57,12 @@ class Command(BaseCommand):
                         "Content-Type": "application/json",
                         "X-API-Token": settings.HEALTHCHECK_TOKEN,
                     },
-                    json=api_payload,
+                    json={
+                        "url": f"https://{monitoring.subdomain}.zendesk.com",
+                        "email": latest_report.admin_email,
+                        "api_token": latest_report.api_token,
+                        "status": "active",
+                    },
                 )
 
                 if response.status_code == 200:
@@ -113,18 +95,18 @@ class Command(BaseCommand):
                             "report_url": f"{settings.APP_URL}/report/{report.id}/",
                         }
 
-                        html_content = render_to_string(
-                            "healthcheck/email/monitoring_report.html", context
-                        )
-
                         send_mail(
                             subject=f"Zendesk Healthcheck Report: {monitoring.subdomain}",
                             message="Please view this email in HTML format",
                             from_email=settings.DEFAULT_FROM_EMAIL,
                             recipient_list=monitoring.notification_emails,
-                            html_message=html_content,
+                            html_message=render_to_string(
+                                "healthcheck/email/monitoring_report.html", context
+                            ),
                         )
-                        self.stdout.write(f"Email sent to {monitoring.notification_emails}")
+                        self.stdout.write(
+                            f"Email sent to {monitoring.notification_emails}"
+                        )
 
                     self.stdout.write(
                         self.style.SUCCESS(
