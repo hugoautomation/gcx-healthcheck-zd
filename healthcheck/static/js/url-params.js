@@ -1,7 +1,41 @@
 const URLParamManager = {
     CACHE_KEY: 'zaf_url_params',
     CACHE_DURATION: 30 * 60 * 1000, // 30 minutes
+    
+    preserveParams(element) {
+        const currentParams = this._getCurrentParams();
+        if (!element || !currentParams) return;
 
+        if (element.tagName === 'A') {
+            let url = new URL(element.href, window.location.origin);
+            Object.entries(currentParams).forEach(([key, value]) => {
+                if (value) url.searchParams.set(key, value);
+            });
+            element.href = url.toString();
+        } else if (element.tagName === 'FORM') {
+            Object.entries(currentParams).forEach(([key, value]) => {
+                if (!element.querySelector(`[name="${key}"]`)) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = value;
+                    element.appendChild(input);
+                }
+            });
+        }
+    },
+    // Add this method to initialize all elements that need params
+    initializeParamPreservation() {
+        // Handle links with data-preserve-params
+        document.querySelectorAll('[data-preserve-params]').forEach(element => {
+            this.preserveParams(element);
+        });
+
+        // Handle forms with data-preserve-params
+        document.querySelectorAll('form[data-preserve-params]').forEach(element => {
+            this.preserveParams(element);
+        });
+    },
     getParams() {
         // Combine current and cached params
         const current = this._getCurrentParams();
@@ -29,7 +63,7 @@ const URLParamManager = {
 
         return params;
     },
-    
+
     _getCacheKey() {
         const urlParams = new URLSearchParams(window.location.search);
         const installationId = urlParams.get('installation_id');

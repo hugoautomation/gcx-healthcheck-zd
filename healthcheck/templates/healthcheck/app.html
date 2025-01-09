@@ -25,10 +25,11 @@
                 <div class="col-auto">
                     {% if subscription.is_active %}
                    <h2 class="rounded bg-primary-subtle text-primary font-semibold py-1 px-2 d-inline-block">Premium Plan</h2>
-                    <a class="c-btn  c-btn--sm d-inline-block loading-button" 
-       href="{% url 'billing' %}?installation_id={{ url_params.installation_id }}&user_id={{ url_params.user_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}">
-        Billing
-    </a>
+                   <a class="c-btn c-btn--sm d-inline-block loading-button" 
+                   href="{% url 'billing' %}"
+                   data-preserve-params>
+                    Billing
+                </a>
                     {% else %}
                     <h2 class="rounded bg-body-secondary font-semibold d-inline-block me-2 py-1 px-2">Free Plan</h2>
                     <a class="c-btn  c-btn--sm d-inline-block" href="{% url 'billing' %}" data-preserve-params>Upgrade</a>
@@ -41,8 +42,11 @@
  <a href="https://help.gravity.cx/" class="btn c-btn c-btn--sm c-btn--basic d-inline-block"  target="_blank">Help</a>
  {% if subscription.is_active %}
 
-<a href="{% url 'monitoring' %}?installation_id={{ url_params.installation_id }}&plan={{ url_params.plan }}&origin={{ url_params.origin|urlencode }}&app_guid={{ url_params.app_guid }}&user_id={{ url_params.user_id }}" 
-class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
+ <a href="{% url 'monitoring' %}"
+ class="btn c-btn c-btn--sm c-btn--basic d-inline-block"
+ data-preserve-params>
+  Monitoring
+</a>
 {% else %}
       <!-- Locked features for non-subscribers -->
       <button class="btn c-btn c-btn--sm c-btn--basic d-inline-block disabled" 

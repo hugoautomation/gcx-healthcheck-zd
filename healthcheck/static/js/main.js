@@ -1,28 +1,6 @@
 let client = null;
 let metadata = null;
 let context = null;
-// Add this function to handle all buttons with a specific class
-// function initializeLoadingButtons() {
-//     document.querySelectorAll('.loading-button').forEach(button => {
-//         button.addEventListener('click', async (e) => {
-//             // Store original text
-//             const originalText = button.innerHTML;
-            
-//             // Disable button and add spinner
-//             button.classList.add('disabled bg-dark');
-//             button.innerHTML = `
-//                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-//                 ${originalText}
-//             `;
-            
-//             // Re-enable after 3 seconds
-//             setTimeout(() => {
-//                 button.classList.remove('disabled bg-dark');
-//                 button.innerHTML = originalText;
-//             }, 3000);
-//         });
-//     });
-// }
 
 // Initialize the app
 function getBaseUrl() {
@@ -39,6 +17,8 @@ async function initializeApp() {
         context = ZAFClientSingleton.context;
 
         if (!await ZAFClientSingleton.ensureUrlParams()) return;
+        
+        URLParamManager.initializeParamPreservation();
 
         // Initialize all components
         initializeRunCheck();
