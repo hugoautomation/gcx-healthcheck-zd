@@ -29,15 +29,29 @@ const URLParamManager = {
 
         return params;
     },
+    
+    _getCacheKey() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const installationId = urlParams.get('installation_id');
+        const origin = urlParams.get('origin');
+        if (!installationId || !origin) return null;
+        
+        // Extract subdomain from origin
+        const subdomain = origin.split('.')[0].replace('https://', '');
+        return `${this.CACHE_KEY}_${installationId}_${subdomain}`;
+    },
 
     _getCachedParams() {
         try {
-            const cached = localStorage.getItem(this.CACHE_KEY);
+            const cacheKey = this._getCacheKey();
+            if (!cacheKey) return null;
+
+            const cached = localStorage.getItem(cacheKey);
             if (!cached) return null;
 
             const data = JSON.parse(cached);
             if (Date.now() > data.expiry) {
-                localStorage.removeItem(this.CACHE_KEY);
+                localStorage.removeItem(cacheKey);
                 return null;
             }
             return data.value;
@@ -49,24 +63,16 @@ const URLParamManager = {
 
     _cacheParams(params) {
         try {
+            const cacheKey = this._getCacheKey();
+            if (!cacheKey) return;
+
             const data = {
                 value: params,
                 expiry: Date.now() + this.CACHE_DURATION
             };
-            localStorage.setItem(this.CACHE_KEY, JSON.stringify(data));
+            localStorage.setItem(cacheKey, JSON.stringify(data));
         } catch (e) {
             console.warn('Cache write error:', e);
         }
-    },
-
-    getUrlWithParams(baseUrl) {
-        const url = new URL(baseUrl, window.location.origin);
-        const params = this.getParams();
-
-        Object.entries(params).forEach(([key, value]) => {
-            if (value) url.searchParams.set(key, value);
-        });
-
-        return url.toString();
     }
 };

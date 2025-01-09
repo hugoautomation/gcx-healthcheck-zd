@@ -228,14 +228,24 @@ async trackAnalytics() {
         });
     },
 
-    _getCachedData() {
+    _getCacheKey(type) {
+        // Create unique cache keys based on installation_id and subdomain
+        const installationId = this.metadata?.installationId;
+        const subdomain = this.context?.account?.subdomain;
+        if (!installationId || !subdomain) return null;
+        return `zaf_${type}_${installationId}_${subdomain}`;
+    },
+      _getCachedData() {
         try {
-            const cached = localStorage.getItem('zaf_client_data');
+            const cacheKey = this._getCacheKey('client_data');
+            if (!cacheKey) return null;
+
+            const cached = localStorage.getItem(cacheKey);
             if (!cached) return null;
 
             const data = JSON.parse(cached);
             if (Date.now() > data.expiry) {
-                localStorage.removeItem('zaf_client_data');
+                localStorage.removeItem(cacheKey);
                 return null;
             }
             return data.value;
@@ -247,6 +257,9 @@ async trackAnalytics() {
 
     _cacheData() {
         try {
+            const cacheKey = this._getCacheKey('client_data');
+            if (!cacheKey) return;
+
             const data = {
                 value: {
                     context: this.context,
@@ -255,7 +268,7 @@ async trackAnalytics() {
                 },
                 expiry: Date.now() + this.CACHE_DURATION.CLIENT_DATA
             };
-            localStorage.setItem('zaf_client_data', JSON.stringify(data));
+            localStorage.setItem(cacheKey, JSON.stringify(data));
         } catch (e) {
             console.warn('Cache write error:', e);
         }
@@ -263,12 +276,15 @@ async trackAnalytics() {
 
     _getCachedUrlParams() {
         try {
-            const cached = localStorage.getItem('zaf_url_params');
+            const cacheKey = this._getCacheKey('url_params');
+            if (!cacheKey) return null;
+
+            const cached = localStorage.getItem(cacheKey);
             if (!cached) return null;
 
             const data = JSON.parse(cached);
             if (Date.now() > data.expiry) {
-                localStorage.removeItem('zaf_url_params');
+                localStorage.removeItem(cacheKey);
                 return null;
             }
             return data.value;
@@ -280,11 +296,14 @@ async trackAnalytics() {
 
     _cacheUrlParams(params) {
         try {
+            const cacheKey = this._getCacheKey('url_params');
+            if (!cacheKey) return;
+
             const data = {
                 value: params,
                 expiry: Date.now() + this.CACHE_DURATION.URL_PARAMS
             };
-            localStorage.setItem('zaf_url_params', JSON.stringify(data));
+            localStorage.setItem(cacheKey, JSON.stringify(data));
         } catch (e) {
             console.warn('URL params cache write error:', e);
         }
