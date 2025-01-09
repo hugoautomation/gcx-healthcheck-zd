@@ -58,13 +58,12 @@ def check_task_status(request, task_id):
     if task.ready():
         result = task.get()
         if result.get("error"):
-            results_html = render_report_components(
-                {"data": None, "error": result["message"]}
-            )
             return JsonResponse({
                 "status": "error", 
                 "error": result["message"],
-                "results_html": results_html
+                "results_html": render_report_components({
+                    "error": result["message"]
+                })
             })
         
         try:
@@ -86,22 +85,18 @@ def check_task_status(request, task_id):
             return JsonResponse({
                 "status": "error",
                 "error": str(e),
-                "results_html": render_report_components({"error": str(e)})
+                "results_html": render_report_components({
+                    "error": str(e)
+                })
             })
     
-    # For pending tasks, return loading state with message
-    results_html = render_report_components({
-        "loading": "Running health check...",
-        "data": None
-    })
+    # For pending tasks, return loading state
     return JsonResponse({
-            "status": "pending",
-            "results_html": render_report_components({
-                "loading": "Running health check...",
-                "data": None,
-                "error": None
-            })
+        "status": "pending",
+        "results_html": render_report_components({
+            "loading": "Running health check..."
         })
+    })
 # @csrf_exempt
 # def health_check(request):
 #     if request.method == "POST":
