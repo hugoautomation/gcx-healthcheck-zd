@@ -24,6 +24,33 @@
     </script>
    
     <script src="{% static 'js/main.js' %}"></script>
+    <style>
+        .loading-button {
+            position: relative;
+            pointer-events: none;
+        }
+        
+        .loading-button::before {
+            content: '';
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-border .75s linear infinite;
+            margin-right: 0.5rem;
+            vertical-align: text-bottom;
+        }
+        
+        .loading-button::after {
+            content: 'Loading...';
+        }
+        
+        @keyframes spinner-border {
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 {% if environment == "production" %}
 <body  data-environment="https://gcx-healthcheck-zd-production.up.railway.app">

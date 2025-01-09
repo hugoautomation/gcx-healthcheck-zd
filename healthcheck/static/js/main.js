@@ -13,11 +13,16 @@ function showButtons(show = true) {
     const buttons = document.querySelectorAll('[data-preserve-params]');
     buttons.forEach(button => {
         if (show) {
-            button.style.visibility = 'visible';
-            button.classList.remove('disabled');
+            button.innerHTML = button.getAttribute('data-original-text');
+            button.classList.remove('loading-button');
+            button.removeAttribute('disabled');
         } else {
-            button.style.visibility = 'hidden';
-            button.classList.add('disabled');
+            // Store original text if not already stored
+            if (!button.getAttribute('data-original-text')) {
+                button.setAttribute('data-original-text', button.innerHTML.trim());
+            }
+            button.classList.add('loading-button');
+            button.setAttribute('disabled', 'disabled');
         }
     });
 }
