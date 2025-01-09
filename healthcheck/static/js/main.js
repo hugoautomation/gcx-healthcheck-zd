@@ -232,13 +232,15 @@ function initializeRunCheck() {
     runCheckButton.addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
         
-        // Show loading state immediately
+        // Set initial loading state with message
         resultsDiv.innerHTML = `
-            <div class="text-center my-5">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
+            <div class="results-container">
+                <div class="text-center my-5">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted">Starting health check...</p>
                 </div>
-                <p class="text-muted">Running health check...</p>
             </div>
         `;
 
@@ -279,9 +281,7 @@ function initializeRunCheck() {
             const response = await client.request(options);
 
             if (response.task_id) {
-                // Show initial loading state
-                resultsDiv.innerHTML = response.results_html;
-
+                let loadingMessage = "Running health check...";
                 // Poll for results
                 const pollInterval = setInterval(async () => {
                     try {
@@ -298,8 +298,24 @@ function initializeRunCheck() {
                         } else if (statusResponse.status === 'error') {
                             clearInterval(pollInterval);
                             showError(resultsDiv, new Error(statusResponse.error || 'Task failed'), 'Health Check Error');
+                        } else {
+                            // Update loading message for pending state
+                            if (statusResponse.results_html) {
+                                resultsDiv.innerHTML = statusResponse.results_html;
+                            } else {
+                                // Fallback loading state if no HTML provided
+                                resultsDiv.innerHTML = `
+                                    <div class="results-container">
+                                        <div class="text-center my-5">
+                                            <div class="spinner-border text-primary mb-3" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                            <p class="text-muted">${loadingMessage}</p>
+                                        </div>
+                                    </div>
+                                `;
+                            }
                         }
-                        // Keep showing loading state for 'pending' status
                     } catch (pollError) {
                         clearInterval(pollInterval);
                         showError(resultsDiv, pollError, 'Polling Error');

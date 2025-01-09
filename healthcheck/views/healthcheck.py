@@ -95,9 +95,13 @@ def check_task_status(request, task_id):
         "data": None
     })
     return JsonResponse({
-        "status": "pending",
-        "results_html": results_html
-    })
+            "status": "pending",
+            "results_html": render_report_components({
+                "loading": "Running health check...",
+                "data": None,
+                "error": None
+            })
+        })
 # @csrf_exempt
 # def health_check(request):
 #     if request.method == "POST":
