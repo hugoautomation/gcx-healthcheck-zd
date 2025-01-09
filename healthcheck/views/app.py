@@ -245,27 +245,3 @@ def create_or_update_user(request):
     except Exception as e:
         print("Unexpected Error:", str(e))
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
-
-
-
-@csrf_exempt
-def get_historical_reports(request):
-    """API endpoint to fetch historical reports"""
-    try:
-        installation_id = request.GET.get('installation_id')
-        if not installation_id:
-            return JsonResponse({'error': 'Installation ID required'}, status=400)
-
-        historical_reports = HealthCheckCache.get_historical_reports(installation_id)
-        formatted_reports = format_historical_reports(historical_reports)
-
-        return JsonResponse({
-            'status': 'success',
-            'reports': formatted_reports
-        })
-
-    except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'error': str(e)
-        }, status=500)

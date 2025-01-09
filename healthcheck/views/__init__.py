@@ -1,5 +1,5 @@
 # App views
-from .app import app, create_or_update_user, get_historical_reports
+from .app import app, create_or_update_user
 
 # Billing views
 from .billing import (
@@ -25,7 +25,6 @@ __all__ = [
     # App
     "app",
     "create_or_update_user",
-    "get_historical_reports",
     # Billing
     "billing_page",
     "create_checkout_session",

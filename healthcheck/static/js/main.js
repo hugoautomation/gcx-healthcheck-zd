@@ -219,43 +219,6 @@ function initializeComponents() {
     }
 }
 
-// Add these new functions
-async function fetchHistoricalReports() {
-    try {
-        const baseUrl = getBaseUrl();
-        const response = await client.request({
-            url: `${baseUrl}/api/historical-reports/?installation_id=${metadata.installationId}`,
-            type: 'GET',
-            secure: true
-        });
-        
-        return response.reports;
-    } catch (error) {
-        console.error('Error fetching historical reports:', error);
-        return null;
-    }
-}
-
-function updateHistoricalMenu(reports) {
-    const menu = document.getElementById('historicalReportsMenu');
-    if (!menu) return;
-
-    menu.innerHTML = reports.map(report => `
-        <a class="dropdown-item historical-report" 
-           href="#"
-           data-report-id="${report.id}">
-            ${report.created_at}
-            <span class="badge bg-danger-subtle text-danger ml-2">
-                ${report.total_issues} issues
-            </span>
-        </a>
-    `).join('');
-
-    // Reinitialize click handlers for new menu items
-    initializeHistoricalReports();
-}
-
-
 
 function initializeRunCheck() {
     const runCheckButton = document.getElementById('run-check');
@@ -321,27 +284,11 @@ function initializeRunCheck() {
                 throw new Error(response.error || 'Unknown error occurred');
             }
 
-        // After successful health check, start polling for new report
-        let attempts = 0;
-        const maxAttempts = 30; // Poll for up to 1 minute
-        const pollInterval = setInterval(async () => {
-            attempts++;
-            const reports = await fetchHistoricalReports();
-            
-            if (reports) {
-                updateHistoricalMenu(reports);
-                clearInterval(pollInterval);
-            } else if (attempts >= maxAttempts) {
-                clearInterval(pollInterval);
-                console.warn('Stopped polling for historical reports after max attempts');
-            }
-        }, 2000); // Poll every 2 seconds
-
-    } catch (error) {
-        console.error('Full error details:', error);
-        showError(resultsDiv, error, 'Error Running Health Check');
-    }
-});
+        } catch (error) {
+            console.error('Full error details:', error);
+            showError(resultsDiv, error, 'Error Running Health Check');
+        }
+    });
 }
 
 function initializeHistoricalReports() {
