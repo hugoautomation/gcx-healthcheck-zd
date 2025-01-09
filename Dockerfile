@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8000
 
 # Default command for the container
-CMD ["sh", "-c", "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn zendeskapp.wsgi"]
+CMD ["./start.sh"]

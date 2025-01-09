@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     "healthcheck.apps.HealthcheckConfig",
     "djstripe",
     "django_extensions",
+    "django_celery_results",
 ]
 
 MIDDLEWARE = [
@@ -165,7 +166,12 @@ CACHES = {
     }
 }
 CACHE_ENABLED = True
-
+CELERY_BROKER_URL = os.environ.get("REDIS_URL", "")
+CELERY_RESULT_BACKEND = 'django-db'
+CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_TIMEZONE = "Australia/Tasmania"
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 

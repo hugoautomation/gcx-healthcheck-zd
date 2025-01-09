@@ -8,8 +8,7 @@ from ..utils.formatting import format_response_data
 from ..utils.reports import render_report_components
 from ..utils.stripe import get_default_subscription_status
 
-import segment.analytics as analytics  # Add this import
-
+from ..tasks import run_health_check
 from ..cache_utils import HealthCheckCache, invalidate_app_cache
 import logging
 import csv
@@ -21,167 +20,226 @@ logger = logging.getLogger(__name__)
 def health_check(request):
     if request.method == "POST":
         try:
-            subscription_status = get_default_subscription_status()
-            # Extract data from request
             data = json.loads(request.body) if request.body else {}
-            installation_id = data.get("installation_id")
-            user_id = data.get("user_id")
-            invalidate_app_cache(installation_id)
-
-            logger.info(
-                "Health check details",
-                extra={
-                    "extra_data": json.dumps(
-                        {
-                            "installation_id": installation_id,
-                            "user_id": user_id,
-                            "data": data,
-                        }
-                    )
-                },
-            )
-
-            # Get user and subscription status
-            user = ZendeskUser.objects.get(user_id=user_id)
-            if user:
-                subscription_status = HealthCheckCache.get_subscription_status(
-                    user.subdomain
-                )
-
-            analytics.track(
-                user_id,
-                "Health Check Started",
-                {
-                    "subdomain": data.get("subdomain"),
-                    "email": data.get("email"),
-                    "subscription_status": subscription_status["status"],
-                    "subscription_active": subscription_status["active"],
-                },
-            )
-
-            # Prepare URL
-            url = data.get("url")
-            if not url or not url.startswith("https://"):
-                url = f"https://{url}"
-
-            api_url = (
-                "https://app.configly.io/api/health-check/"
-                if settings.ENVIRONMENT == "production"
-                else "https://django-server-development-1b87.up.railway.app/api/health-check/"
-            )
-
-            # Make API request
-            api_payload = {
-                "url": url,
-                "email": data.get("email"),
-                "api_token": data.get("api_token"),
-                "status": "active",
-            }
-
-            logger.info(
-                "Making API request",
-                extra={
-                    "extra_data": json.dumps(
-                        {
-                            "api_url": api_url,
-                            "subdomain": data.get("subdomain"),
-                            "payload": api_payload,
-                        }
-                    )
-                },
-            )
-
-            response = requests.post(
-                api_url,
-                headers={
-                    "X-API-Token": settings.HEALTHCHECK_TOKEN,
-                    "Content-Type": "application/json",
-                },
-                json=api_payload,
-            )
-
-            if response.status_code == 401:
-                error_message = "Authentication failed. Please verify your Admin Email and API Token are correct."
-                results_html = render_report_components(
-                    {"data": None, "error": error_message}
-                )
-                return JsonResponse({"error": True, "results_html": results_html})
-
-            if response.status_code != 200:
-                results_html = render_report_components(
-                    {"data": None, "error": f"API Error: {response.text}"}
-                )
-                return JsonResponse({"error": True, "results_html": results_html})
-
-            # Get response data
-            response_data = response.json()
-
-            # Create report
-            report = HealthCheckReport.objects.create(
-                installation_id=int(installation_id),
+            
+            # Start async task
+            task = run_health_check.delay(
+                url=data.get("url"),
+                email=data.get("email"),
                 api_token=data.get("api_token"),
-                admin_email=data.get("email"),
+                installation_id=data.get("installation_id"),
+                user_id=data.get("user_id"),
+                subdomain=data.get("subdomain"),
                 instance_guid=data.get("instance_guid"),
-                subdomain=data.get("subdomain", ""),
                 app_guid=data.get("app_guid"),
-                stripe_subscription_id=subscription_status.get("subscription_id"),
+                stripe_subscription_id=data.get("stripe_subscription_id"),
                 version=data.get("version", "1.0.0"),
-                raw_response=response_data,
             )
 
-            analytics.identify(
-                user_id,
-                {
-                    "email": user.email,
-                    "last_healthcheck": report.created_at,
-                },
-            )
-            logger.info(f"subscription_status: {subscription_status}")
-            # Format response data with subscription status
-            # formatted_data = format_response_data(
-            #     response_data,
-            #     subscription_active=subscription_status["active"],
-            #     report_id=report.id,
-            #     last_check=report.created_at,
-            #     is_unlocked=report.is_unlocked,
-            # )
-
-            # Render results using utility function
-            results_html = HealthCheckCache.get_report_results(
-                report.id, subscription_active=subscription_status["active"]
-            )
-            analytics.track(
-                user_id,
-                "Health Check Completed",
-                {
-                    "total_issues": len(response_data.get("issues", [])),
-                    "report_id": report.id,
-                    "critical_issues": sum(
-                        1
-                        for issue in response_data.get("issues", [])
-                        if issue.get("type") == "error"
-                    ),
-                    "warning_issues": sum(
-                        1
-                        for issue in response_data.get("issues", [])
-                        if issue.get("type") == "warning"
-                    ),
-                    "is_unlocked": report.is_unlocked,
-                    "subscription_status": subscription_status["status"],
-                    "subscription_active": subscription_status["active"],
-                },
-            )
-            HealthCheckCache.invalidate_report_cache(report.id, installation_id)
-
-            return JsonResponse({"error": False, "results_html": results_html})
+            return JsonResponse({
+                "task_id": task.id,
+                "status": "pending",
+                "results_html": render_report_components({"loading": "Running health check..."})
+            })
 
         except Exception as e:
+            logger.error(f"Error starting health check: {str(e)}")
             results_html = render_report_components(
                 {"data": None, "error": f"Error processing request: {str(e)}"}
             )
             return JsonResponse({"error": True, "results_html": results_html})
 
     return HttpResponse("Method not allowed", status=405)
+
+
+@csrf_exempt
+def check_task_status(request, task_id):
+    """Check the status of a health check task"""
+    task = run_health_check.AsyncResult(task_id)
+    
+    if task.ready():
+        result = task.get()
+        if result.get("error"):
+            results_html = render_report_components(
+                {"data": None, "error": result["message"]}
+            )
+            return JsonResponse({"status": "error", "results_html": results_html})
+        
+        # Get the report and render it
+        report = HealthCheckReport.objects.get(id=result["report_id"])
+        subscription_status = get_default_subscription_status()
+        
+        results_html = HealthCheckCache.get_report_results(
+            report.id, 
+            subscription_active=subscription_status["active"]
+        )
+        
+        return JsonResponse({
+            "status": "complete",
+            "results_html": results_html
+        })
+    
+    return JsonResponse({
+        "status": "pending",
+        "results_html": render_report_components({"loading": "Running health check..."})
+    })
+
+# @csrf_exempt
+# def health_check(request):
+#     if request.method == "POST":
+#         try:
+#             subscription_status = get_default_subscription_status()
+#             # Extract data from request
+#             data = json.loads(request.body) if request.body else {}
+#             installation_id = data.get("installation_id")
+#             user_id = data.get("user_id")
+#             invalidate_app_cache(installation_id)
+
+#             logger.info(
+#                 "Health check details",
+#                 extra={
+#                     "extra_data": json.dumps(
+#                         {
+#                             "installation_id": installation_id,
+#                             "user_id": user_id,
+#                             "data": data,
+#                         }
+#                     )
+#                 },
+#             )
+
+#             # Get user and subscription status
+#             user = ZendeskUser.objects.get(user_id=user_id)
+#             if user:
+#                 subscription_status = HealthCheckCache.get_subscription_status(
+#                     user.subdomain
+#                 )
+
+#             analytics.track(
+#                 user_id,
+#                 "Health Check Started",
+#                 {
+#                     "subdomain": data.get("subdomain"),
+#                     "email": data.get("email"),
+#                     "subscription_status": subscription_status["status"],
+#                     "subscription_active": subscription_status["active"],
+#                 },
+#             )
+
+#             # Prepare URL
+#             url = data.get("url")
+#             if not url or not url.startswith("https://"):
+#                 url = f"https://{url}"
+
+#             api_url = (
+#                 "https://app.configly.io/api/health-check/"
+#                 if settings.ENVIRONMENT == "production"
+#                 else "https://django-server-development-1b87.up.railway.app/api/health-check/"
+#             )
+
+#             # Make API request
+#             api_payload = {
+#                 "url": url,
+#                 "email": data.get("email"),
+#                 "api_token": data.get("api_token"),
+#                 "status": "active",
+#             }
+
+#             logger.info(
+#                 "Making API request",
+#                 extra={
+#                     "extra_data": json.dumps(
+#                         {
+#                             "api_url": api_url,
+#                             "subdomain": data.get("subdomain"),
+#                             "payload": api_payload,
+#                         }
+#                     )
+#                 },
+#             )
+
+#             response = requests.post(
+#                 api_url,
+#                 headers={
+#                     "X-API-Token": settings.HEALTHCHECK_TOKEN,
+#                     "Content-Type": "application/json",
+#                 },
+#                 json=api_payload,
+#             )
+
+#             if response.status_code == 401:
+#                 error_message = "Authentication failed. Please verify your Admin Email and API Token are correct."
+#                 results_html = render_report_components(
+#                     {"data": None, "error": error_message}
+#                 )
+#                 return JsonResponse({"error": True, "results_html": results_html})
+
+#             if response.status_code != 200:
+#                 results_html = render_report_components(
+#                     {"data": None, "error": f"API Error: {response.text}"}
+#                 )
+#                 return JsonResponse({"error": True, "results_html": results_html})
+
+#             # Get response data
+#             response_data = response.json()
+
+#             # Create report
+#             report = HealthCheckReport.objects.create(
+#                 installation_id=int(installation_id),
+#                 api_token=data.get("api_token"),
+#                 admin_email=data.get("email"),
+#                 instance_guid=data.get("instance_guid"),
+#                 subdomain=data.get("subdomain", ""),
+#                 app_guid=data.get("app_guid"),
+#                 stripe_subscription_id=subscription_status.get("subscription_id"),
+#                 version=data.get("version", "1.0.0"),
+#                 raw_response=response_data,
+#             )
+
+#             analytics.identify(
+#                 user_id,
+#                 {
+#                     "email": user.email,
+#                     "last_healthcheck": report.created_at,
+#                 },
+#             )
+#             logger.info(f"subscription_status: {subscription_status}")
+
+#             results_html = HealthCheckCache.get_report_results(
+#                 report.id, subscription_active=subscription_status["active"]
+#             )
+#             analytics.track(
+#                 user_id,
+#                 "Health Check Completed",
+#                 {
+#                     "total_issues": len(response_data.get("issues", [])),
+#                     "report_id": report.id,
+#                     "critical_issues": sum(
+#                         1
+#                         for issue in response_data.get("issues", [])
+#                         if issue.get("type") == "error"
+#                     ),
+#                     "warning_issues": sum(
+#                         1
+#                         for issue in response_data.get("issues", [])
+#                         if issue.get("type") == "warning"
+#                     ),
+#                     "is_unlocked": report.is_unlocked,
+#                     "subscription_status": subscription_status["status"],
+#                     "subscription_active": subscription_status["active"],
+#                 },
+#             )
+#             HealthCheckCache.invalidate_report_cache(report.id, installation_id)
+
+#             return JsonResponse({"error": False, "results_html": results_html})
+
+#         except Exception as e:
+#             results_html = render_report_components(
+#                 {"data": None, "error": f"Error processing request: {str(e)}"}
+#             )
+#             return JsonResponse({"error": True, "results_html": results_html})
+
+#     return HttpResponse("Method not allowed", status=405)
 
 
 @csrf_exempt

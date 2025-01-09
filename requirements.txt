@@ -10,6 +10,10 @@ stripe
 redis==5.2.1
 hiredis==3.1.0
 
+# Asyncronous support
+celery==5.3.1   
+django-celery-results
+
 # Testing dependencies
 pytest==7.4.3
 pytest-django==4.7.0

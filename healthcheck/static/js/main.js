@@ -260,7 +260,7 @@ function initializeRunCheck() {
             console.log('Making request with data:', { ...requestData, api_token: '[REDACTED]' });
 
             const options = {
-                url: `${baseUrl}/health_check/`,  // Note: Changed from /check/ to /health_check/
+                url: `${baseUrl}/health_check/`,
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(requestData),
@@ -278,17 +278,28 @@ function initializeRunCheck() {
 
             // Make the request
             const response = await client.request(options);
-            console.log('Response received:', response);
+            
+            if (response.task_id) {
+                // Poll for results
+                const pollInterval = setInterval(async () => {
+                    const statusResponse = await client.request({
+                        url: `${baseUrl}/health_check/status/${response.task_id}/`,
+                        type: 'GET',
+                        secure: true
+                    });
 
-            // Check if we have results_html, regardless of error status
-            if (response.results_html) {
-                resultsDiv.innerHTML = response.results_html;
-                initializeComponents();
+                    resultsDiv.innerHTML = statusResponse.results_html;
+                    
+                    if (statusResponse.status !== 'pending') {
+                        clearInterval(pollInterval);
+                        if (statusResponse.status === 'complete') {
+                            initializeComponents();
+                        }
+                    }
+                }, 2000); // Poll every 2 seconds
             } else {
-                // Only throw if we don't have results to display
                 throw new Error(response.error || 'Unknown error occurred');
             }
-
         } catch (error) {
             console.error('Full error details:', error);
             showError(resultsDiv, error, 'Error Running Health Check');
