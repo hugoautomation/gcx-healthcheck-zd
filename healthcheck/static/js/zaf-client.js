@@ -1,3 +1,8 @@
+
+function getBaseUrl() {
+    const bodyElement = document.body;
+    return bodyElement.getAttribute('data-environment') || 'https://gcx-healthcheck-zd-development.up.railway.app';
+}
 const ZAFClientSingleton = {
     client: null,
     metadata: null,
@@ -14,9 +19,7 @@ const ZAFClientSingleton = {
     async _cacheOnServer() {
 
         // Cache data on server
-        const baseUrl = window.ENVIRONMENT === 'production'
-            ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-            : 'https://gcx-healthcheck-zd-production.up.railway.app';
+        const baseUrl = getBaseUrl();
 
         try {
             await this.client.request({
@@ -142,10 +145,8 @@ async trackAnalytics() {
         }
 
     
-            const baseUrl = window.ENVIRONMENT === 'production'
-                ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                : 'https://gcx-healthcheck-zd-production.up.railway.app';
-    
+        const baseUrl = getBaseUrl();
+
             try {
                 const options = {
                     url: `${baseUrl}/api/users/create-or-update/`,

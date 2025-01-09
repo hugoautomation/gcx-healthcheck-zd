@@ -28,7 +28,10 @@ from django.db import transaction
 from djstripe.models import Event, Subscription
 from .cache_utils import HealthCheckCache, invalidate_app_cache
 
-stripe.api_key = os.environ.get("STRIPE_LIVE_SECRET_KEY", "")
+if settings.DJANGO_ENV == "production":
+    stripe.api_key = os.environ.get("STRIPE_LIVE_SECRET_KEY", "")
+else:
+    stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
 
 logger = logging.getLogger(__name__)
 
@@ -1115,9 +1118,11 @@ def create_checkout_session(request):
             return JsonResponse({"error": "User not found"}, status=404)
 
         # Create Stripe checkout session
-        stripe.api_key = settings.STRIPE_LIVE_SECRET_KEY
+        if settings.DJANGO_ENV == "production":
+            stripe.api_key = os.environ.get("STRIPE_LIVE_SECRET_KEY", "")
+        else:
+            stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")        
         stripe.api_version = "2020-03-02"
-
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             client_reference_id=installation_id,
