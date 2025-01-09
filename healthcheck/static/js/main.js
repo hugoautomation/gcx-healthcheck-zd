@@ -277,24 +277,34 @@ function initializeRunCheck() {
             });
 
             // Make the request
-            const response = await client.request(options);
-            
             if (response.task_id) {
+                // Show initial loading state
+                resultsDiv.innerHTML = response.results_html;
+
                 // Poll for results
                 const pollInterval = setInterval(async () => {
-                    const statusResponse = await client.request({
-                        url: `${baseUrl}/health_check/status/${response.task_id}/`,
-                        type: 'GET',
-                        secure: true
-                    });
+                    try {
+                        const statusResponse = await client.request({
+                            url: `${baseUrl}/health_check/status/${response.task_id}/`,
+                            type: 'GET',
+                            secure: true
+                        });
 
-                    resultsDiv.innerHTML = statusResponse.results_html;
-                    
-                    if (statusResponse.status !== 'pending') {
-                        clearInterval(pollInterval);
-                        if (statusResponse.status === 'complete') {
-                            initializeComponents();
+                        // Only update HTML if we have new content
+                        if (statusResponse.results_html) {
+                            resultsDiv.innerHTML = statusResponse.results_html;
                         }
+                        
+                        if (statusResponse.status === 'complete') {
+                            clearInterval(pollInterval);
+                            initializeComponents();
+                        } else if (statusResponse.status === 'error') {
+                            clearInterval(pollInterval);
+                            showError(resultsDiv, new Error(statusResponse.error || 'Task failed'), 'Health Check Error');
+                        }
+                    } catch (pollError) {
+                        clearInterval(pollInterval);
+                        showError(resultsDiv, pollError, 'Polling Error');
                     }
                 }, 2000); // Poll every 2 seconds
             } else {

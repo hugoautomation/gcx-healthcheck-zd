@@ -51,7 +51,6 @@ def health_check(request):
 
     return HttpResponse("Method not allowed", status=405)
 
-
 @csrf_exempt
 def check_task_status(request, task_id):
     """Check the status of a health check task"""
@@ -63,22 +62,35 @@ def check_task_status(request, task_id):
             results_html = render_report_components(
                 {"data": None, "error": result["message"]}
             )
-            return JsonResponse({"status": "error", "results_html": results_html})
+            return JsonResponse({
+                "status": "error", 
+                "error": result["message"],
+                "results_html": results_html
+            })
         
-        # Get the report and render it
-        report = HealthCheckReport.objects.get(id=result["report_id"])
-        subscription_status = get_default_subscription_status()
-        
-        results_html = HealthCheckCache.get_report_results(
-            report.id, 
-            subscription_active=subscription_status["active"]
-        )
-        
-        return JsonResponse({
-            "status": "complete",
-            "results_html": results_html
-        })
+        try:
+            # Get the report and render it
+            report = HealthCheckReport.objects.get(id=result["report_id"])
+            subscription_status = get_default_subscription_status()
+            
+            results_html = HealthCheckCache.get_report_results(
+                report.id, 
+                subscription_active=subscription_status["active"]
+            )
+            
+            return JsonResponse({
+                "status": "complete",
+                "results_html": results_html
+            })
+        except Exception as e:
+            logger.error(f"Error rendering report: {str(e)}")
+            return JsonResponse({
+                "status": "error",
+                "error": str(e),
+                "results_html": render_report_components({"error": str(e)})
+            })
     
+    # For pending tasks, return the loading state
     return JsonResponse({
         "status": "pending",
         "results_html": render_report_components({"loading": "Running health check..."})
