@@ -3,6 +3,7 @@ from .views import (
     # App views
     app,
     create_or_update_user,
+    get_historical_reports,
     # Billing views
     billing_page,
     create_checkout_session,
@@ -71,6 +72,7 @@ urlpatterns = [
         create_payment_intent,
         name="create_payment_intent",
     ),
+    path("api/historical-reports/", get_historical_reports, name="get_historical_reports"),
     path("api/cache/zaf-data/", cache_views.cache_zaf_data, name="cache_zaf_data"),
     path(
         "api/cache/zaf-data/",

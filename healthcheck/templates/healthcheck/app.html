@@ -48,10 +48,13 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
 
                     {% if historical_reports %}
                     <div class="dropdown d-inline">
-                        <button class="btn c-btn c-btn--sm c-btn--secondary dropdown-toggle d-inline-block" type="button" id="historyDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn c-btn c-btn--sm c-btn--secondary dropdown-toggle d-inline-block" 
+                                type="button" id="historyDropdown" 
+                                data-bs-toggle="dropdown" 
+                                aria-expanded="false">
                             History
                         </button>
-                        <div class="dropdown-menu dropdown-menu-right scrollable-menu" aria-labelledby="historyDropdown">
+                        <div id="historicalReportsMenu" class="dropdown-menu dropdown-menu-right scrollable-menu" aria-labelledby="historyDropdown">
                             {% for report in historical_reports %}
                             <a class="dropdown-item historical-report" 
                                href="#"
@@ -59,7 +62,6 @@ class="btn c-btn c-btn--sm c-btn--basic d-inline-block">Monitoring</a>
                                 {{ report.created_at }}
                                 <span class="badge bg-danger-subtle text-danger ml-2">
                                     {{ report.total_issues }} issues
-                                  
                                 </span>
                             </a>
                             {% endfor %}
