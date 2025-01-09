@@ -8,8 +8,24 @@ function getBaseUrl() {
     return bodyElement.getAttribute('data-environment') || 'https://gcx-healthcheck-zd-development.up.railway.app';
 }
 
+// Add this new function at the top with other utility functions
+function showButtons(show = true) {
+    const buttons = document.querySelectorAll('[data-preserve-params]');
+    buttons.forEach(button => {
+        if (show) {
+            button.style.visibility = 'visible';
+            button.classList.remove('disabled');
+        } else {
+            button.style.visibility = 'hidden';
+            button.classList.add('disabled');
+        }
+    });
+}
+
 async function initializeApp() {
     try {
+        showButtons(false);
+
         // Initialize ZAF client
         await ZAFClientSingleton.init();
         client = ZAFClientSingleton.client;
@@ -18,7 +34,8 @@ async function initializeApp() {
 
         if (!await ZAFClientSingleton.ensureUrlParams()) return;
         
-        URLParamManager.initializeParamPreservation();
+        await URLParamManager.initializeParamPreservation();
+        showButtons(true);
 
         // Initialize all components
         initializeRunCheck();
