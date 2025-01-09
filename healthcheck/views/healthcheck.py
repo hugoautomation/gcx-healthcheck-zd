@@ -332,10 +332,15 @@ def get_historical_report(request, report_id):
             is_unlocked=report.is_unlocked,
         )
 
-        # Use render_report_components utility
-        results_html = render_report_components(report_data)
-
-        return JsonResponse({"results_html": results_html})
+        try:
+            # Use render_report_components utility
+            results_html = render_report_components(report_data)
+            return JsonResponse({"results_html": results_html})
+        except Exception as template_error:
+            logger.error(f"Template rendering error: {str(template_error)}")
+            return JsonResponse({
+                "error": "Error rendering report template"
+            }, status=500)
 
     except HealthCheckReport.DoesNotExist:
         logger.error(f"Report {report_id} not found")
