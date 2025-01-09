@@ -19,9 +19,10 @@ from djstripe.models import Event, Subscription
 from ..cache_utils import HealthCheckCache, invalidate_app_cache
 
 if settings.DJANGO_ENV == "production":
-    stripe.api_key = os.environ.get("STRIPE_LIVE_SECRET_KEY", "")
+    stripe.api_key = settings.STRIPE_LIVE_SECRET_KEY
 else:
-    stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
+    stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
+
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +188,14 @@ def billing_page(request):
     return render(request, "healthcheck/billing.html", context)
 
 
+# At the top of the file, modify the Stripe key setup
+if settings.DJANGO_ENV == "production":
+    stripe.api_key = settings.STRIPE_LIVE_SECRET_KEY
+else:
+    stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
+
+logger = logging.getLogger(__name__)
+
 @csrf_exempt
 def create_checkout_session(request):
     try:
@@ -204,16 +213,14 @@ def create_checkout_session(request):
         except ZendeskUser.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
 
+        # Log the environment and price ID for debugging
+        logger.info(f"Environment: {settings.DJANGO_ENV}")
+        logger.info(f"Using price ID: {price_id}")
+        logger.info(f"Using Stripe key: {'Live' if settings.DJANGO_ENV == 'production' else 'Test'}")
+
         # Create Stripe checkout session
-        if settings.DJANGO_ENV == "production":
-            stripe.api_key = os.environ.get("STRIPE_LIVE_SECRET_KEY", "")
-        else:
-            stripe.api_key = os.environ.get("STRIPE_TEST_SECRET_KEY", "")
-        stripe.api_version = "2020-03-02"
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=["card"],
-            client_reference_id=installation_id,
-            customer_email=user.email,
             mode="subscription",
             allow_promotion_codes=True,
             billing_address_collection="required",
@@ -237,16 +244,12 @@ def create_checkout_session(request):
                 "user_id": user_id,
             },
             success_url=request.build_absolute_uri("/payment/subscription/success/"),
-            # cancel_url=request.build_absolute_uri(
-            #     f"/billing/?installation_id={installation_id}&canceled=true"
-            # ),
         )
 
         return JsonResponse({"url": checkout_session.url})
 
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON data"}, status=400)
     except Exception as e:
+        logger.error(f"Checkout session error: {str(e)}", exc_info=True)
         return JsonResponse({"error": str(e)}, status=400)
 
 
