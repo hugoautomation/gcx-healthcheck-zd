@@ -4,10 +4,12 @@ import requests
 import logging
 from django.conf import settings
 logger = logging.getLogger(__name__)
-
 @shared_task
 def run_health_check(url, email, api_token, installation_id, user_id, subdomain, instance_guid, app_guid, stripe_subscription_id, version):
     try:
+        # Construct proper Zendesk URL
+        zendesk_url = f"https://{subdomain}.zendesk.com"
+        
         api_url = (
             "https://app.configly.io/api/health-check/"
             if settings.ENVIRONMENT == "production"
@@ -22,7 +24,7 @@ def run_health_check(url, email, api_token, installation_id, user_id, subdomain,
                 "Content-Type": "application/json",
             },
             json={
-                "url": url,
+                "url": zendesk_url,  # Use the properly constructed URL
                 "email": email,
                 "api_token": api_token,
                 "status": "active",

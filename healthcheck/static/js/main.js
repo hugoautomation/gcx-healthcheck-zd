@@ -244,7 +244,7 @@ function initializeRunCheck() {
 
             // Prepare request data
             const requestData = {
-                url: context.account.subdomain + '.zendesk.com',
+                url: context.account.subdomain,
                 email: '{{setting.admin_email}}',
                 api_token: '{{setting.api_token}}',
                 instance_guid: context.instanceGuid,
