@@ -24,9 +24,10 @@
     </script>
    
     <script src="{% static 'js/main.js' %}"></script>
+
 </head>
 {% if environment == "production" %}
-<body data-environment="https://gcx-healthcheck-zd-production.up.railway.app">
+<body  data-environment="https://gcx-healthcheck-zd-production.up.railway.app">
 {% else %}
 <body data-environment="https://gcx-healthcheck-zd-development.up.railway.app">
 {% endif %}

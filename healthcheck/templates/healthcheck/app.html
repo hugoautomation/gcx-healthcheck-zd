@@ -7,6 +7,11 @@
             max-height: 200px;
             overflow-x: hidden;
         }
+        .scrollable-body {
+            height: auto;
+            max-height: 80vh;
+            overflow-x: hidden;
+        }
     </style>
     {% if loading %}
     <div id="results">
@@ -14,7 +19,7 @@
     </div>
 {% else %}
 
-    <div class="container">
+    <div class="container scrollable-body">
         <div class="sticky-header">
             <div class="row align-items-center my-3 justify-content-between">
                 <div class="col-auto">
