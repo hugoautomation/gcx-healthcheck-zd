@@ -282,19 +282,16 @@ function initializeRunCheck() {
                             type: 'GET',
                             secure: true
                         });
-
-                        // Only update HTML if we have new content
-                        if (statusResponse.results_html) {
-                            resultsDiv.innerHTML = statusResponse.results_html;
-                        }
                         
                         if (statusResponse.status === 'complete') {
                             clearInterval(pollInterval);
+                            resultsDiv.innerHTML = statusResponse.results_html;
                             initializeComponents();
                         } else if (statusResponse.status === 'error') {
                             clearInterval(pollInterval);
                             showError(resultsDiv, new Error(statusResponse.error || 'Task failed'), 'Health Check Error');
                         }
+                        // If status is 'pending', keep showing loading state
                     } catch (pollError) {
                         clearInterval(pollInterval);
                         showError(resultsDiv, pollError, 'Polling Error');

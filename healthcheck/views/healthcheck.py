@@ -50,7 +50,6 @@ def health_check(request):
             return JsonResponse({"error": True, "results_html": results_html})
 
     return HttpResponse("Method not allowed", status=405)
-
 @csrf_exempt
 def check_task_status(request, task_id):
     """Check the status of a health check task"""
@@ -90,10 +89,9 @@ def check_task_status(request, task_id):
                 "results_html": render_report_components({"error": str(e)})
             })
     
-    # For pending tasks, return the loading state
+    # For pending tasks, only return status without HTML
     return JsonResponse({
-        "status": "pending",
-        "results_html": render_report_components({"loading": "Running health check..."})
+        "status": "pending"
     })
 
 # @csrf_exempt
