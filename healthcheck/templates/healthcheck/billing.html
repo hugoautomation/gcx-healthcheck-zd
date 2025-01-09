@@ -200,6 +200,10 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
 
 
     <script>
+        function getBaseUrl() {
+            const bodyElement = document.body;
+            return bodyElement.getAttribute('data-environment') || 'https://gcx-healthcheck-zd-development.up.railway.app';
+        }
         document.addEventListener('DOMContentLoaded', async () => {
             await ZAFClientSingleton.quickInit();
             
@@ -210,10 +214,8 @@ class="btn c-btn c-btn--secondary c-btn--sm">Back to Dashboard</a>
                         const planType = button.closest('.card').querySelector('.card-header h4').textContent.toLowerCase();
                         
                         // Get base URL based on environment
-                        const baseUrl = window.ENVIRONMENT === 'production' 
-                            ? 'https://gcx-healthcheck-zd-production.up.railway.app'
-                            : 'https://gcx-healthcheck-zd-production.up.railway.app';
-    
+                        const baseUrl = getBaseUrl();
+                        
                         const response = await ZAFClientSingleton.client.request({
                             url: `${baseUrl}/create-checkout-session/`,
                             type: 'POST',
