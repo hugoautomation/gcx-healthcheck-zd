@@ -89,6 +89,8 @@ def check_task_status(request, task_id):
     return JsonResponse({
         "status": "pending"
     })
+
+
 # @csrf_exempt
 # def health_check(request):
 #     if request.method == "POST":

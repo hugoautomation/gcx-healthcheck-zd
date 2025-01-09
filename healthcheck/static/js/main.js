@@ -224,6 +224,12 @@ function initializeComponents() {
     }
 }
 
+function updateLoadingProgress(progressBar, startTime, duration) {
+    const elapsed = (Date.now() - startTime) / 1000; // Convert to seconds
+    const progress = Math.min((elapsed / duration) * 100, 95); // Max at 95% until complete
+    progressBar.style.width = `${progress}%`;
+    progressBar.setAttribute('aria-valuenow', progress);
+}
 
 function initializeRunCheck() {
     const runCheckButton = document.getElementById('run-check');
@@ -231,18 +237,34 @@ function initializeRunCheck() {
 
     runCheckButton.addEventListener('click', async () => {
         const resultsDiv = document.getElementById('results');
+        const startTime = Date.now();
         
-        // Set initial loading state with message
+        // Show loading state with progress bar
         resultsDiv.innerHTML = `
             <div class="results-container">
                 <div class="text-center my-5">
                     <div class="spinner-border text-primary mb-3" role="status">
                         <span class="visually-hidden">Loading...</span>
                     </div>
-                    <p class="text-muted">Starting health check...</p>
+                    <p class="text-muted mb-3">Running health check...</p>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             aria-valuenow="0" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100" 
+                             style="width: 0%">
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
+
+        const progressBar = resultsDiv.querySelector('.progress-bar');
+        const progressInterval = setInterval(() => {
+            updateLoadingProgress(progressBar, startTime, 90); // 90 seconds duration
+        }, 100); // Update every 100ms for smooth animation
+
 
         try {
             if (!client || !context || !metadata) {
