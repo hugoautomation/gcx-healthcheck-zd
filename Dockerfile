@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8000
 
 # Default command for the container
-CMD ["./start.sh"]
+CMD ["/bin/bash", "/app/start.sh"]
