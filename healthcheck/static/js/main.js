@@ -14,19 +14,22 @@ function showButtons(show = true) {
     buttons.forEach(button => {
         if (show) {
             button.innerHTML = button.getAttribute('data-original-text');
-            button.classList.remove('loading-button');
+            button.classList.remove('disabled');
             button.removeAttribute('disabled');
         } else {
             // Store original text if not already stored
             if (!button.getAttribute('data-original-text')) {
                 button.setAttribute('data-original-text', button.innerHTML.trim());
             }
-            button.classList.add('loading-button');
+            button.innerHTML = `
+                <span class="spinner-border spinner-border-sm" role="status"></span>
+                <span class="ms-2">Loading...</span>
+            `;
+            button.classList.add('disabled');
             button.setAttribute('disabled', 'disabled');
         }
     });
 }
-
 async function initializeApp() {
     try {
         showButtons(false);
