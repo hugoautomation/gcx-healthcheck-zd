@@ -19,6 +19,7 @@ from .healthcheck import (
     download_report_csv,
     check_unlock_status,
     get_historical_report,
+    check_task_status,
 )
 
 __all__ = [
@@ -39,4 +40,5 @@ __all__ = [
     "download_report_csv",
     "check_unlock_status",
     "get_historical_report",
+    "check_task_status",
 ]
