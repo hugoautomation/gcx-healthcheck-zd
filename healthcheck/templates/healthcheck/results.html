@@ -12,12 +12,12 @@
     <div class="alert alert-danger" role="alert">
         {{ error }}
     </div>
-    {% elif not data %}
-        <div class="alert alert-info" role="alert">
-            <h5>Welcome to Zendesk Healthcheck</h5>
-            <p>Click "Run Health Check" to analyze your Zendesk instance.</p>
-        </div>
-    {% else %}
+{% elif not data %}
+    <div class="alert alert-info" role="alert">
+        <h5>Welcome to Zendesk Healthcheck</h5>
+        <p>Click "Run Health Check" to analyze your Zendesk instance.</p>
+    </div>
+{% else %}
 <div class="row my-3">
     <div class="col">
         <div class="text-muted small mb-3 d-inline-block">Time since report: {{ data.time_since_check }} ago {% if data.report_created_at %}<br>Report Date: {{ data.report_created_at }}{% endif %}</div>
