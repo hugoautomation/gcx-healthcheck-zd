@@ -1,36 +1,4 @@
-from django.template.loader import render_to_string
-from .models import HealthCheckMonitoring
 from django.utils.timesince import timesince
-from zendeskapp import settings
-from djstripe.models import WebhookEndpoint
-
-
-def get_default_subscription_status():
-    """Helper function to return default subscription status"""
-    return {
-        "status": "inactive",
-        "active": False,
-        "plan": "Free",
-        "current_period_end": None,
-        "subscription_id": None,
-    }
-
-
-def create_webhook_endpoint(request):
-    """Create or get a webhook endpoint"""
-    webhook_url = request.build_absolute_uri("/stripe/webhook/")
-
-    # Try to get existing webhook or create new one
-    webhook_endpoint = WebhookEndpoint.objects.filter(url=webhook_url).first()
-    if not webhook_endpoint:
-        webhook_endpoint = WebhookEndpoint.objects.create(
-            url=webhook_url,
-            secret=settings.DJSTRIPE_WEBHOOK_SECRET,
-            active=True,
-            # api_version=settings.STRIPE_API_VERSION,
-        )
-
-    return webhook_endpoint
 
 
 def format_response_data(
@@ -121,52 +89,6 @@ def format_response_data(
             }
             for issue in issues
         ],
-    }
-
-
-def render_report_components(formatted_data):
-    """Helper function to render report template"""
-    # If it's an error message, don't nest it under 'data'
-    if "error" in formatted_data and len(formatted_data) == 1:
-        return render_to_string("healthcheck/results.html", formatted_data)
-    # Otherwise, wrap it in 'data' as before
-    return render_to_string("healthcheck/results.html", {"data": formatted_data})
-
-def get_monitoring_context(installation_id, subscription_active, latest_report=None):
-    """Helper function to get monitoring settings context"""
-    try:
-        monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
-        
-        # First check if subscription is active, if not, monitoring should be disabled
-        if not subscription_active:
-            monitoring_data = {
-                "is_active": False,  # Force inactive if no subscription
-                "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails or [],
-                "instance_guid": monitoring.instance_guid,
-                "subdomain": monitoring.subdomain,
-            }
-        else:
-            monitoring_data = {
-                "is_active": monitoring.is_active,  # Only use monitoring setting if subscription is active
-                "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails or [],
-                "instance_guid": monitoring.instance_guid,
-                "subdomain": monitoring.subdomain,
-            }
-            
-    except HealthCheckMonitoring.DoesNotExist:
-        monitoring_data = {
-            "is_active": False,
-            "frequency": "weekly",
-            "notification_emails": [],
-            "instance_guid": latest_report.instance_guid if latest_report else "",
-            "subdomain": latest_report.subdomain if latest_report else "",
-        }
-
-    return {
-        "monitoring_settings": monitoring_data,
-        "subscription_active": subscription_active,
     }
 
 

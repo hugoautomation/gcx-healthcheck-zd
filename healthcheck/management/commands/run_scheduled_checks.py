@@ -7,8 +7,7 @@ import requests
 from zendeskapp import settings
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-from healthcheck.models import ZendeskUser
-from healthcheck.cache_utils import HealthCheckCache
+
 
 class Command(BaseCommand):
     help = "Run scheduled health checks"
