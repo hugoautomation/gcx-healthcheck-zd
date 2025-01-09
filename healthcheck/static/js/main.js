@@ -239,10 +239,7 @@ function initializeRunCheck() {
                 throw new Error('Client, context, or metadata not initialized');
             }
 
-            // Determine base URL based on environment
             const baseUrl = getBaseUrl();
-
-            // Prepare request data
             const requestData = {
                 url: context.account.subdomain,
                 email: '{{setting.admin_email}}',
@@ -257,8 +254,6 @@ function initializeRunCheck() {
                 version: metadata.version
             };
 
-            console.log('Making request with data:', { ...requestData, api_token: '[REDACTED]' });
-
             const options = {
                 url: `${baseUrl}/health_check/`,
                 type: 'POST',
@@ -272,11 +267,9 @@ function initializeRunCheck() {
                 }
             };
 
-            console.log('Request options:', { 
-                ...options
-            });
+            // Make the initial request
+            const response = await client.request(options);
 
-            // Make the request
             if (response.task_id) {
                 // Show initial loading state
                 resultsDiv.innerHTML = response.results_html;
