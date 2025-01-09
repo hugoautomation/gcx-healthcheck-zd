@@ -298,36 +298,16 @@ def download_report_csv(request, report_id):
 
 @csrf_exempt
 def check_unlock_status(request):
-    try:
-        report_id = request.GET.get("report_id")
-        if not report_id:
-            return JsonResponse({"error": "No report ID provided"}, status=400)
+    report_id = request.GET.get("report_id")
+    if not report_id:
+        return JsonResponse({"error": "No report ID provided"}, status=400)
 
-        logger.info(f"Checking unlock status for report: {report_id}")
-        
-        # Get report directly from database first
-        try:
-            report = HealthCheckReport.objects.get(id=report_id)
-            is_unlocked = report.is_unlocked
-            logger.info(f"Report {report_id} unlock status: {is_unlocked}")
-            
-            # Update cache with current status
-            HealthCheckCache.set_report_unlock_status(report_id, is_unlocked)
-            
-            return JsonResponse({
-                "is_unlocked": is_unlocked, 
-                "report_id": report_id
-            })
-            
-        except HealthCheckReport.DoesNotExist:
-            logger.error(f"Report {report_id} not found")
-            return JsonResponse({"error": "Report not found"}, status=404)
-            
-    except Exception as e:
-        logger.error(f"Error checking unlock status: {str(e)}", exc_info=True)
-        return JsonResponse({
-            "error": f"Error checking unlock status: {str(e)}"
-        }, status=500)
+    # Get cached unlock status
+    is_unlocked = HealthCheckCache.get_report_unlock_status(report_id)
+    if is_unlocked is None:
+        return JsonResponse({"error": "Report not found"}, status=404)
+
+    return JsonResponse({"is_unlocked": is_unlocked, "report_id": report_id})
 
 
 @csrf_exempt
