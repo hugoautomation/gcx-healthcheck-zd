@@ -26,7 +26,7 @@
                     {% if subscription.is_active %}
                    <h2 class="rounded bg-primary-subtle text-primary font-semibold py-1 px-2 d-inline-block">Premium Plan</h2>
                    
-                   <a class="c-btn c-btn--sm d-inline-block loading-button" 
+                   <a class="btn c-btn c-btn--sm d-inline-block" 
                    href="{% url 'billing' %}"
                    data-preserve-params>
                     Billing
@@ -34,7 +34,7 @@
                     {% else %}
                     <h2 class="rounded bg-body-secondary font-semibold d-inline-block me-2 py-1 px-2">Free Plan</h2>
                     
-                    <a class="c-btn  c-btn--sm d-inline-block" href="{% url 'billing' %}" data-preserve-params>Upgrade</a>
+                    <a class="btn c-btn c-btn--sm d-inline-block" href="{% url 'billing' %}" data-preserve-params>Upgrade</a>
                     
                     {% endif %}
                 </div>
