@@ -134,83 +134,90 @@ function initializeFilters() {
     categoryFilter.addEventListener('change', filterIssues);
 }
 
+
 function initializeUnlockButtons() {
     document.querySelectorAll('.unlock-report').forEach(button => {
-        button.replaceWith(button.cloneNode(true));
-        const newButton = document.querySelector(`.unlock-report[data-report-id="${button.dataset.reportId}"]`);
-
-        if (newButton) {
-            newButton.addEventListener('click', async function() {
-                const reportId = this.dataset.reportId;
+        button.addEventListener('click', async function() {
+            const reportId = this.dataset.reportId;
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                const baseUrl = getBaseUrl();
                 
-                try {
-                    const baseUrl = getBaseUrl();
+                // Show loading state
+                showLoadingState(resultsDiv);
 
-                    // Create a payment intent with report metadata
-                    const response = await client.request({
-                        url: `${baseUrl}/create-payment-intent/`,
-                        type: 'POST',
-                        data: JSON.stringify({
-                            report_id: reportId,
-                            installation_id: metadata.installationId,
-                            user_id: ZAFClientSingleton.userInfo?.id
-                        }),
-                        secure: true
-                    });
+                // Create payment intent
+                const response = await client.request({
+                    url: `${baseUrl}/create-payment-intent/`,
+                    type: 'POST',
+                    data: JSON.stringify({
+                        report_id: reportId,
+                        installation_id: metadata.installationId,
+                        user_id: ZAFClientSingleton.userInfo?.id
+                    }),
+                    secure: true
+                });
 
-                    if (response.error) {
-                        throw new Error(response.error);
-                    }
+                if (response.error) {
+                    throw new Error(response.error);
+                }
 
-                    // Open Stripe payment page
-                    const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
-                    window.open(response.url, 'StripePayment', windowFeatures);
+                // Open Stripe payment page
+                const windowFeatures = 'width=800,height=600,menubar=no,toolbar=no,location=no,status=no';
+                const paymentWindow = window.open(response.url, 'StripePayment', windowFeatures);
 
-                    // Start polling for unlock status
-                    const pollUnlockStatus = async () => {
-                        try {
-                            const statusResponse = await client.request({
-                                url: `${baseUrl}/check-unlock-status/?report_id=${reportId}`,
-                                type: 'GET',
-                                secure: true
-                            });
+                // Poll for unlock status with retries
+                const pollUnlockStatus = async (retryCount = 0) => {
+                    try {
+                        const statusResponse = await client.request({
+                            url: `${baseUrl}/check-unlock-status/?report_id=${reportId}`,
+                            type: 'GET',
+                            secure: true
+                        });
 
-                            if (statusResponse.is_unlocked) {
-                                // Refresh the report content
+                        if (statusResponse.is_unlocked) {
+                            try {
                                 const reportResponse = await client.request({
                                     url: `${baseUrl}/report/${reportId}/?installation_id=${metadata.installationId}&user_id=${ZAFClientSingleton.userInfo?.id}`,
                                     type: 'GET',
                                     secure: true
                                 });
                                 
-                                document.getElementById('results').innerHTML = reportResponse.results_html;
+                                resultsDiv.innerHTML = reportResponse.results_html;
                                 initializeComponents();
-                                return true; // Stop polling
+                                return true;
+                            } catch (reportError) {
+                                console.error('Error loading report:', reportError);
+                                showError(resultsDiv, reportError, 'Error Loading Report');
+                                return true;
                             }
-                            return false; // Continue polling
-                        } catch (error) {
-                            console.error('Error checking unlock status:', error);
-                            return false;
                         }
-                    };
-
-                    // Poll every 2 seconds for up to 5 minutes
-                    const maxAttempts = 150; // 5 minutes = 300 seconds / 2 seconds
-                    let attempts = 0;
-                    const pollInterval = setInterval(async () => {
-                        attempts++;
-                        const isUnlocked = await pollUnlockStatus();
-                        if (isUnlocked || attempts >= maxAttempts) {
-                            clearInterval(pollInterval);
+                        return false;
+                    } catch (error) {
+                        console.error('Error checking unlock status:', error);
+                        // Retry up to 3 times if it's a 502 error
+                        if (error.status === 502 && retryCount < 3) {
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            return pollUnlockStatus(retryCount + 1);
                         }
-                    }, 2000);
+                        return false;
+                    }
+                };
 
-                } catch (error) {
-                    console.error('Error creating payment:', error);
-                    alert('Error creating payment. Please try again.');
-                }
-            });
-        }
+                // Poll every 2 seconds
+                const pollInterval = setInterval(async () => {
+                    const shouldStop = await pollUnlockStatus();
+                    if (shouldStop) {
+                        clearInterval(pollInterval);
+                    }
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error creating payment:', error);
+                showError(resultsDiv, error, 'Payment Error');
+            }
+        });
     });
 }
 
