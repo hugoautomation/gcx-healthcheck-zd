@@ -230,9 +230,17 @@ function initializeRunCheck() {
     if (!runCheckButton) return;
 
     runCheckButton.addEventListener('click', async () => {
-        console.log('Run Health Check button clicked');
         const resultsDiv = document.getElementById('results');
-        showLoadingState(resultsDiv);
+        
+        // Show loading state immediately
+        resultsDiv.innerHTML = `
+            <div class="text-center my-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted">Running health check...</p>
+            </div>
+        `;
 
         try {
             if (!client || !context || !metadata) {
@@ -291,7 +299,7 @@ function initializeRunCheck() {
                             clearInterval(pollInterval);
                             showError(resultsDiv, new Error(statusResponse.error || 'Task failed'), 'Health Check Error');
                         }
-                        // If status is 'pending', keep showing loading state
+                        // Keep showing loading state for 'pending' status
                     } catch (pollError) {
                         clearInterval(pollInterval);
                         showError(resultsDiv, pollError, 'Polling Error');

@@ -15,7 +15,6 @@ import csv
 
 logger = logging.getLogger(__name__)
 
-
 @csrf_exempt
 def health_check(request):
     if request.method == "POST":
@@ -36,20 +35,22 @@ def health_check(request):
                 version=data.get("version", "1.0.0"),
             )
 
+            # Only return the task ID, don't send results_html
             return JsonResponse({
                 "task_id": task.id,
-                "status": "pending",
-                "results_html": render_report_components({"loading": "Running health check..."})
+                "status": "pending"
             })
 
         except Exception as e:
             logger.error(f"Error starting health check: {str(e)}")
-            results_html = render_report_components(
-                {"data": None, "error": f"Error processing request: {str(e)}"}
-            )
-            return JsonResponse({"error": True, "results_html": results_html})
+            return JsonResponse({
+                "error": True, 
+                "message": f"Error processing request: {str(e)}"
+            })
 
     return HttpResponse("Method not allowed", status=405)
+
+
 @csrf_exempt
 def check_task_status(request, task_id):
     """Check the status of a health check task"""
