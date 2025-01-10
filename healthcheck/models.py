@@ -8,7 +8,9 @@ from django.core.validators import EmailValidator
 from djstripe.models import Subscription
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import logging
 
+logger = logging.getLogger(__name__)
 
 class HealthCheckReport(models.Model):
     """Stores health check reports with raw response data"""
@@ -82,6 +84,26 @@ class HealthCheckReport(models.Model):
             ),  # Add this for subscription queries
         ]
 
+@receiver(post_save, sender=HealthCheckReport)
+def handle_report_save(sender, instance, created, **kwargs):
+    """Handle post-save actions for HealthCheckReport"""
+    if created:  # Only run this for new reports
+        try:
+            # Check subscription status
+            status = ZendeskUser.get_subscription_status(instance.subdomain)
+            
+            # Automatically unlock for active subscriptions
+            if status["active"] and not instance.is_unlocked:
+                instance.is_unlocked = True
+                instance.save(update_fields=['is_unlocked'])
+                logger.info(f"Automatically unlocked report {instance.id} for active subscription")
+
+        except Exception as e:
+            logger.error(f"Error handling report save: {str(e)}")
+
+    # Always invalidate cache
+    from .cache_utils import HealthCheckCache
+    HealthCheckCache.invalidate_report_data(instance.id)
 
 class HealthCheckMonitoring(models.Model):
     """Manages automated health check monitoring settings"""
