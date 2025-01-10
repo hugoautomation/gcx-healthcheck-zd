@@ -298,19 +298,28 @@ class HealthCheckCache:
             return cached_settings
 
         try:
-            settings = HealthCheckMonitoring.objects.get(
-                installation_id=installation_id
-            )
-            monitoring_data = {
-                "is_active": settings.is_active,
-                "frequency": settings.frequency,
-                "notification_emails": settings.notification_emails,
-                "last_check": settings.last_check,
+            monitoring = HealthCheckMonitoring.objects.get(installation_id=installation_id)
+            settings_data = {
+                "is_active": monitoring.is_active,
+                "frequency": monitoring.frequency,
+                "notification_emails": monitoring.notification_emails or [],
+                "last_check": monitoring.last_check,
+                "next_check": monitoring.next_check,
             }
-            cache.set(cache_key, monitoring_data, cls.TIMEOUTS["monitoring"])
-            return monitoring_data
+            cache.set(cache_key, settings_data, cls.TIMEOUTS["monitoring"])
+            return settings_data
         except HealthCheckMonitoring.DoesNotExist:
             return None
+
+        
+
+    @classmethod
+    def invalidate_monitoring_settings(cls, installation_id):
+        """Invalidate monitoring settings cache"""
+        cache_key = cls.get_cache_key("monitoring_settings", installation_id)
+        cache.delete(cache_key)
+        logger.info(f"Invalidated monitoring settings cache for installation: {installation_id}")
+
 
     # Cache invalidation methods
     @classmethod

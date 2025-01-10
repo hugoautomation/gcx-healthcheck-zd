@@ -105,6 +105,8 @@ class HealthCheckMonitoring(models.Model):
     notification_emails = ArrayField(
         models.EmailField(validators=[EmailValidator()]),
         blank=True,
+        null=True,
+        default=list,
         help_text="List of email addresses to receive reports",
     )
 
@@ -127,7 +129,12 @@ class HealthCheckMonitoring(models.Model):
             self.next_check = self.last_check + relativedelta(months=1)
 
     def save(self, *args, **kwargs):
-        if not self.next_check:
+        # Ensure notification_emails is never None
+        if self.notification_emails is None:
+            self.notification_emails = []
+            
+        # Schedule next check only if monitoring is active
+        if self.is_active and not self.next_check:
             self.schedule_next_check()
         super().save(*args, **kwargs)
 

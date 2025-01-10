@@ -80,7 +80,6 @@ def monitoring(request):
     )
 
     return render(request, "healthcheck/monitoring.html", context)
-
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
@@ -95,18 +94,20 @@ def monitoring_settings(request):
         frequency = data.get("frequency", "weekly")
         notification_emails = data.get("notification_emails", [])
 
+        logger.info(f"Received monitoring settings update: {data}")
+
         # Validate required fields
         if not installation_id:
             return JsonResponse({"error": "Installation ID required"}, status=400)
         if not user_id:
             return JsonResponse({"error": "User ID required"}, status=400)
 
-        # Validate emails if monitoring is active
-        if is_active and not notification_emails:
-            return JsonResponse(
-                {"error": "At least one email is required when monitoring is active"},
-                status=400,
-            )
+        # Get user info for subdomain
+        try:
+            user = ZendeskUser.objects.get(user_id=user_id)
+            subdomain = user.subdomain
+        except ZendeskUser.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=400)
 
         # Get or create monitoring settings
         monitoring, created = HealthCheckMonitoring.objects.update_or_create(
@@ -114,12 +115,16 @@ def monitoring_settings(request):
             defaults={
                 "is_active": is_active,
                 "frequency": frequency,
-                "notification_emails": notification_emails,
+                "notification_emails": notification_emails or [],
+                "subdomain": subdomain,  # Add subdomain
+                "instance_guid": data.get("instance_guid", "")  # Add instance_guid if available
             },
         )
 
-        # Instead of using set_monitoring_settings, invalidate the cache
+        # Invalidate cache
         HealthCheckCache.invalidate_monitoring_settings(installation_id)
+
+        logger.info(f"Successfully updated monitoring settings for installation {installation_id}")
 
         return JsonResponse({
             "status": "success",
@@ -127,12 +132,12 @@ def monitoring_settings(request):
             "data": {
                 "is_active": monitoring.is_active,
                 "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails,
+                "notification_emails": monitoring.notification_emails or [],
             }
         })
 
     except Exception as e:
-        logger.error(f"Error saving monitoring settings: {str(e)}")
+        logger.error(f"Error saving monitoring settings: {str(e)}", exc_info=True)
         return JsonResponse(
             {"error": "Failed to save monitoring settings", "details": str(e)},
             status=500,
