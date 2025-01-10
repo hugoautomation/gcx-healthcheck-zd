@@ -3,13 +3,27 @@ from .models import HealthCheckReport
 import requests
 import logging
 from django.conf import settings
+
 logger = logging.getLogger(__name__)
+
+
 @shared_task
-def run_health_check(url, email, api_token, installation_id, user_id, subdomain, instance_guid, app_guid, stripe_subscription_id, version):
+def run_health_check(
+    url,
+    email,
+    api_token,
+    installation_id,
+    user_id,
+    subdomain,
+    instance_guid,
+    app_guid,
+    stripe_subscription_id,
+    version,
+):
     try:
         # Construct proper Zendesk URL
         zendesk_url = f"https://{subdomain}.zendesk.com"
-        
+
         api_url = (
             "https://app.configly.io/api/health-check/"
             if settings.ENVIRONMENT == "production"
@@ -32,7 +46,11 @@ def run_health_check(url, email, api_token, installation_id, user_id, subdomain,
         )
 
         if response.status_code != 200:
-            error_message = "Authentication failed." if response.status_code == 401 else f"API Error: {response.text}"
+            error_message = (
+                "Authentication failed."
+                if response.status_code == 401
+                else f"API Error: {response.text}"
+            )
             return {"error": True, "message": error_message}
 
         response_data = response.json()

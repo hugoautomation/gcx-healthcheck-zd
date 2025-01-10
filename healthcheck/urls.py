@@ -35,7 +35,11 @@ urlpatterns = [
     ),
     path("", app, name="app"),
     path("health_check/", health_check, name="health_check"),
-    path('health_check/status/<str:task_id>/', check_task_status, name='check_task_status'),  # Add this line
+    path(
+        "health_check/status/<str:task_id>/",
+        check_task_status,
+        name="check_task_status",
+    ),  # Add this line
     path(
         "report/<int:report_id>/download/",
         download_report_csv,

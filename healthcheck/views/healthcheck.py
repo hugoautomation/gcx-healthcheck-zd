@@ -1,26 +1,25 @@
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-import requests
-from zendeskapp import settings
-from ..models import HealthCheckReport, ZendeskUser
+from ..models import HealthCheckReport
 from ..utils.formatting import format_response_data
 from ..utils.reports import render_report_components
 from ..utils.stripe import get_default_subscription_status
 
 from ..tasks import run_health_check
-from ..cache_utils import HealthCheckCache, invalidate_app_cache
+from ..cache_utils import HealthCheckCache
 import logging
 import csv
 
 logger = logging.getLogger(__name__)
+
 
 @csrf_exempt
 def health_check(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body) if request.body else {}
-            
+
             # Start async task
             task = run_health_check.delay(
                 url=data.get("url"),
@@ -36,17 +35,13 @@ def health_check(request):
             )
 
             # Only return the task ID, don't send results_html
-            return JsonResponse({
-                "task_id": task.id,
-                "status": "pending"
-            })
+            return JsonResponse({"task_id": task.id, "status": "pending"})
 
         except Exception as e:
             logger.error(f"Error starting health check: {str(e)}")
-            return JsonResponse({
-                "error": True, 
-                "message": f"Error processing request: {str(e)}"
-            })
+            return JsonResponse(
+                {"error": True, "message": f"Error processing request: {str(e)}"}
+            )
 
     return HttpResponse("Method not allowed", status=405)
 
@@ -55,40 +50,38 @@ def health_check(request):
 def check_task_status(request, task_id):
     """Check the status of a health check task"""
     task = run_health_check.AsyncResult(task_id)
-    
+
     if task.ready():
         result = task.get()
         if result.get("error"):
-            return JsonResponse({
-                "status": "error",
-                "error": result["message"],
-                "results_html": render_report_components({
-                    "error": result["message"]
-                })
-            })
-        
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "error": result["message"],
+                    "results_html": render_report_components(
+                        {"error": result["message"]}
+                    ),
+                }
+            )
+
         try:
             report = HealthCheckReport.objects.get(id=result["report_id"])
             subscription_status = get_default_subscription_status()
-            
-            return JsonResponse({
-                "status": "complete",
-                "results_html": HealthCheckCache.get_report_results(
-                    report.id, 
-                    subscription_active=subscription_status["active"]
-                )
-            })
+
+            return JsonResponse(
+                {
+                    "status": "complete",
+                    "results_html": HealthCheckCache.get_report_results(
+                        report.id, subscription_active=subscription_status["active"]
+                    ),
+                }
+            )
         except Exception as e:
             logger.error(f"Error rendering report: {str(e)}")
-            return JsonResponse({
-                "status": "error",
-                "error": str(e)
-            })
-    
+            return JsonResponse({"status": "error", "error": str(e)})
+
     # For pending tasks, only return status
-    return JsonResponse({
-        "status": "pending"
-    })
+    return JsonResponse({"status": "pending"})
 
 
 # @csrf_exempt
@@ -338,9 +331,9 @@ def get_historical_report(request, report_id):
             return JsonResponse({"results_html": results_html})
         except Exception as template_error:
             logger.error(f"Template rendering error: {str(template_error)}")
-            return JsonResponse({
-                "error": "Error rendering report template"
-            }, status=500)
+            return JsonResponse(
+                {"error": "Error rendering report template"}, status=500
+            )
 
     except HealthCheckReport.DoesNotExist:
         logger.error(f"Report {report_id} not found")

@@ -12,7 +12,6 @@ from ..utils.stripe import (
 import segment.analytics as analytics  # Add this import
 import logging
 import stripe
-import os
 from djstripe.event_handlers import djstripe_receiver
 from django.db import transaction
 from djstripe.models import Event, Subscription
@@ -34,6 +33,10 @@ def billing_page(request):
     app_guid = request.GET.get("app_guid")
     origin = request.GET.get("origin")
     subscription_status = get_default_subscription_status()
+    if settings.DJANGO_ENV == "production":
+        stripe_portal = "https://billing.stripe.com/p/login/cN26qO86Hc7b3YI5kk"
+    else:
+        stripe_portal = "https://billing.stripe.com/p/login/test_4gwaHHgWTeitgsUfYY"
 
     # Show loading state if no installation_id
     if not installation_id:
@@ -179,6 +182,7 @@ def billing_page(request):
             "origin": origin,
             "user_id": user_id,
         },
+        "stripe_portal": stripe_portal,
         "user": user,
         "environment": settings.ENVIRONMENT,
         "stripe_publishable_key": settings.STRIPE_PUBLIC_KEY,
@@ -195,6 +199,7 @@ else:
     stripe.api_key = settings.STRIPE_TEST_SECRET_KEY
 
 logger = logging.getLogger(__name__)
+
 
 @csrf_exempt
 def create_checkout_session(request):
@@ -216,7 +221,9 @@ def create_checkout_session(request):
         # Log the environment and price ID for debugging
         logger.info(f"Environment: {settings.DJANGO_ENV}")
         logger.info(f"Using price ID: {price_id}")
-        logger.info(f"Using Stripe key: {'Live' if settings.DJANGO_ENV == 'production' else 'Test'}")
+        logger.info(
+            f"Using Stripe key: {'Live' if settings.DJANGO_ENV == 'production' else 'Test'}"
+        )
 
         # Create Stripe checkout session
         checkout_session = stripe.checkout.Session.create(
