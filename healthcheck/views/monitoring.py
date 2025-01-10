@@ -81,60 +81,25 @@ def monitoring(request):
 
     return render(request, "healthcheck/monitoring.html", context)
 
-
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
-    subscription_status = get_default_subscription_status()
-
     try:
-        # Parse data based on content type
-        if request.content_type == "application/json":
-            try:
-                data = json.loads(request.body)
-                installation_id = data.get("installation_id")
-                user_id = data.get("user_id")
-                is_active = data.get("is_active", False)
-                frequency = data.get("frequency", "weekly")
-                notification_emails = data.get("notification_emails", [])
-            except json.JSONDecodeError:
-                return JsonResponse({"error": "Invalid JSON data"}, status=400)
-        else:
-            installation_id = request.POST.get("installation_id")
-            user_id = request.POST.get("user_id")
-            is_active = request.POST.get("is_active") == "on"
-            frequency = request.POST.get("frequency", "weekly")
-            notification_emails = request.POST.getlist("notification_emails[]")
+        data = json.loads(request.body)
+        installation_id = data.get("installation_id")
+        user_id = data.get("user_id")
+        is_active = data.get("is_active", False)
+        frequency = data.get("frequency", "weekly")
+        notification_emails = data.get("notification_emails", [])
 
         # Validate required fields
         if not installation_id:
             return JsonResponse({"error": "Installation ID required"}, status=400)
         if not user_id:
             return JsonResponse({"error": "User ID required"}, status=400)
-
-        # Validate subscription status
-        try:
-            user = ZendeskUser.objects.get(user_id=user_id)
-            subscription_status = HealthCheckCache.get_subscription_status(
-                user.subdomain
-            )
-            if not subscription_status.get("active"):
-                return JsonResponse(
-                    {"error": "Active subscription required"}, status=403
-                )
-        except ZendeskUser.DoesNotExist:
-            return JsonResponse({"error": "User not found"}, status=404)
-
-        # Get the latest report
-        latest_report = HealthCheckReport.get_latest_for_installation(installation_id)
-
-        # Filter out empty email fields
-        notification_emails = [
-            email for email in notification_emails if email and email.strip()
-        ]
 
         # Validate emails if monitoring is active
         if is_active and not notification_emails:
@@ -143,47 +108,32 @@ def monitoring_settings(request):
                 status=400,
             )
 
-        # Update or create monitoring settings
+        # Get or create monitoring settings
         monitoring, created = HealthCheckMonitoring.objects.update_or_create(
             installation_id=installation_id,
             defaults={
-                "instance_guid": latest_report.instance_guid if latest_report else "",
-                "subdomain": latest_report.subdomain if latest_report else "",
                 "is_active": is_active,
                 "frequency": frequency,
                 "notification_emails": notification_emails,
             },
         )
 
-        # Track the event
-        try:
-            analytics.track(
-                user_id,
-                "Monitoring Settings Updated",
-                {
-                    "is_active": is_active,
-                    "frequency": frequency,
-                    "notification_emails_count": len(notification_emails),
-                    "subdomain": latest_report.subdomain if latest_report else None,
-                    "created": created,
-                    "subscription_active": subscription_status["active"],
-                },
-            )
-        except Exception as e:
-            logger.warning(f"Analytics tracking failed: {str(e)}")
+        # Update cache
+        HealthCheckCache.set_monitoring_settings(installation_id, {
+            "is_active": monitoring.is_active,
+            "frequency": monitoring.frequency,
+            "notification_emails": monitoring.notification_emails,
+        })
 
-        # Return success response
-        return JsonResponse(
-            {
-                "status": "success",
-                "message": "Settings saved successfully",
-                "data": {
-                    "is_active": monitoring.is_active,
-                    "frequency": monitoring.frequency,
-                    "notification_emails": monitoring.notification_emails,
-                },
+        return JsonResponse({
+            "status": "success",
+            "message": "Settings saved successfully",
+            "data": {
+                "is_active": monitoring.is_active,
+                "frequency": monitoring.frequency,
+                "notification_emails": monitoring.notification_emails,
             }
-        )
+        })
 
     except Exception as e:
         logger.error(f"Error saving monitoring settings: {str(e)}")

@@ -24,6 +24,20 @@ const URLParamManager = {
             });
         }
     },
+     // Add this new method
+     getUrlWithParams(baseUrl) {
+        const url = new URL(baseUrl, window.location.origin);
+        const currentParams = this._getCurrentParams();
+        
+        // Add all available parameters
+        Object.entries(currentParams).forEach(([key, value]) => {
+            if (value) {
+                url.searchParams.set(key, value);
+            }
+        });
+
+        return url.toString();
+    },
     // Add this method to initialize all elements that need params
     initializeParamPreservation() {
         // Handle links with data-preserve-params
