@@ -118,12 +118,8 @@ def monitoring_settings(request):
             },
         )
 
-        # Update cache
-        HealthCheckCache.set_monitoring_settings(installation_id, {
-            "is_active": monitoring.is_active,
-            "frequency": monitoring.frequency,
-            "notification_emails": monitoring.notification_emails,
-        })
+        # Instead of using set_monitoring_settings, invalidate the cache
+        HealthCheckCache.invalidate_monitoring_settings(installation_id)
 
         return JsonResponse({
             "status": "success",

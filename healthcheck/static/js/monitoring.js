@@ -91,16 +91,23 @@ const MonitoringApp = {
                 badge.textContent.trim().replace('×', '').trim()
             );
 
+            const isActive = form.querySelector('#is_active').checked;
+            
+            // Validate emails if monitoring is active
+            if (isActive && emails.length === 0) {
+                this.showMessage('At least one email is required when monitoring is active', 'danger');
+                return;
+            }
+
             const formData = {
                 installation_id: this.metadata?.installationId,
                 user_id: ZAFClientSingleton.userInfo?.id,
-                is_active: form.querySelector('#is_active').checked,
+                is_active: isActive,
                 frequency: form.querySelector('#frequency').value,
                 notification_emails: emails
             };
 
             const baseUrl = getBaseUrl();
-            // Use direct URL instead of URLParamManager
             const response = await this.client.request({
                 url: `${baseUrl}/monitoring-settings/`,
                 type: 'POST',
@@ -109,7 +116,11 @@ const MonitoringApp = {
                 secure: true
             });
 
-            this.showMessage('Settings saved successfully', 'success');
+            if (response.status === 'success') {
+                this.showMessage('Settings saved successfully', 'success');
+            } else {
+                throw new Error(response.error || 'Failed to save settings');
+            }
 
         } catch (error) {
             console.error('Error saving settings:', error);

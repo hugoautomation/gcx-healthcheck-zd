@@ -45,7 +45,7 @@ data-user-id="{{ url_params.user_id }}">
                 {% endif %}
             </div>
             <!-- Add Email Form -->
-            <form method="POST" id="monitoring-form">
+            <form method="POST" id="monitoring-form" data-preserve-params>
                 <input type="hidden" name="installation_id" value="{{ request.GET.installation_id }}">
                 <input type="hidden" name="user_id" value="{{ request.GET.user_id }}">
                 
