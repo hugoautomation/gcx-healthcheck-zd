@@ -17,9 +17,7 @@ EXPOSE 8000
 
 # Set environment variables for Celery
 ENV C_FORCE_ROOT=1
-ENV CELERY_WORKER_MAX_TASKS_PER_CHILD=50
-ENV CELERY_WORKER_MAX_MEMORY_PER_CHILD=400000  # 400MB
-ENV CELERY_WORKER_TIMEOUT=900
+ENV CELERY_WORKER_TIMEOUT=120
 
 # Default command for the container
 CMD ["/bin/bash", "/app/start.sh"]

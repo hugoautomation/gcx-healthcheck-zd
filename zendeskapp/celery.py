@@ -15,11 +15,8 @@ app = Celery("zendeskapp")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
 app.conf.update(
-    worker_max_tasks_per_child=50,  # Restart workers after 50 tasks
-    worker_prefetch_multiplier=1,    # Don't prefetch tasks
-    worker_timeout=900,              # 15 minutes timeout
-    task_time_limit=900,            # 15 minutes hard timeout
-    task_soft_time_limit=600,       # 10 minutes soft timeout
+    worker_timeout=120,              # 2 minutes timeout
+    task_time_limit=120,            # 2 minutes hard timeout
     broker_connection_retry_on_startup=True,
 )
 # Load task modules from all registered Django apps.
