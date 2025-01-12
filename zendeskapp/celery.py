@@ -15,8 +15,6 @@ app = Celery("zendeskapp")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
 app.conf.update(
-    worker_timeout=120,              # 2 minutes timeout
-    task_time_limit=120,            # 2 minutes hard timeout
     broker_connection_retry_on_startup=True,
 )
 # Load task modules from all registered Django apps.

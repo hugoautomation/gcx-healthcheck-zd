@@ -17,7 +17,6 @@ EXPOSE 8000
 
 # Set environment variables for Celery
 ENV C_FORCE_ROOT=1
-ENV CELERY_WORKER_TIMEOUT=120
 
 # Default command for the container
 CMD ["/bin/bash", "/app/start.sh"]
