@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @shared_task(
     bind=True,
     max_retries=3,
-    default_retry_delay=60,  # 1 minute between retries
+    default_retry_delay=90,  # 1 minute between retries
     soft_time_limit=600,     # 10 minute soft timeout
     time_limit=900          # 15 minute hard timeout
 )
