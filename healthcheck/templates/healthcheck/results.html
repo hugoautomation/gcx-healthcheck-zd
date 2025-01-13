@@ -51,14 +51,13 @@
         <p class="card-text mb-4">
         You're viewing the free version of this report which only shows <b>Ticket Forms</b> and <b>Ticket Fields</b> issues, without the ability to download the full report.
         </p>
-        {% if data.hidden_issues_count > 0 %}
+        {% if data.hidden_issues_count > 0 %}  {# Move this condition to wrap the entire card #}
         <div class="mb-3">
             We found <b class="bg-danger-subtle text-danger rounded-pill p-1 fs-6">{{ data.hidden_issues_count }}</b> additional issues in other areas:
             <ul class="mt-2 list-group list-group-flush">
-                
                 {% for category, count in data.hidden_categories.items %}
                 <li class="list-group-item">{{ category|split_camel_case }}: {{ count }} issue{{ count|pluralize }}</li>
-            {% endfor %}
+                {% endfor %}
             </ul>
         </div>
         <!-- Buttons -->
@@ -66,13 +65,11 @@
             <button class="btn c-btn c-btn--sm c-btn--primary unlock-report" data-report-id="{{ data.report_id }}">
                 $249 Unlock This Report
             </button>
-           
         </div>
+        {% endif %}  {# End the if statement here instead #}
     </div>
 </div>
-
-            {% endif %}
-    {% endif %}
+{% endif %}
 
     <div class="card mb-4">
         <div class="card-body">
