@@ -40,6 +40,7 @@
 </div>
 </div>
 {% if not subscription.is_active and not data.is_unlocked %}
+{% if data.hidden_issues_count > 0 %}  
 <div class="card shadow-sm mb-3 border-primary-subtle">
     <div class="card-body">
         <!-- Title with pill background -->
@@ -51,7 +52,7 @@
         <p class="card-text mb-4">
         You're viewing the free version of this report which only shows <b>Ticket Forms</b> and <b>Ticket Fields</b> issues, without the ability to download the full report.
         </p>
-        {% if data.hidden_issues_count > 0 %}  {# Move this condition to wrap the entire card #}
+        {# Move this condition to wrap the entire card #}
         <div class="mb-3">
             We found <b class="bg-danger-subtle text-danger rounded-pill p-1 fs-6">{{ data.hidden_issues_count }}</b> additional issues in other areas:
             <ul class="mt-2 list-group list-group-flush">
@@ -66,9 +67,10 @@
                 $249 Unlock This Report
             </button>
         </div>
-        {% endif %}  {# End the if statement here instead #}
+         {# End the if statement here instead #}
     </div>
 </div>
+{% endif %}
 {% endif %}
 
     <div class="card mb-4">
