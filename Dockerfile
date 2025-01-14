@@ -15,5 +15,8 @@ RUN chmod +x /app/start.sh
 # Expose port 8000 for the Django app
 EXPOSE 8000
 
+# Set environment variables for Celery
+ENV C_FORCE_ROOT=1
+
 # Default command for the container
 CMD ["/bin/bash", "/app/start.sh"]

@@ -304,9 +304,21 @@ function initializeRunCheck() {
             const response = await client.request(options);
 
             if (response.task_id) {
-                // Poll for results
+                let retryCount = 0;
+                const maxRetries = 3;
+                const maxPollingTime = 300000; // 5 minutes in milliseconds
+                const startPollingTime = Date.now();
+
                 const pollInterval = setInterval(async () => {
                     try {
+                        // Check if we've exceeded maximum polling time
+                        if (Date.now() - startPollingTime > maxPollingTime) {
+                            clearInterval(pollInterval);
+                            clearInterval(progressInterval);
+                            showError(resultsDiv, new Error('Health check timed out. Please try again.'), 'Timeout Error');
+                            return;
+                        }
+
                         const statusResponse = await client.request({
                             url: `${baseUrl}/health_check/status/${response.task_id}/`,
                             type: 'GET',
@@ -315,22 +327,38 @@ function initializeRunCheck() {
                         
                         if (statusResponse.status === 'complete') {
                             clearInterval(pollInterval);
+                            clearInterval(progressInterval);
                             resultsDiv.innerHTML = statusResponse.results_html;
                             initializeComponents();
                         } else if (statusResponse.status === 'error') {
+                            if (retryCount < maxRetries) {
+                                retryCount++;
+                                console.log(`Retrying... Attempt ${retryCount} of ${maxRetries}`);
+                                // Continue polling on retriable errors
+                                return;
+                            }
                             clearInterval(pollInterval);
-                            showError(resultsDiv, new Error(statusResponse.error), 'Health Check Error');
+                            clearInterval(progressInterval);
+                            showError(resultsDiv, new Error(statusResponse.error || 'Health check failed'), 'Health Check Error');
                         }
-                        // Keep showing loading state for 'pending' status
+                        // Reset retry count on successful poll
+                        retryCount = 0;
                     } catch (pollError) {
+                        if (retryCount < maxRetries) {
+                            retryCount++;
+                            console.log(`Retrying after error... Attempt ${retryCount} of ${maxRetries}`);
+                            return;
+                        }
                         clearInterval(pollInterval);
+                        clearInterval(progressInterval);
                         showError(resultsDiv, pollError, 'Polling Error');
                     }
-                }, 2000);
+                }, 3000); // Increased polling interval to 3 seconds
             } else {
                 throw new Error(response.error || 'Unknown error occurred');
             }
         } catch (error) {
+            clearInterval(progressInterval);
             console.error('Full error details:', error);
             showError(resultsDiv, error, 'Error Running Health Check');
         }
