@@ -12,6 +12,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class HealthCheckReport(models.Model):
     """Stores health check reports with raw response data"""
 
@@ -84,6 +85,7 @@ class HealthCheckReport(models.Model):
             ),  # Add this for subscription queries
         ]
 
+
 @receiver(post_save, sender=HealthCheckReport)
 def handle_report_save(sender, instance, created, **kwargs):
     """Handle post-save actions for HealthCheckReport"""
@@ -91,19 +93,23 @@ def handle_report_save(sender, instance, created, **kwargs):
         try:
             # Check subscription status
             status = ZendeskUser.get_subscription_status(instance.subdomain)
-            
+
             # Automatically unlock for active subscriptions
             if status["active"] and not instance.is_unlocked:
                 instance.is_unlocked = True
-                instance.save(update_fields=['is_unlocked'])
-                logger.info(f"Automatically unlocked report {instance.id} for active subscription")
+                instance.save(update_fields=["is_unlocked"])
+                logger.info(
+                    f"Automatically unlocked report {instance.id} for active subscription"
+                )
 
         except Exception as e:
             logger.error(f"Error handling report save: {str(e)}")
 
     # Always invalidate cache
     from .cache_utils import HealthCheckCache
+
     HealthCheckCache.invalidate_report_data(instance.id)
+
 
 class HealthCheckMonitoring(models.Model):
     """Manages automated health check monitoring settings"""
@@ -154,7 +160,7 @@ class HealthCheckMonitoring(models.Model):
         # Ensure notification_emails is never None
         if self.notification_emails is None:
             self.notification_emails = []
-            
+
         # Schedule next check only if monitoring is active
         if self.is_active and not self.next_check:
             self.schedule_next_check()

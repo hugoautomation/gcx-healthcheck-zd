@@ -4,11 +4,10 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib import messages
 import json
 from zendeskapp import settings
-from ..models import HealthCheckReport, HealthCheckMonitoring, ZendeskUser
+from ..models import HealthCheckMonitoring, ZendeskUser
 from ..utils.monitoring import get_monitoring_context
 from ..utils.stripe import get_default_subscription_status
 
-import segment.analytics as analytics  # Add this import
 from ..cache_utils import HealthCheckCache
 import logging
 
@@ -80,6 +79,8 @@ def monitoring(request):
     )
 
     return render(request, "healthcheck/monitoring.html", context)
+
+
 @csrf_exempt
 def monitoring_settings(request):
     """Handle monitoring settings updates"""
@@ -117,24 +118,30 @@ def monitoring_settings(request):
                 "frequency": frequency,
                 "notification_emails": notification_emails or [],
                 "subdomain": subdomain,  # Add subdomain
-                "instance_guid": data.get("instance_guid", "")  # Add instance_guid if available
+                "instance_guid": data.get(
+                    "instance_guid", ""
+                ),  # Add instance_guid if available
             },
         )
 
         # Invalidate cache
         HealthCheckCache.invalidate_monitoring_settings(installation_id)
 
-        logger.info(f"Successfully updated monitoring settings for installation {installation_id}")
+        logger.info(
+            f"Successfully updated monitoring settings for installation {installation_id}"
+        )
 
-        return JsonResponse({
-            "status": "success",
-            "message": "Settings saved successfully",
-            "data": {
-                "is_active": monitoring.is_active,
-                "frequency": monitoring.frequency,
-                "notification_emails": monitoring.notification_emails or [],
+        return JsonResponse(
+            {
+                "status": "success",
+                "message": "Settings saved successfully",
+                "data": {
+                    "is_active": monitoring.is_active,
+                    "frequency": monitoring.frequency,
+                    "notification_emails": monitoring.notification_emails or [],
+                },
             }
-        })
+        )
 
     except Exception as e:
         logger.error(f"Error saving monitoring settings: {str(e)}", exc_info=True)

@@ -10,6 +10,7 @@ from ..tasks import run_health_check
 from ..cache_utils import HealthCheckCache
 import logging
 import csv
+from time import sleep
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,17 @@ def health_check(request):
             )
 
     return HttpResponse("Method not allowed", status=405)
+
+
+@csrf_exempt
+def test_timeout(request):
+    """
+    Test endpoint that sleeps for 35 seconds to verify timeout settings
+    """
+    print("Starting sleep test...")
+    sleep(35)  # Sleep for 35 seconds
+    print("Sleep test completed")
+    return HttpResponse("If you see this, the timeout is working correctly!")
 
 
 @csrf_exempt

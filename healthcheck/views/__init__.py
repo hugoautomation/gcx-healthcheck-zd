@@ -20,6 +20,7 @@ from .healthcheck import (
     check_unlock_status,
     get_historical_report,
     check_task_status,
+    test_timeout,
 )
 
 __all__ = [
@@ -41,4 +42,5 @@ __all__ = [
     "check_unlock_status",
     "get_historical_report",
     "check_task_status",
+    "test_timeout",
 ]

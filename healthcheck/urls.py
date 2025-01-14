@@ -16,6 +16,7 @@ from .views import (
     check_unlock_status,
     get_historical_report,
     check_task_status,
+    test_timeout,
 )
 
 # from . import views
@@ -33,6 +34,7 @@ urlpatterns = [
         success_page.test_one_off_success,
         name="test_one_off_success",
     ),
+    path("test-timeout/", test_timeout, name="test_timeout"),
     path("", app, name="app"),
     path("health_check/", health_check, name="health_check"),
     path(

@@ -3,17 +3,28 @@ from .models import HealthCheckReport
 import requests
 import logging
 from django.conf import settings
-from celery.exceptions import MaxRetriesExceededError
-from requests.exceptions import Timeout, ConnectionError, RequestException
 
 logger = logging.getLogger(__name__)
+
 
 @shared_task(
     bind=True,
     max_retries=3,
-    time_limit=120,          # 2 minute timeout
+    time_limit=120,  # 2 minute timeout
 )
-def run_health_check(self, url, email, api_token, installation_id, user_id, subdomain, instance_guid, app_guid, stripe_subscription_id, version):
+def run_health_check(
+    self,
+    url,
+    email,
+    api_token,
+    installation_id,
+    user_id,
+    subdomain,
+    instance_guid,
+    app_guid,
+    stripe_subscription_id,
+    version,
+):
     try:
         zendesk_url = f"https://{subdomain}.zendesk.com"
         api_url = (
@@ -30,7 +41,7 @@ def run_health_check(self, url, email, api_token, installation_id, user_id, subd
             headers={
                 "X-API-Token": settings.HEALTHCHECK_TOKEN,
                 "Content-Type": "application/json",
-                "User-Agent": f"HealthCheck/v{version}"
+                "User-Agent": f"HealthCheck/v{version}",
             },
             json={
                 "url": zendesk_url,
@@ -38,28 +49,32 @@ def run_health_check(self, url, email, api_token, installation_id, user_id, subd
                 "api_token": api_token,
                 "status": "active",
             },
-            timeout=(30, 300)
+            timeout=(30, 300),
         )
 
         logger.info(f"Response status code: {response.status_code}")
-        logger.info(f"Response content: {response.text[:500]}")  # Log first 500 chars of response
+        logger.info(
+            f"Response content: {response.text[:500]}"
+        )  # Log first 500 chars of response
 
         if response.status_code == 502:
             attempt = self.request.retries + 1
-            logger.warning(f"Received 502 error for {subdomain}, attempt {attempt} of 3")
-            
+            logger.warning(
+                f"Received 502 error for {subdomain}, attempt {attempt} of 3"
+            )
+
             if attempt < 3:  # Only retry if we haven't hit max retries
-                countdown = 60 * (2 ** self.request.retries)
+                countdown = 60 * (2**self.request.retries)
                 logger.info(f"Retrying in {countdown} seconds...")
                 self.retry(
                     exc=Exception(f"502 error from API for {subdomain}"),
-                    countdown=countdown
+                    countdown=countdown,
                 )
             else:
                 logger.error(f"Max retries reached for {subdomain}")
                 return {
                     "error": True,
-                    "message": "Health check failed after multiple retries. The instance might be too large or temporarily unavailable."
+                    "message": "Health check failed after multiple retries. The instance might be too large or temporarily unavailable.",
                 }
 
         # Rest of the status code handling
@@ -67,7 +82,10 @@ def run_health_check(self, url, email, api_token, installation_id, user_id, subd
             logger.warning(f"Rate limit hit for {subdomain}")
             if self.request.retries < 2:
                 self.retry(countdown=300)
-            return {"error": True, "message": "Rate limit exceeded. Please try again later."}
+            return {
+                "error": True,
+                "message": "Rate limit exceeded. Please try again later.",
+            }
 
         if response.status_code != 200:
             error_message = (
@@ -98,9 +116,7 @@ def run_health_check(self, url, email, api_token, installation_id, user_id, subd
         return {"error": False, "report_id": report.id}
 
     except Exception as e:
-        logger.error(f"Error during health check for {subdomain}: {str(e)}", exc_info=True)
-        return {
-            "error": True,
-            "message": f"Health check failed: {str(e)}"
-        }
-    
+        logger.error(
+            f"Error during health check for {subdomain}: {str(e)}", exc_info=True
+        )
+        return {"error": True, "message": f"Health check failed: {str(e)}"}

@@ -173,10 +173,7 @@ CELERY_TIMEZONE = "Australia/Tasmania"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 120
 # Timeout settings
-TIMEOUT_SETTINGS = {
-    'GUNICORN_TIMEOUT': 120,
-    'REQUEST_TIMEOUT': 120
-}
+TIMEOUT_SETTINGS = {"GUNICORN_TIMEOUT": 120, "REQUEST_TIMEOUT": 120}
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
