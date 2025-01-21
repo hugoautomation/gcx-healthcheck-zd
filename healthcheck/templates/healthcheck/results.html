@@ -99,13 +99,15 @@
                         <option value="warning">Warnings Only</option>
                     </select>
                 </div>
-                <div class="col-md-4">
+                {% if data.has_status_values %}
+                <div class="col-md-4 filter-column">
                     <select id="status-filter" class="form-select">
-                        <option value="all">All status</option>
+                        <option value="all">All Status</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                     </select>
                 </div>
+                {% endif %}
                 <div class="col-md-4">
                     <select id="category-filter" class="form-select">
                         <option value="all">All Categories</option>
@@ -134,7 +136,11 @@
                             data-category="{{ issue.category }}"
                             data-status="{{ issue.active|yesno:'active,inactive' }}">
                             
-                            <td><a href="#" data-bs-toggle="tooltip" data-bs-title="{% if issue.active %}Active{% else %}Inactive{% endif %}"><i class="bi bi-circle-fill me-1 {% if issue.active %}text-success{% else %}text-secondary{% endif %}"></i></a> {{ issue.category|split_camel_case }}</td>
+                            <td>
+                                {% if data.has_status_values %}
+                                <a href="#" data-bs-toggle="tooltip" data-bs-title="{% if issue.active %}Active{% else %}Inactive{% endif %}"><i class="bi bi-circle-fill me-1 {% if issue.active %}text-success{% else %}text-secondary{% endif %}"></i></a>
+                                {% endif %}
+                                {{ issue.category|split_camel_case }}</td>
                             <td>
                                 <span class="badge {% if issue.severity == 'error' %}bg-danger{% else %}bg-warning{% endif %}">
                                     {{ issue.severity|title }}

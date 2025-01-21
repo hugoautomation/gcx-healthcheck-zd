@@ -110,25 +110,41 @@ function showError(element, error, title = 'Error') {
 function initializeFilters() {
     const severityFilter = document.getElementById('severity-filter');
     const categoryFilter = document.getElementById('category-filter');
-    const statusFilter = document.getElementById('status-filter');  // Add this line
+    const statusFilter = document.getElementById('status-filter');
     
-    if (!severityFilter || !categoryFilter || !statusFilter) return;  // Updated check
+    if (!severityFilter || !categoryFilter) return;
+
+    // Check if there are any active/inactive issues
+    const issueRows = document.querySelectorAll('.issue-row');
+    const hasStatusValues = Array.from(issueRows).some(row => row.dataset.status);
+
+    // Hide status filter container if no status values exist
+    if (statusFilter) {
+        const statusFilterContainer = statusFilter.closest('.col-md-4');
+        if (!hasStatusValues) {
+            statusFilterContainer.style.display = 'none';
+            // Adjust other columns to take full width
+            const otherColumns = document.querySelectorAll('.filter-column');
+            otherColumns.forEach(col => col.classList.remove('col-md-4'));
+            otherColumns.forEach(col => col.classList.add('col-md-6'));
+        }
+    }
 
     function filterIssues() {
         const selectedSeverity = severityFilter.value;
         const selectedCategory = categoryFilter.value;
-        const selectedStatus = statusFilter.value;  // Add this line
+        const selectedStatus = statusFilter?.value || 'all';
         const issueRows = document.querySelectorAll('.issue-row');
 
         issueRows.forEach(row => {
             const severity = row.dataset.severity;
             const category = row.dataset.category;
-            const status = row.dataset.status;  // Add this line
+            const status = row.dataset.status;
             const showSeverity = selectedSeverity === 'all' || severity === selectedSeverity;
             const showCategory = selectedCategory === 'all' || category === selectedCategory;
-            const showStatus = selectedStatus === 'all' || status === selectedStatus;  // Add this line
+            const showStatus = selectedStatus === 'all' || status === selectedStatus;
             
-            row.style.display = showSeverity && showCategory && showStatus ? '' : 'none';  // Updated condition
+            row.style.display = showSeverity && showCategory && showStatus ? '' : 'none';
         });
 
         adjustContentHeight();
@@ -136,7 +152,9 @@ function initializeFilters() {
 
     severityFilter.addEventListener('change', filterIssues);
     categoryFilter.addEventListener('change', filterIssues);
-    statusFilter.addEventListener('change', filterIssues);  // Add this line
+    if (statusFilter && hasStatusValues) {
+        statusFilter.addEventListener('change', filterIssues);
+    }
 }
 
 function initializeUnlockButtons() {
