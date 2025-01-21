@@ -92,14 +92,21 @@
     {% if data.issues %}
         <div class="mb-3">
             <div class="row">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <select id="severity-filter" class="form-select">
                         <option value="all">All Severities</option>
                         <option value="error">Errors Only</option>
                         <option value="warning">Warnings Only</option>
                     </select>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
+                    <select id="status-filter" class="form-select">
+                        <option value="all">All status</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
                     <select id="category-filter" class="form-select">
                         <option value="all">All Categories</option>
                         {% for category in data.categories %}
@@ -124,8 +131,10 @@
                     {% for issue in data.issues %}
                         <tr class="issue-row" 
                             data-severity="{{ issue.severity }}"
-                            data-category="{{ issue.category }}">
-                            <td>{{ issue.category|split_camel_case }}</td>
+                            data-category="{{ issue.category }}"
+                            data-status="{{ issue.active|yesno:'active,inactive' }}">
+                            
+                            <td><a href="#" data-bs-toggle="tooltip" data-bs-title="{% if issue.active %}Active{% else %}Inactive{% endif %}"><i class="bi bi-circle-fill me-1 {% if issue.active %}text-success{% else %}text-secondary{% endif %}"></i></a> {{ issue.category|split_camel_case }}</td>
                             <td>
                                 <span class="badge {% if issue.severity == 'error' %}bg-danger{% else %}bg-warning{% endif %}">
                                     {{ issue.severity|title }}

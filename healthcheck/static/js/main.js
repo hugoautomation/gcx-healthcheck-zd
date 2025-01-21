@@ -110,21 +110,25 @@ function showError(element, error, title = 'Error') {
 function initializeFilters() {
     const severityFilter = document.getElementById('severity-filter');
     const categoryFilter = document.getElementById('category-filter');
+    const statusFilter = document.getElementById('status-filter');  // Add this line
     
-    if (!severityFilter || !categoryFilter) return;
+    if (!severityFilter || !categoryFilter || !statusFilter) return;  // Updated check
 
     function filterIssues() {
         const selectedSeverity = severityFilter.value;
         const selectedCategory = categoryFilter.value;
+        const selectedStatus = statusFilter.value;  // Add this line
         const issueRows = document.querySelectorAll('.issue-row');
 
         issueRows.forEach(row => {
             const severity = row.dataset.severity;
             const category = row.dataset.category;
+            const status = row.dataset.status;  // Add this line
             const showSeverity = selectedSeverity === 'all' || severity === selectedSeverity;
             const showCategory = selectedCategory === 'all' || category === selectedCategory;
+            const showStatus = selectedStatus === 'all' || status === selectedStatus;  // Add this line
             
-            row.style.display = showSeverity && showCategory ? '' : 'none';
+            row.style.display = showSeverity && showCategory && showStatus ? '' : 'none';  // Updated condition
         });
 
         adjustContentHeight();
@@ -132,6 +136,7 @@ function initializeFilters() {
 
     severityFilter.addEventListener('change', filterIssues);
     categoryFilter.addEventListener('change', filterIssues);
+    statusFilter.addEventListener('change', filterIssues);  // Add this line
 }
 
 function initializeUnlockButtons() {
