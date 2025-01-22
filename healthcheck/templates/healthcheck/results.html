@@ -26,14 +26,14 @@
         {% if subscription.is_active or data.is_unlocked %}
         {% if data.report_id %}  {# Only show download button if we have a report ID #}
         <a href="{% url 'download_report_csv'  report_id=data.report_id %}" data-preserve-params class="btn c-btn c-btn--sm d-inline-block loading-button">
-            Download as CSV
+            Download CSV
             </a>
     {% endif %}
     {% else %}
     {% if data.report_id %}
     <a href="#" class="btn c-btn c-btn--sm d-inline-block disabled"
     title="Requires active subscription">
-    🔒 Download CSV Report
+    🔒 Download CSV
         </a>
     {% endif %}
     {% endif %}

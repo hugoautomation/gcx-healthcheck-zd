@@ -17,6 +17,7 @@ def format_response_data(
     issues = response_data.get("issues", [])
     counts = response_data.get("counts", {})
     total_counts = response_data.get("sum_totals", {})
+    has_status_values = any('active' in issue for issue in issues)
 
     # Calculate hidden issues for users without access
     hidden_issues_count = 0
@@ -39,6 +40,7 @@ def format_response_data(
         ]
 
     return {
+        "has_status_values": has_status_values,
         "instance": {
             "name": response_data.get("name", "Unknown"),
             "url": response_data.get("instance_url", "Unknown"),
