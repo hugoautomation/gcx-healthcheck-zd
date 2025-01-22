@@ -84,6 +84,7 @@ def format_response_data(
             {
                 "category": issue.get("item_type", "Unknown"),
                 "severity": issue.get("type", "warning"),
+                "active": issue.get("active", False),
                 "description": issue.get("message", ""),
                 "zendesk_url": issue.get("zendesk_url", "#"),
             }
