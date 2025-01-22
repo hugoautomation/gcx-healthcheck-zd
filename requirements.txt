@@ -26,6 +26,7 @@ black==23.10.1
 flake8==6.1.0
 ruff
 django-extensions
+sentry-sdk[django]
 
 # Production dependencies
 gunicorn==21.2.0
