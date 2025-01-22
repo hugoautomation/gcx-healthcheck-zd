@@ -14,15 +14,19 @@ import os
 from pathlib import Path
 import sentry_sdk
 
+DJANGO_ENV = os.environ.get("RAILWAY_ENVIRONMENT_NAME", "development")
+
 sentry_sdk.init(
     dsn="https://bd914ab88c8974972d105866779f7858@o4508684689866752.ingest.us.sentry.io/4508684690915328",
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for tracing.
+    environment=DJANGO_ENV
     traces_sample_rate=1.0,
     _experiments={
         # Set continuous_profiling_auto_start to True
         # to automatically start the profiler on when
         # possible.
+        
         "continuous_profiling_auto_start": True,
     },
 )
@@ -57,7 +61,6 @@ LOGGING = {
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-DJANGO_ENV = os.environ.get("RAILWAY_ENVIRONMENT_NAME", "development")
 HEALTHCHECK_TOKEN = os.environ.get("HEALTHCHECK_TOKEN", "")
 SEGMENT_WRITE_KEY = os.environ.get("SEGMENT_WRITE_KEY", "")
 APP_URL = "https://gravity.cx"
