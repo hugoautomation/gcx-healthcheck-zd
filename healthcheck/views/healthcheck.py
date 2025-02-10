@@ -70,37 +70,16 @@ def test_timeout(request):
 def check_task_status(request, task_id):
     """Check the status of a health check task"""
     task = run_health_check.AsyncResult(task_id)
-    user_id = request.GET.get("user_id")
+
     if task.ready():
         result = task.get()
         if result.get("error"):
-            return JsonResponse(
-                {
-                    "status": "error",
-                    "error": result["message"],
-                    "results_html": render_report_components(
-                        {"error": result["message"]}
-                    ),
-                }
-            )
-        # Get critical issues count from the report's raw response
-        critical_issues = sum(
-            1
-            for issue in report.raw_response.get("issues", [])
-            if issue.get("type") == "error"
-        )
-        # Try to get user_id from ZendeskUser using admin_email from raw_response
-                # Track health check completed
-        analytics.track(
-            user_id,
-            "Health Check Completed",
-            {
-                "critical_issues": critical_issues,
-                "is_unlocked": report.is_unlocked,
-                "report_id": report.id,
-            }
-        )
- 
+            return JsonResponse({
+                "status": "error",
+                "error": result["message"],
+                "results_html": render_report_components({"error": result["message"]}),
+            })
+
         try:
             report = HealthCheckReport.objects.get(id=result["report_id"])
             subscription_status = get_default_subscription_status()
