@@ -5,6 +5,7 @@ from ..models import HealthCheckReport
 from ..utils.formatting import format_response_data
 from ..utils.reports import render_report_components
 from ..utils.stripe import get_default_subscription_status
+import segment.analytics as analytics  # Add this import
 
 from ..tasks import run_health_check
 from ..cache_utils import HealthCheckCache
@@ -20,7 +21,14 @@ def health_check(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body) if request.body else {}
-
+            # Track health check started
+            analytics.track(
+                data.get("user_id"),
+                "Health Check Started",
+                {
+                    "subdomain": data.get("subdomain"),
+                }
+            )
             # Start async task
             task = run_health_check.delay(
                 url=data.get("url"),
@@ -79,6 +87,24 @@ def check_task_status(request, task_id):
         try:
             report = HealthCheckReport.objects.get(id=result["report_id"])
             subscription_status = get_default_subscription_status()
+
+            # Get critical issues count from the report's raw response
+            critical_issues = sum(
+                1
+                for issue in report.raw_response.get("issues", [])
+                if issue.get("type") == "error"
+            )
+
+            # Track health check completed with actual critical issues count
+            analytics.track(
+                report.user_id,
+                "Health Check Completed",
+                {
+                    "critical_issues": critical_issues,
+                    "is_unlocked": report.is_unlocked,
+                    "report_id": report.id
+                }
+            )
 
             return JsonResponse(
                 {
