@@ -79,10 +79,30 @@ def check_task_status(request, task_id):
                 "error": result["message"],
                 "results_html": render_report_components({"error": result["message"]}),
             })
-
+        
         try:
             report = HealthCheckReport.objects.get(id=result["report_id"])
             subscription_status = get_default_subscription_status()
+            
+            # Calculate critical issues after we have the report
+            critical_issues = sum(
+                1
+                for issue in report.raw_response.get("issues", [])
+                if issue.get("type") == "error"
+            )
+            
+            user_id = request.GET.get("user_id")
+            
+            # Track health check completed
+            analytics.track(
+                user_id,
+                "Health Check Completed",
+                {
+                    "critical_issues": critical_issues,
+                    "is_unlocked": report.is_unlocked,
+                    "report_id": report.id,
+                }
+            )
 
             return JsonResponse({
                 "status": "complete",
@@ -91,6 +111,7 @@ def check_task_status(request, task_id):
                     subscription_active=subscription_status["active"]
                 ),
             })
+        
         except Exception as e:
             logger.error(f"Error rendering report: {str(e)}")
             return JsonResponse({"status": "error", "error": str(e)})
