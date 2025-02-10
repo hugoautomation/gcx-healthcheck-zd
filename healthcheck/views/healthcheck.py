@@ -5,6 +5,7 @@ from ..models import HealthCheckReport
 from ..utils.formatting import format_response_data
 from ..utils.reports import render_report_components
 from ..utils.stripe import get_default_subscription_status
+import segment.analytics as analytics  # Add this import
 
 from ..tasks import run_health_check
 from ..cache_utils import HealthCheckCache
@@ -20,7 +21,14 @@ def health_check(request):
     if request.method == "POST":
         try:
             data = json.loads(request.body) if request.body else {}
-
+            # Track health check started
+            analytics.track(
+                data.get("user_id"),
+                "Health Check Started",
+                {
+                    "subdomain": data.get("subdomain"),
+                },
+            )
             # Start async task
             task = run_health_check.delay(
                 url=data.get("url"),
@@ -62,7 +70,7 @@ def test_timeout(request):
 def check_task_status(request, task_id):
     """Check the status of a health check task"""
     task = run_health_check.AsyncResult(task_id)
-
+    user_id = request.GET.get("user_id")
     if task.ready():
         result = task.get()
         if result.get("error"):
@@ -75,19 +83,35 @@ def check_task_status(request, task_id):
                     ),
                 }
             )
-
+        # Get critical issues count from the report's raw response
+        critical_issues = sum(
+            1
+            for issue in report.raw_response.get("issues", [])
+            if issue.get("type") == "error"
+        )
+        # Try to get user_id from ZendeskUser using admin_email from raw_response
+                # Track health check completed
+        analytics.track(
+            user_id,
+            "Health Check Completed",
+            {
+                "critical_issues": critical_issues,
+                "is_unlocked": report.is_unlocked,
+                "report_id": report.id,
+            }
+        )
+ 
         try:
             report = HealthCheckReport.objects.get(id=result["report_id"])
             subscription_status = get_default_subscription_status()
 
-            return JsonResponse(
-                {
-                    "status": "complete",
-                    "results_html": HealthCheckCache.get_report_results(
-                        report.id, subscription_active=subscription_status["active"]
-                    ),
-                }
-            )
+            return JsonResponse({
+                "status": "complete",
+                "results_html": HealthCheckCache.get_report_results(
+                    report.id, 
+                    subscription_active=subscription_status["active"]
+                ),
+            })
         except Exception as e:
             logger.error(f"Error rendering report: {str(e)}")
             return JsonResponse({"status": "error", "error": str(e)})
