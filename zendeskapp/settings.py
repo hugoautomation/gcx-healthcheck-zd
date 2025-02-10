@@ -26,7 +26,6 @@ sentry_sdk.init(
         # Set continuous_profiling_auto_start to True
         # to automatically start the profiler on when
         # possible.
-        
         "continuous_profiling_auto_start": True,
     },
 )

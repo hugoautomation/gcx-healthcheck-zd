@@ -27,7 +27,7 @@ def health_check(request):
                 "Health Check Started",
                 {
                     "subdomain": data.get("subdomain"),
-                }
+                },
             )
             # Start async task
             task = run_health_check.delay(
@@ -102,8 +102,8 @@ def check_task_status(request, task_id):
                 {
                     "critical_issues": critical_issues,
                     "is_unlocked": report.is_unlocked,
-                    "report_id": report.id
-                }
+                    "report_id": report.id,
+                },
             )
 
             return JsonResponse(
