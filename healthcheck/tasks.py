@@ -3,6 +3,7 @@ from .models import HealthCheckReport
 import requests
 import logging
 from django.conf import settings
+import segment.analytics as analytics  # Add this import
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,24 @@ def run_health_check(
             version=version,
             raw_response=response_data,
         )
+                # Calculate critical issues
+        critical_issues = sum(
+            1
+            for issue in response_data.get("issues", [])
+            if issue.get("type") == "error"
+        )
+
+        # Track health check completed
+        analytics.track(
+            user_id,
+            "Health Check Completed",
+            {
+                "critical_issues": critical_issues,
+                "is_unlocked": report.is_unlocked,
+                "report_id": report.id,
+            }
+        )
+
 
         logger.info(f"Successfully completed health check for {subdomain}")
         return {"error": False, "report_id": report.id}

@@ -74,16 +74,11 @@ def check_task_status(request, task_id):
     if task.ready():
         result = task.get()
         if result.get("error"):
-            return JsonResponse(
-                {
-                    "status": "error",
-                    "error": result["message"],
-                    "results_html": render_report_components(
-                        {"error": result["message"]}
-                    ),
-                }
-            )
-
+            return JsonResponse({
+                "status": "error",
+                "error": result["message"],
+                "results_html": render_report_components({"error": result["message"]}),
+            })
         try:
             report = HealthCheckReport.objects.get(id=result["report_id"])
             subscription_status = get_default_subscription_status()
@@ -95,6 +90,7 @@ def check_task_status(request, task_id):
                     subscription_active=subscription_status["active"]
                 ),
             })
+        
         except Exception as e:
             logger.error(f"Error rendering report: {str(e)}")
             return JsonResponse({"status": "error", "error": str(e)})
