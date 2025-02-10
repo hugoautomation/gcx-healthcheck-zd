@@ -1,7 +1,7 @@
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-from ..models import HealthCheckReport
+from ..models import HealthCheckReport, ZendeskUser
 from ..utils.formatting import format_response_data
 from ..utils.reports import render_report_components
 from ..utils.stripe import get_default_subscription_status
@@ -95,19 +95,24 @@ def check_task_status(request, task_id):
                 if issue.get("type") == "error"
             )
 
-            # Get user_id from the task result data
-            user_id = result.get("user_id")  # Get from the task result
-
-            # Track health check completed with actual critical issues count
-            analytics.track(
-                user_id,
-                "Health Check Completed",
-                {
-                    "critical_issues": critical_issues,
-                    "is_unlocked": report.is_unlocked,
-                    "report_id": report.id,
-                }
-            )
+            # Try to get user_id from ZendeskUser using admin_email from raw_response
+            try:
+                admin_email = report.raw_response.get("admin_email")
+                user = ZendeskUser.objects.get(email=admin_email)
+                user_id = user.user_id
+                
+                # Track health check completed
+                analytics.track(
+                    user_id,
+                    "Health Check Completed",
+                    {
+                        "critical_issues": critical_issues,
+                        "is_unlocked": report.is_unlocked,
+                        "report_id": report.id,
+                    }
+                )
+            except ZendeskUser.DoesNotExist:
+                logger.warning(f"No user found for admin email: {admin_email}")
 
             return JsonResponse({
                 "status": "complete",
