@@ -95,25 +95,27 @@ def check_task_status(request, task_id):
                 if issue.get("type") == "error"
             )
 
+            # Get user_id from the task result data
+            user_id = result.get("user_id")  # Get from the task result
+
             # Track health check completed with actual critical issues count
             analytics.track(
-                report.user_id,
+                user_id,
                 "Health Check Completed",
                 {
                     "critical_issues": critical_issues,
                     "is_unlocked": report.is_unlocked,
                     "report_id": report.id,
-                },
-            )
-
-            return JsonResponse(
-                {
-                    "status": "complete",
-                    "results_html": HealthCheckCache.get_report_results(
-                        report.id, subscription_active=subscription_status["active"]
-                    ),
                 }
             )
+
+            return JsonResponse({
+                "status": "complete",
+                "results_html": HealthCheckCache.get_report_results(
+                    report.id, 
+                    subscription_active=subscription_status["active"]
+                ),
+            })
         except Exception as e:
             logger.error(f"Error rendering report: {str(e)}")
             return JsonResponse({"status": "error", "error": str(e)})
