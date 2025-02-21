@@ -89,6 +89,8 @@ async function initializeApp() {
         initializeHistoricalReports();
         initializeComponents();
         
+        // Initialize chat widget after everything else
+        await initializeChatWidget();
 
         // Adjust initial height
         await client.invoke('resize', { width: '100%', height: '600px' });
@@ -454,13 +456,3 @@ function initializeHistoricalReports() {
     });
 }
 
-// Event Listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize chat widget regardless of page
-    initializeChatWidget();
-    
-    // Only initialize if we're not on the monitoring page
-    if (!document.getElementById('monitoring-form')) {
-        initializeApp();
-    }
-});
