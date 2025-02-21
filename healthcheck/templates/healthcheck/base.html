@@ -43,25 +43,6 @@
     integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
     crossorigin="anonymous"></script>
    
-    {% if site_config and site_config.is_chat_enabled and site_config.chat_widget_script %}
-        <!-- Chat Widget -->
-        <div id="chat-widget-container">
-            {{ site_config.chat_widget_script|safe }}
-        </div>
-    {% endif %}
-
-    <script>
-        // Ensure chat widget loads after page content
-        document.addEventListener('DOMContentLoaded', function() {
-            if (document.getElementById('chat-widget-container')) {
-                // Force script evaluation if needed
-                var scripts = document.getElementById('chat-widget-container').getElementsByTagName('script');
-                for(var i = 0; i < scripts.length; i++) {
-                    eval(scripts[i].innerHTML);
-                }
-            }
-        });
-    </script>
 <script>
 const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
 const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))

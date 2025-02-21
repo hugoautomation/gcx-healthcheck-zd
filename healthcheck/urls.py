@@ -17,6 +17,7 @@ from .views import (
     get_historical_report,
     check_task_status,
     test_timeout,
+    get_chat_widget
 )
 
 # from . import views
@@ -85,4 +86,5 @@ urlpatterns = [
         cache_views.get_cached_zaf_data,
         name="get_cached_zaf_data",
     ),
+    path('api/chat-widget/', get_chat_widget, name='get_chat_widget'),
 ]

@@ -23,6 +23,9 @@ from .healthcheck import (
     test_timeout,
 )
 
+# API views
+from .api import get_chat_widget
+
 __all__ = [
     # App
     "app",
@@ -43,4 +46,6 @@ __all__ = [
     "get_historical_report",
     "check_task_status",
     "test_timeout",
+    # API
+    "get_chat_widget",
 ]
