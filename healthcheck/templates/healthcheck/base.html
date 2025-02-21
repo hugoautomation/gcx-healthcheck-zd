@@ -42,6 +42,34 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
     crossorigin="anonymous"></script>
+    <script type="module">
+        import UltimateChat from 'https://widget.ultimate.ai/sdk/index.mjs';
+    
+        const chat = UltimateChat.Initialize({
+            botId: '67b510a398f99f028a545671',
+            theme: {
+                'actions':'#4C67D3',
+                'actions-hover':'#1833AB',
+                'header-text':'#FFFFFF',
+                'chat-button':'#151A1E',
+                'header':'#063940',
+                'chat-border-radius': '12px'
+            },
+            navbar: {
+                avatarUrl: 'https://www.ultimate.ai/hubfs/raw_assets/public/ultimate/favicon/apple-touch-icon-152x152.png',
+                title: 'AI agents (Ultimate)'
+            },
+            recoverConversation: true,
+            messageGeneratedAdditionalInfo: false,
+            showLlmSources: true,
+            showAIAnswerLabel: true,
+            allowSoundNotifications: true,
+            chatPosition: 'bottom-right',
+        });
+    </script>
+    {% if site_config.is_chat_enabled and site_config.chat_widget_script %}
+    {{ site_config.chat_widget_script|safe }}
+{% endif %}
 <script>
 const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
 const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))

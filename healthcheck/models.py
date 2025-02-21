@@ -253,3 +253,28 @@ def invalidate_report_cache(sender, instance, **kwargs):
     from .cache_utils import HealthCheckCache
 
     HealthCheckCache.invalidate_report_data(instance.id)
+
+
+class SiteConfiguration(models.Model):
+    chat_widget_script = models.TextField(
+        blank=True,
+        help_text="Paste the complete chat widget script here. It will be embedded in the base template."
+    )
+    is_chat_enabled = models.BooleanField(
+        default=False,
+        help_text="Toggle to enable/disable the chat widget across the site"
+    )
+    
+    class Meta:
+        verbose_name = "Site Configuration"
+        verbose_name_plural = "Site Configuration"
+
+    def save(self, *args, **kwargs):
+        # Ensure we only have one instance
+        if not self.pk and SiteConfiguration.objects.exists():
+            return
+        return super().save(*args, **kwargs)
+
+    @classmethod
+    def get_settings(cls):
+        return cls.objects.first()

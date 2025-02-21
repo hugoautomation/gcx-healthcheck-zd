@@ -1,6 +1,6 @@
 # Register your models here.
 from django.contrib import admin
-from .models import HealthCheckReport, HealthCheckMonitoring, ZendeskUser
+from .models import HealthCheckReport, HealthCheckMonitoring, ZendeskUser, SiteConfiguration
 
 
 @admin.register(HealthCheckReport)
@@ -70,3 +70,16 @@ class ZendeskUserAdmin(admin.ModelAdmin):
         "role",
         "subdomain",
     )
+
+
+@admin.register(SiteConfiguration)
+class SiteConfigurationAdmin(admin.ModelAdmin):
+    list_display = ['is_chat_enabled']
+    
+    def has_add_permission(self, request):
+        # Prevent creating multiple configurations
+        return not SiteConfiguration.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        # Prevent deletion of the configuration
+        return False
