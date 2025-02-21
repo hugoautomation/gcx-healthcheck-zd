@@ -4,7 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
 from zendeskapp import settings
-from ..models import ZendeskUser
+from ..models import ZendeskUser, SiteConfiguration
 from ..utils.formatting import format_historical_reports
 from ..utils.stripe import get_default_subscription_status
 import segment.analytics as analytics  # Add this import

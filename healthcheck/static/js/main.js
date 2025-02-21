@@ -30,6 +30,45 @@ function showButtons(show = true) {
         }
     });
 }
+
+// Add this function to handle chat widget injection
+async function initializeChatWidget() {
+    try {
+        const baseUrl = getBaseUrl();
+        const response = await fetch(`${baseUrl}/api/chat-widget/`);
+        const data = await response.json();
+        
+        if (data.is_enabled && data.script) {
+            // Create container if it doesn't exist
+            let container = document.getElementById('chat-widget-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'chat-widget-container';
+                document.body.appendChild(container);
+            }
+            
+            // Create a new script element
+            const scriptElement = document.createElement('script');
+            
+            // Preserve the type="module" attribute if present in the original script
+            if (data.script.includes('type="module"')) {
+                scriptElement.type = 'module';
+            }
+            
+            // Set the script content
+            scriptElement.textContent = data.script
+                .replace(/<script[^>]*>|<\/script>/g, ''); // Remove script tags
+            
+            // Clear container and append new script
+            container.innerHTML = '';
+            container.appendChild(scriptElement);
+        }
+    } catch (error) {
+        console.error('Error loading chat widget:', error);
+    }
+}
+
+// Modify your existing initializeApp function
 async function initializeApp() {
     try {
         showButtons(false);
@@ -49,6 +88,9 @@ async function initializeApp() {
         initializeRunCheck();
         initializeHistoricalReports();
         initializeComponents();
+        
+        // Initialize chat widget after everything else
+        await initializeChatWidget();
 
         // Adjust initial height
         await client.invoke('resize', { width: '100%', height: '600px' });
@@ -416,6 +458,7 @@ function initializeHistoricalReports() {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', () => {
+   
     // Only initialize if we're not on the monitoring page
     if (!document.getElementById('monitoring-form')) {
         initializeApp();
