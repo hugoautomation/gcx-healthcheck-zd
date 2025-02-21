@@ -174,7 +174,6 @@ def app(request):
                 "plan": subscription_status.get("plan"),
             },
             "environment": settings.ENVIRONMENT,
-            "site_config": SiteConfiguration.objects.first(),
         }
     )
 
