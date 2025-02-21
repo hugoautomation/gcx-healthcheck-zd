@@ -47,20 +47,21 @@ async function initializeChatWidget() {
                 document.body.appendChild(container);
             }
             
-            // Insert the script
-            container.innerHTML = data.script;
+            // Create a new script element
+            const scriptElement = document.createElement('script');
             
-            // Force script evaluation
-            const scripts = container.getElementsByTagName('script');
-            for (let i = 0; i < scripts.length; i++) {
-                const newScript = document.createElement('script');
-                if (scripts[i].src) {
-                    newScript.src = scripts[i].src;
-                } else {
-                    newScript.textContent = scripts[i].textContent;
-                }
-                scripts[i].parentNode.replaceChild(newScript, scripts[i]);
+            // Preserve the type="module" attribute if present in the original script
+            if (data.script.includes('type="module"')) {
+                scriptElement.type = 'module';
             }
+            
+            // Set the script content
+            scriptElement.textContent = data.script
+                .replace(/<script[^>]*>|<\/script>/g, ''); // Remove script tags
+            
+            // Clear container and append new script
+            container.innerHTML = '';
+            container.appendChild(scriptElement);
         }
     } catch (error) {
         console.error('Error loading chat widget:', error);
